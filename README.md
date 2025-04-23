@@ -149,7 +149,7 @@ Untuk menjalankan unit test yang telah dibuat:
 
 ## 8. Dependensi Utama
 
-*   **Java Development Kit (JDK):** `[Versi 24]`
+*   **Java Development Kit (JDK):** `[Versi 21]`
 *   **Gradle:** Build Tool
 *   **JUnit 5:** Framework untuk Unit Testing
 *   **SLF4J API, Logback/Log4j2 Core:** Framework Logging
