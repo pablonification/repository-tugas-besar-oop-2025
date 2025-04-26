@@ -1,0 +1,567 @@
+' Rancangan Utama Struktur Program
+@startuml
+' --- MVC Packages ---
+package model <<Rectangle>> {
+  '================== ENUMERATIONS ==================
+  class Gender <<enumeration>> {
+    MALE
+    FEMALE
+    OTHER
+  }
+  class RelationshipStatus <<enumeration>> {
+    SINGLE
+    FIANCE
+    SPOUSE
+  }
+
+  class ItemCategory <<enumeration>> {
+    SEED
+    FISH
+    CROP
+    FOOD
+    EQUIPMENT
+    MISC
+    RING
+  }
+  class Season <<enumeration>> { 
+    SPRING
+    SUMMER
+    FALL
+    WINTER
+    ANY 
+  }
+  class Weather <<enumeration>> { 
+    SUNNY
+    RAINY
+    ANY 
+  }
+  class TileType <<enumeration>> { 
+    TILLABLE
+    TILLED
+    PLANTED
+    WATERED
+    DEPLOYED_OBJECT 
+  }
+  class Direction <<enumeration>> { 
+    NORTH
+    SOUTH
+    EAST
+    WEST 
+  }
+  class LocationType <<enumeration>> { 
+    FARM
+    FOREST_RIVER
+    MOUNTAIN_LAKE
+    OCEAN
+    STORE, NPC_HOME, POND }
+
+  '=================== INTERFACES ===================
+  interface EdibleItem {
+    + getEnergyRestore(): int
+  }
+  interface MapArea {
+    + getName(): String
+    + getSize(): Dimension
+    + getTile(x: int, y: int): Tile
+    + isOccupied(x: int, y: int): boolean
+    + placeObject(obj: DeployedObject, x: int, y: int): void
+    + getObjectAt(x: int, y: int): DeployedObject
+  }
+  ' TimeListener interface removed for simplicity, logic handled centrally
+
+  '================= ABSTRACT CLASSES ================
+  abstract class Item {
+    # name: String
+    # category: ItemCategory
+    # buyPrice: int
+    # sellPrice: int
+    + getName(): String
+    + getCategory(): ItemCategory
+    + getBuyPrice(): int
+    + getSellPrice(): int
+    + {abstract} use(player: Player, target: Object): boolean
+  }
+  abstract class NPC {
+    # name: String
+    # heartPoints: int
+    # maxHeartPoints: int
+    # lovedItems: List<String>
+    # likedItems: List<String>
+    # hatedItems: List<String>
+    # relationshipStatus: RelationshipStatus
+    # homeLocation: LocationType ' Changed to LocationType
+    # isBachelor: boolean ' Added from previous good version
+    + getName(): String
+    + getHeartPoints(): int
+    + addHeartPoints(amt: int): void
+    + getRelationshipStatus(): RelationshipStatus
+    + setRelationshipStatus(s: RelationshipStatus): void
+    + checkGiftPreference(item: Item): int
+    + interact(player: Player): void
+  }
+  abstract class DeployedObject {
+    # name: String
+    # width: int
+    # height: int
+    # mapSymbol: char
+    + getName(): String
+    + getSize(): Dimension
+    + getSymbol(): char
+  }
+
+  '=================== CORE DOMAIN ==================
+  class Farm {
+    - name: String
+    - player: Player
+    - farmMap: FarmMap
+    - worldMap: WorldMap ' Added reference to world map areas
+    - store: Store ' Added reference to store
+    - npcs: List<NPC> ' List of all NPCs
+    - recipes: List<Recipe> ' List of all Recipes
+    - gameTime: GameTime
+    - shippingBin: ShippingBin
+    - statistics: EndGameStatistics ' Changed from StatisticsTracker
+    - priceList: PriceList ' Added PriceList
+    + getName(): String
+    + getPlayer(): Player
+    + getFarmMap(): FarmMap
+    + getWorldMap(): WorldMap
+    + getStore(): Store
+    + getNPCs(): List<NPC>
+    + findNPC(name: String): NPC
+    + getRecipes(): List<Recipe>
+    + findRecipe(name: String): Recipe
+    + getCurrentTime(): GameTime
+    + getShippingBin(): ShippingBin
+    + getStatistics(): EndGameStatistics
+    + getPriceList(): PriceList
+    + nextDay(): void ' Central logic for day change
+    + checkEndConditions(): boolean
+    + getMapArea(type: LocationType): MapArea ' Get specific map based on type
+  }
+  class Player {
+    ' --- Constants ---
+    + {static} final int MAX_ENERGY = 100
+    + {static} final int MIN_ENERGY = -20
+    + {static} final int LOW_ENERGY_THRESHOLD = 10 ' Added constant
+
+    ' --- Attributes ---
+    - name: String
+    - gender: Gender
+    - energy: int
+    - farmName: String
+    - gold: int
+    - inventory: Inventory
+    - currentMap: MapArea
+    - currentTileX: int
+    - currentTileY: int
+    - partner: NPC
+    - favoriteItemName: String
+
+    ' --- Constructor (Implicit dependency on ItemRegistry not shown in diagram) ---
+    + Player(name: String, gender: Gender, farmName: String, startMap: MapArea, startX: int, startY: int, itemRegistry: ItemRegistry)
+
+    ' --- Getters ---
+    + getName(): String
+    + getGender(): Gender
+    + getEnergy(): int
+    + getGold(): int
+    + getInventory(): Inventory
+    + getCurrentMap(): MapArea
+    + getPosition(): Point ' Returns Point(currentTileX, currentTileY)
+    + getPartner(): NPC
+    + getFavoriteItemName(): String
+
+    ' --- Setters / State Changers ---
+    + changeEnergy(amt: int): void ' Clamps energy, pass-out check delegated
+    + addGold(amt: int): void
+    + spendGold(amt: int): boolean
+    + setPartner(n: NPC): void
+    + setPosition(x: int, y: int): void ' Separate from setCurrentMap
+    + setCurrentMap(m: MapArea): void ' Separate from setPosition
+    + setFavoriteItemName(name: String): void
+
+    ' --- Action Methods (Many delegate complex logic/state changes to Controller) ---
+    + move(dir: Direction): boolean ' Checks bounds & obstacles, updates position
+    + till(targetTile: Tile): boolean ' Checks tool & tile, calls tile.till(). Costs delegated.
+    + recoverLand(targetTile: Tile): boolean ' Checks tool & tile, calls tile.recover(). Costs delegated.
+    + plant(seedToPlant: Seed, targetTile: Tile): boolean ' Calls seed.use(), removes seed if success. Costs delegated.
+    + water(targetTile: Tile): boolean ' Checks tool & tile, calls tile.water(). Costs delegated.
+    + harvest(targetTile: Tile, itemRegistry: ItemRegistry): boolean ' Calls tile.harvest(), adds items to inventory. Costs delegated. ' Changed return, added param
+    + eat(itemToEat: Item): boolean ' Checks instanceof EdibleItem, calls item.use(), removes item if success. Time cost delegated. ' Parameter changed to Item
+    + sleep(energyBeforeSleep: int, usedBonusBed: boolean): void ' Sets energy based on penalty/bonus. Time skip delegated. ' Changed signature & return
+    + cook(recipe: Recipe, fuelItem: Item, itemRegistry: ItemRegistry): boolean ' Checks & consumes ingredients/fuel. Passive time/item addition delegated. ' Added params
+    + fish(fishingLocation: LocationType): void ' Checks tool. RNG & item addition delegated. ' Changed return type
+    + propose(npcTarget: NPC, ring: ProposalRing): boolean ' Calls ring.use(). Core logic (checks, status change, costs) delegated. ' Added param
+    + marry(npcTarget: NPC): boolean ' Checks conditions. Time skip & status change delegated.
+    + watchTV(): Weather ' Placeholder. Costs delegated. Needs bonus impl.
+    + visit(destinationMap: MapArea, entryX: int, entryY: int): boolean ' Updates map & position. Costs delegated. ' Changed params
+    + chat(npcTarget: NPC): boolean ' Calls npc.interact(), adds heart points. Costs delegated.
+    + gift(npcTarget: NPC, itemToGift: Item): boolean ' Checks preference, adds points, removes item. Costs delegated.
+    + sellItemToBin(itemToSell: Item, quantity: int, shippingBin: ShippingBin): boolean ' Adds item to bin, removes from inventory. Time cost delegated. ' Added param
+  }
+
+  class Inventory {
+    - items: Map<Item, Integer>
+    + addItem(item: Item, qty: int): void
+    + removeItem(item: Item, qty: int): boolean
+    + getItemCount(item: Item): int
+    + hasItem(item: Item, qty: int): boolean
+    + getItems(): Map<Item, Integer>
+  }
+  class ShippingBin {
+    - itemsToSell: Map<Item, Integer>
+    - {static} final int MAX_UNIQUE_SLOTS = 16
+    - lastSellDay: int
+    + addItem(item: Item, qty: int): boolean
+    + canSell(currentDay: int): boolean
+    + processSales(stats: EndGameStatistics, prices: PriceList): int ' Needs PriceList now
+    + clearBin(): void
+    + getItems(): Map<Item, Integer>
+  }
+  class Tile {
+    - type: TileType
+    - isWatered: boolean
+    - daysSinceWatered: int ' Renamed for clarity
+    - plantedSeed: Seed
+    - growthDays: int
+    - associatedObject: DeployedObject
+    + getType(): TileType
+    + setType(t: TileType): void
+    + water(): void
+    + isWatered(): boolean
+    + plant(s: Seed): void
+    + getPlantedSeed(): Seed
+    + incrementGrowth(): boolean ' Returns true if harvestable
+    + getGrowthDays(): int
+    + associateObject(o: DeployedObject): void
+    + getAssociatedObject(): DeployedObject
+    + resetWaterCounter(): void
+    + incrementDaysSinceWatered(): void
+    + needsWatering(weather: Weather): boolean
+  }
+  class DeployedObjectPlacement { 
+    - deployedObject: DeployedObject
+    - x: int
+    - y: int
+  }
+  class House extends DeployedObject {}
+  class Pond extends DeployedObject {}
+  class ShippingBinObject extends DeployedObject {}
+
+  '================ TIME =================
+  class GameTime {
+    - hour: int
+    - minute: int
+    - day: int ' Added back
+    - season: Season ' Added back
+    - weather: Weather ' Added back
+    - {static} final int DAYS_IN_SEASON = 10
+    + advance(minutes: int): boolean ' Returns true if day changed
+    + getTimeString(): String
+    + isDayTime(): boolean
+    + isNightTime(): boolean
+    + getCurrentDay(): int
+    + getCurrentSeason(): Season
+    + getCurrentWeather(): Weather
+    + setWeather(w: Weather): void
+    + nextDay(): void ' Increments day, handles season/year change
+    + isPastBedtime(): boolean
+  }
+
+  '===================== MAPS =======================
+  class FarmMap implements MapArea {
+    - {static} final int WIDTH = 32
+    - {static} final int HEIGHT = 32
+    - tiles: Tile[][]
+    - deployedObjects: Map<Point, DeployedObject> ' Using Map for easier lookup
+    + getName(): String
+    + getSize(): Dimension
+    + getTile(x: int, y: int): Tile
+    + isOccupied(x: int, y: int): boolean
+    + placeObject(obj: DeployedObject, x: int, y: int): void
+    + getObjectAt(x: int, y: int): DeployedObject
+  }
+  class WorldMap implements MapArea { 
+    - name: String ' e.g., "Forest", "Mountain", "Ocean"
+    - tiles: Tile[][] ' Simplified representation, maybe not needed if abstract
+    + getName(): String
+    + getSize(): Dimension
+    + getTile(x: int, y: int): Tile ' Might return null or generic tile
+    + isOccupied(x: int, y: int): boolean
+    + placeObject(obj: DeployedObject, x: int, y: int): void
+    + getObjectAt(x: int, y: int): DeployedObject
+  }
+  class Store implements MapArea {
+    - name: String = "Store"
+    - availableItems: List<String> 
+    + getName(): String
+    + getSize(): Dimension ' Small fixed size?
+    + getTile(x: int, y: int): Tile ' Basic floor tiles
+    + isOccupied(x: int, y: int): boolean
+    + placeObject(obj: DeployedObject, x: int, y: int): void
+    + getObjectAt(x: int, y: int): DeployedObject
+    + getAvailableItems(priceList: PriceList): List<Item> ' Get actual items with prices
+  }
+
+  '=================== ITEMS ==================
+  class Seed extends Item {
+    - daysToHarvest: int
+    - targetSeason: Season
+    - cropYieldName: String
+    - quantityPerHarvest: int
+    + use(player: Player, target: Object): boolean
+    + getDaysToHarvest(): int
+    + getTargetSeason(): Season
+    + getCropYieldName(): String
+    + getQuantityPerHarvest(): int
+  }
+  class Fish extends Item implements EdibleItem {
+    - rarity: FishRarity
+    - requiredSeason: Season
+    - startTime: int ' Hour 0-23
+    - endTime: int ' Hour 0-23
+    - requiredWeather: Weather
+    - requiredLocation: LocationType 
+    - {static} final int BASE_ENERGY_RESTORE = 1
+    + calculateSellPrice(prices: PriceList): int 
+    + getEnergyRestore(): int
+    + use(player: Player, target: Object): boolean
+    + getRarity(): FishRarity
+    + canBeCaught(season: Season, time: GameTime, weather: Weather, location: LocationType): boolean
+  }
+  class Crop extends Item implements EdibleItem {
+    - {static} final int BASE_ENERGY_RESTORE = 3
+    + getEnergyRestore(): int
+    + use(player: Player, target: Object): boolean
+  }
+  class Food extends Item implements EdibleItem {
+    - energyRestored: int
+    + getEnergyRestore(): int
+    + use(player: Player, target: Object): boolean
+  }
+  class Equipment extends Item {
+    - toolType: String
+    + use(player: Player, target: Object): boolean
+    + getToolType(): String
+  }
+  class MiscItem extends Item {
+    + use(player: Player, target: Object): boolean
+  }
+  class ProposalRing extends Item {
+    + use(player: Player, target: Object): boolean
+  }
+
+  '=================== OTHER ==================
+  class Recipe {
+    - name: String
+    - ingredients: Map<String,Integer> ' Item name -> quantity
+    - resultItemName: String ' Name of the Food item produced
+    - fuelRequired: String ' e.g., "Firewood" or "Coal"
+    - unlockCondition: String ' e.g., "Default", "Fish10", "HarvestParsnip"
+    + getName(): String
+    + getIngredients(): Map<String,Integer>
+    + getResultItemName(): String
+    + checkUnlock(stats: EndGameStatistics): boolean ' Check against stats
+    + getFuelRequired(): String
+  }
+  class PriceList {
+    - buyPrices: Map<String,Integer>
+    - sellPrices: Map<String,Integer>
+    + getBuyPrice(itemName:String): int
+    + getSellPrice(itemName:String): int
+    + loadFromFile(path:String): void
+  }
+  class EndGameStatistics {
+    - totalIncome: int
+    - totalExpenditure: int
+    - seasonalIncome: Map<Season, Integer> ' Added back
+    - seasonalExpenditure: Map<Season, Integer> ' Added back
+    - totalDaysPlayed: int
+    - npcFriendshipStatus: Map<String, RelationshipStatus> ' NPC Name -> Status
+    - npcHeartPoints: Map<String, Integer> ' NPC Name -> Hearts
+    - chatFrequency: Map<String, Integer> ' NPC Name -> Count
+    - giftFrequency: Map<String, Integer> ' NPC Name -> Count
+    - visitFrequency: Map<String, Integer> ' NPC Name -> Count (Harder to track?)
+    - cropsHarvested: Map<String, Integer> ' Crop Name -> Count
+    - fishCaught: Map<String, Map<FishRarity, Integer>> ' Fish Name -> Rarity -> Count
+    + computeAll(farm: Farm): void ' Takes Farm object to access all data
+    + recordIncome(amount: int, season: Season): void ' Methods to update stats incrementally
+    + recordExpenditure(amount: int, season: Season): void
+    + incrementDay(): void
+    + recordChat(npcName: String): void
+    + recordGift(npcName: String): void
+    + recordVisit(npcName: String): void
+    + recordHarvest(cropName: String, quantity: int): void
+    + recordFishCatch(fishName: String, fishRarity: FishRarity): void
+    + updateNpcStatus(npcName: String, status: RelationshipStatus, hearts: int): void
+    + getSummary(): String ' For display
+    ' ... Getters for individual stats ...
+  }
+
+}
+
+package view <<Rectangle>> {
+  interface GameView {
+    + displayMap(map: MapArea, playerPos: Point, objects: List<DeployedObjectPlacement>, npcs: List<NPC>): void ' More info needed
+    + displayPlayerInfo(player: Player): void
+    + displayInventory(inventory: Inventory): void
+    + displayNPCInfo(npc: NPC): void
+    + displayMessage(message: String): void
+    + displayStatistics(stats: EndGameStatistics): void ' Use EndGameStatistics
+    + displayAvailableActions(actions: List<String>): void
+    + displayTime(time: GameTime): void
+    + displayMenu(options: List<String>): void
+    + clearScreen(): void
+    + showDialogue(speaker: String, text: String): void ' For NPC interaction
+    + promptForInput(prompt: String): String ' Maybe needed for item/NPC selection dialogs
+  }
+  class JavaFXView implements GameView {
+    ' --- Internal JavaFX Components ---
+    ' ...
+    ' --- Event Handlers setup ---
+    ' + setupEventHandlers(controller: GameController): void
+    ' --- Implementation of GameView methods ---
+    + displayMap(map: MapArea, playerPos: Point, objects: List<DeployedObjectPlacement>, npcs: List<NPC>): void
+    + displayPlayerInfo(player: Player): void
+    + displayInventory(inventory: Inventory): void
+    + displayNPCInfo(npc: NPC): void
+    + displayMessage(message: String): void
+    + displayStatistics(stats: EndGameStatistics): void
+    + displayAvailableActions(actions: List<String>): void
+    + displayTime(time: GameTime): void
+    + displayMenu(options: List<String>): void
+    + clearScreen(): void
+    + showDialogue(speaker: String, text: String): void
+    + promptForInput(prompt: String): String ' Implement using Dialogs
+  }
+} 
+
+package controller <<Rectangle>> {
+  class GameEngine implements Runnable { 
+    - controller: GameController
+    - tickIntervalMs: int = 100 ' Example: 10 updates per second
+    - isRunning: boolean
+    + GameEngine(controller: GameController)
+    + run(): void ' Main game loop thread
+    + stop(): void
+  }
+
+  class GameController {
+    - farm: Farm ' The Model
+    - view: GameView ' The View Interface
+    - engine: GameEngine ' The Game Loop Runner
+    - isPaused: boolean = false
+
+    + GameController(farm: Farm, view: GameView) ' Constructor
+    + startGame(): void ' Initializes engine and starts the game
+    + pauseGame(): void
+    + resumeGame(): void
+    + update(): void ' Called by GameEngine periodically
+    - processTimeAdvance(): void
+    - checkAutoSleep(): void
+    - checkCropGrowth(): void
+    - updateView(): void ' Tells the view to refresh
+    ' --- Request Handlers (Called by View Event Handlers) ---
+    + handleMoveRequest(direction: Direction): void
+    + handleTillRequest(): void
+    + handleWaterRequest(): void
+    + handlePlantRequest(seedName: String): void
+    + handleHarvestRequest(): void
+    + handleEatRequest(itemName: String): void
+    + handleSleepRequest(): void
+    + handleCookRequest(recipeName: String, fuelName: String): void
+    + handleFishRequest(): void
+    + handleProposeRequest(npcName: String): void
+    + handleMarryRequest(): void
+    + handleChatRequest(): void ' Determines nearby NPC
+    + handleGiftRequest(itemName: String): void ' Determines nearby NPC, needs item selection
+    + handleSellRequest(itemName: String, quantity: int): void
+    + handleVisitRequest(location: LocationType): void
+    + handleWatchTVRequest(): void
+    + handleShowInventoryRequest(): void
+    + handleShowStatsRequest(): void
+    + handleExitRequest(): void
+    + handleMapClick(x: int, y: int): void
+    + handleGenericAction(): void ' Context-sensitive action button
+    ' --- Helper methods ---
+    - getPlayerTile(): Tile
+    - getFacingTile(): Tile
+    - getNPCAt(map: MapArea, x: int, y: int): NPC
+    - getObjectAt(map: MapArea, x: int, y: int): DeployedObject
+  }
+} 
+
+' class SpakborHillsGame extends Application { ' Main JavaFX class
+'   + {static} main(args: String[]): void
+'   + start(primaryStage: Stage): void
+' }
+
+' --- Relationships ---
+' MVC & Engine
+' SpakborHillsGame ..> GameController : Creates
+' SpakborHillsGame ..> Farm : Creates
+' SpakborHillsGame ..> JavaFXView : Creates
+GameController "1" *--> "1" Farm : manages >
+GameController "1" *--> "1" GameView : interacts >
+GameController "1" o-- "1" GameEngine : controls <
+GameEngine "1" *--> "1" GameController : updates <
+GameView <|.. JavaFXView
+GameView ..> Farm : reads < ' View reads model data for display
+
+' Model Internal Relationships (Selected, many omitted for brevity but implied)
+Farm "1" *-- "1" Player
+Farm "1" *-- "1" FarmMap
+Farm "1" *-- "1" WorldMap
+Farm "1" *-- "1" Store
+Farm "1" *-- "1" GameTime
+Farm "1" *-- "1" ShippingBin
+Farm "1" *-- "1" EndGameStatistics
+Farm "1" *-- "1" PriceList
+Farm "1" o-- "*" NPC
+Farm "1" o-- "*" Recipe
+
+Player "1" *-- "1" Inventory
+Player -- Inventory
+Player -- MapArea
+Player -- NPC
+Player -- Item
+Player -- Point
+Player -- Gender
+Player -- Direction
+Player -- LocationType
+Player -- Weather
+Player ..> ItemRegistry : uses > 
+Player ..> Seed : uses >
+Player ..> Recipe : uses >
+Player ..> ProposalRing : uses >
+Player ..> ShippingBin : uses >
+
+FarmMap "1" ..|> MapArea
+WorldMap "1" ..|> MapArea
+Store "1" ..|> MapArea
+
+FarmMap "1" *-- "*" Tile
+WorldMap "1" *-- "*" Tile 
+Store "1" *-- "*" Tile
+
+ShippingBin --> EndGameStatistics : updates >
+ShippingBin --> PriceList : uses >
+
+EndGameStatistics --> Farm : computes from <
+
+Item <|-- Seed
+Item <|-- Fish
+Item <|-- Crop
+Item <|-- Food
+Item <|-- Equipment
+Item <|-- MiscItem
+Item <|-- ProposalRing
+
+EdibleItem <|.. Fish
+EdibleItem <|.. Crop
+EdibleItem <|.. Food
+
+PriceList --> Item : references >
+
+@enduml
