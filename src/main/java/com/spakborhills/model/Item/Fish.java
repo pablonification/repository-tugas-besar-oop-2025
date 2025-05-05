@@ -23,7 +23,7 @@ import com.spakborhills.model.Enum.Season;
 import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Player;
-import com.spakborhills.model.GameTime;
+import com.spakborhills.model.Util.GameTime;
 
 
 // Assuming these enums and classes exist in the correct packages
@@ -38,7 +38,7 @@ import com.spakborhills.model.GameTime;
 public class Fish extends Item implements EdibleItem {
 
     // Helper class untuk menangani kasus waktu disjoin
-    public class TimeRange {
+    public static class TimeRange {
         public final int startHour;
         public final int endHour;
 

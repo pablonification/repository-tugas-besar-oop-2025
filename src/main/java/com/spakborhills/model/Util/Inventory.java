@@ -9,11 +9,14 @@
   }
  */
 
-package main.java.com.spakborhills.model.Util;
+package com.spakborhills.model.Util;
 
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Collection;
+import java.util.Collections;
+import com.spakborhills.model.Item.Item;
+import com.spakborhills.model.Item.Equipment;
+
 
 /**
  * Merepresentasikan inventory pemain, menyimpan koleksi item dan jumlahnya.
@@ -41,11 +44,11 @@ public class Inventory {
      */
     public void addItem(Item item, int quantity){
       if(item == null || quantity <= 0){
-        throw new IllegalArgumentException("Item atau kuantitas tidak valid");
+        // throw new IllegalArgumentException("Item atau kuantitas tidak valid");
         return;
       }
       this.items.put(item, items.getOrDefault(item, 0) + quantity);
-      System.out.println("Berhasil menambahkan " + quantity + " " + item.getName() + " ke inventory.");
+      // System.out.println("Berhasil menambahkan " + quantity + " " + item.getName() + " ke inventory.");
     }
 
 /**
@@ -57,7 +60,7 @@ public class Inventory {
      */
     public boolean removeItem(Item item, int quantity){
       if(item == null || quantity <= 0){
-        throw new IllegalArgumentException("Item atau kuantitas tidak valid");
+        // throw new IllegalArgumentException("Item atau kuantitas tidak valid");
         return false;
       }
       
@@ -83,7 +86,7 @@ public class Inventory {
      */
     public boolean hasItem(Item item, int quantity){
       if(item == null || quantity <= 0){
-        throw new IllegalArgumentException("Item atau kuantitas tidak valid");
+        // throw new IllegalArgumentException("Item atau kuantitas tidak valid");
         return false;
       } 
       return this.items.getOrDefault(item, 0) >= quantity;
@@ -97,7 +100,7 @@ public class Inventory {
      */
     public int getItemCount(Item item){
       if(item == null){
-        throw new IllegalArgumentException("Item tidak valid");
+        // throw new IllegalArgumentException("Item tidak valid");
         return 0;
       }
       return this.items.getOrDefault(item, 0);
@@ -112,11 +115,11 @@ public class Inventory {
      */
     public boolean hasTool(String toolType){
       if(toolType == null){
-        throw new IllegalArgumentException("Tipe alat tidak valid");
+        // throw new IllegalArgumentException("Tipe alat tidak valid");
         return false;
       }
       for (Item item : this.items.keySet()){
-        if(item instanceof Equipment && ((Equipment) item).getType().equalsIgnoreCase(toolType)){
+        if(item instanceof Equipment && ((Equipment) item).getToolType().equalsIgnoreCase(toolType)){
           if(this.items.get(item) > 0){
             return true;
           }

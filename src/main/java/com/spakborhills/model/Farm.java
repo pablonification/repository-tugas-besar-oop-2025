@@ -34,16 +34,16 @@ package com.spakborhills.model;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Map;
+// import java.util.Map;
 
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Enum.RelationshipStatus;
-import com.spakborhills.model.Item.Item; // Item dasar
+// import com.spakborhills.model.Item.Item; // Item dasar
 import com.spakborhills.model.NPC.NPC; // Kelas abstrak NPC
 import com.spakborhills.model.Map.FarmMap; // Kelas FarmMap
 import com.spakborhills.model.Map.MapArea; // Interface MapArea
 import com.spakborhills.model.Map.WorldMap; // Kelas/Interface WorldMap (perlu dibuat)
-import com.spakborhills.model.Store.Store; // Kelas Store (perlu dibuat)
+// import com.spakborhills.model.Store; // Kelas Store (perlu dibuat)
 import com.spakborhills.model.Util.GameTime; // Kelas GameTime
 import com.spakborhills.model.Util.PriceList; // Kelas PriceList (perlu dibuat)
 import com.spakborhills.model.Util.Recipe; // Kelas Recipe

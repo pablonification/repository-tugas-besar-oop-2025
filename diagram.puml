@@ -64,8 +64,9 @@ package model <<Rectangle>> {
     + getSize(): Dimension
     + getTile(x: int, y: int): Tile
     + isOccupied(x: int, y: int): boolean
-    + placeObject(obj: DeployedObject, x: int, y: int): void
-    + getObjectAt(x: int, y: int): DeployedObject
+    + isWithinBounds(x: int, y: int): boolean
+    // + placeObject(obj: DeployedObject, x: int, y: int): void
+    // + getObjectAt(x: int, y: int): DeployedObject
   }
   ' TimeListener interface removed for simplicity, logic handled centrally
 

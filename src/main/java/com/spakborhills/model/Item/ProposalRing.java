@@ -3,10 +3,10 @@ package com.spakborhills.model.Item;
 import com.spakborhills.model.Enum.ItemCategory;
 import com.spakborhills.model.Player;
 import com.spakborhills.model.NPC.NPC;
-import com.spakborhills.model.Enum.RelationshipStatus;
+// import com.spakborhills.model.Enum.RelationshipStatus;
 
 public class ProposalRing extends Item {
-    public ProposalRing(String name, int buyPrice, int sellPrice) {
+    public ProposalRing() {
         // Item Special, tidak bisa dibeli dan dijual
         super("Proposal Ring", ItemCategory.RING, 0, 0);
     }
@@ -28,7 +28,7 @@ public class ProposalRing extends Item {
             System.out.println("ERROR: Proposal Ring hanya bisa digunakan untuk melamar NPC!");
             return false;
         }
-        NPC npc = (NPC) target;
+        NPC npcTarget = (NPC) target;
         System.out.println(player.getName() + " mengeluarkan Proposal Ring dan mencoba melamar " + npcTarget.getName() + "...");
 
         //    Controller/Player kemudian akan melanjutkan dengan logika Proposing:

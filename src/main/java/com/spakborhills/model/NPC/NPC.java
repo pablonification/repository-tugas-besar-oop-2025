@@ -22,10 +22,12 @@
 package com.spakborhills.model.NPC;
 
 import java.util.List;
+import java.util.ArrayList;
 
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Enum.RelationshipStatus;
+import com.spakborhills.model.Player;
 
 public abstract class NPC {
     protected String name;

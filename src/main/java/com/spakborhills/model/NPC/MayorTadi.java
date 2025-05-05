@@ -1,10 +1,11 @@
 package com.spakborhills.model.NPC;
 
-import java.lang.reflect.Array;
+// import java.lang.reflect.Array;
 import java.util.Arrays;
 
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Item.Item;
+import com.spakborhills.model.Player;
 
 /*
  * Atribut Nilai
@@ -19,7 +20,7 @@ public class MayorTadi extends NPC {
     public MayorTadi() {
         super("Mayor Tadi", LocationType.NPC_HOME, false);
         this.lovedItems.add("Legend");
-        this.likedItems.addAll(Arrays.asList(("Angler", "Crimsonfish", "Glacierfish")));
+        this.likedItems.addAll(Arrays.asList("Angler", "Crimsonfish", "Glacierfish"));
         // hated items
         /*
         // Catatan: Hated items Mayor Tadi adalah "Seluruh item yang bukan merupakan

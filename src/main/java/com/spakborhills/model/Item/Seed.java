@@ -17,7 +17,7 @@ import com.spakborhills.model.Enum.ItemCategory;
 import com.spakborhills.model.Enum.Season;
 import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Player;
-import com.spakborhills.model.Tile;
+import com.spakborhills.model.Map.Tile;
 
 
 public class Seed extends Item {

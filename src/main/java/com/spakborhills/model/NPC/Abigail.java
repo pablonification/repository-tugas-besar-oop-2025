@@ -3,6 +3,7 @@ package com.spakborhills.model.NPC;
 import java.util.Arrays;
 
 import com.spakborhills.model.Enum.LocationType;
+import com.spakborhills.model.Player;
 
 public class Abigail extends NPC {
     public Abigail() {

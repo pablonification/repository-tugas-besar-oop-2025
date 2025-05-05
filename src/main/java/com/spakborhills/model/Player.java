@@ -75,10 +75,10 @@ import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Enum.RelationshipStatus;
 import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Item.Item;
-import com.spakborhills.model.Item.Crop;
+// import com.spakborhills.model.Item.Crop;
 import com.spakborhills.model.Item.EdibleItem;
 import com.spakborhills.model.Item.Seed;
-import com.spakborhills.model.Item.Equipment; // Pastikan ada
+// import com.spakborhills.model.Item.Equipment; // Pastikan ada
 import com.spakborhills.model.Item.ProposalRing;
 import com.spakborhills.model.NPC.NPC; // Pastikan ada
 import com.spakborhills.model.Map.MapArea;
@@ -321,8 +321,8 @@ public class Player {
      * @return true jika penyiraman berhasil, false jika gagal.
      */
     public boolean water(Tile targetTile) {
-        if (!inventory.hasTool("Watering Can")) {
-            System.out.println("Kamu butuh penyiram tanaman (Watering Can)!");
+        if (!inventory.hasTool("WateringCan")) {
+            System.out.println("Kamu butuh penyiram tanaman (WateringCan)!");
             return false;
         }
         if (targetTile == null || !targetTile.canBeWatered()) {

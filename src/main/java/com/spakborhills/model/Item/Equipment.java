@@ -9,10 +9,12 @@ package com.spakborhills.model.Item;
 
 import com.spakborhills.model.Enum.ItemCategory;
 import com.spakborhills.model.Player;
+
+
 public class Equipment extends Item {
     private String toolType;
 
-    public Equipment(String name, String toolType, int buyPrice, int sellPrice) {
+    public Equipment(String name, String toolType) {
         super(name, ItemCategory.EQUIPMENT, 0, 0);
         this.toolType = toolType;
     }

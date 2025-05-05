@@ -15,6 +15,7 @@
 package com.spakborhills.model.Item;
 
 import com.spakborhills.model.Enum.ItemCategory;
+import com.spakborhills.model.Player;
 
 public abstract class Item {
     private String name;

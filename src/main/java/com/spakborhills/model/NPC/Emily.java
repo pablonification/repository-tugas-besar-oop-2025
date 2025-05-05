@@ -5,7 +5,7 @@ import java.util.Arrays;
 import com.spakborhills.model.Enum.ItemCategory;
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Item.Item;
-
+import com.spakborhills.model.Player;
 public class Emily extends NPC {
     public Emily() {
         super("Emily", LocationType.STORE, false);

@@ -3,7 +3,7 @@ package com.spakborhills.model.NPC;
 import java.util.Arrays;
 
 import com.spakborhills.model.Enum.LocationType;
-
+import com.spakborhills.model.Player;
 public class Dasco extends NPC {
     public Dasco() {
         super("Dasco", LocationType.NPC_HOME, false);
