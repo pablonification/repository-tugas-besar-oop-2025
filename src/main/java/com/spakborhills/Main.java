@@ -7,9 +7,11 @@ import com.spakborhills.model.Map.*;
 import com.spakborhills.model.NPC.*;
 // import com.spakborhills.model.Store.*;
 import com.spakborhills.model.Util.*;
+import com.spakborhills.model.tile.TileManager;
 import com.spakborhills.view.main.GamePanel;
 
 import javax.swing.*;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays; // Untuk Arrays.asList
 import java.util.HashMap;
@@ -17,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 // import java.util.Optional;
 import java.util.Set; // Untuk Set di Fish
-import java.awt.Point;
+
 
 public class Main {
 
@@ -48,6 +50,14 @@ public class Main {
     public static void main(String[] args) {
 
         if(currentMode == UI_MODE) {
+
+//            GamePanel p = new GamePanel();
+//            TileManager manager = new TileManager(p);
+//            manager.generateMap();
+//            return;
+
+//            System.out.println(new Rectangle(1,1,3,3).contains(1,1));
+
             JFrame window = new JFrame();
             window.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             window.setResizable(false);

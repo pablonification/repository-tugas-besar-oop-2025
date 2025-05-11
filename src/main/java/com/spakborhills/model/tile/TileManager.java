@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Random;
 
 @SuppressWarnings({"DataFlowIssue", "CallToPrintStackTrace"})
 public class TileManager {
@@ -24,7 +25,84 @@ public class TileManager {
         tiles = new Tile[NO_OF_TILES];
         mapTileNum = new int[MAP_SIZE][MAP_SIZE];
         getTileImage();
-        loadMap("/map/farmV2.txt");
+        generateMap();
+//        loadMap("/map/farmV2.txt");
+    }
+
+    public void generateMap() {
+        // house & shipping bin generation;
+        Random random = new Random();
+        int houseX = random.nextInt(22) + 9;
+        int houseY = random.nextInt(25) + 9;
+
+        /*
+        * Rectangle below specify the allocated space for the house & shipping bin + 1 tile
+        * additional space in every side to prevent pond getting side by side with house & shipping bin
+        * (it's not specified in the specs, but I think it better be that way)
+        * */
+        Rectangle house = new Rectangle(houseX - 1, houseY - 1, 12, 8 );
+
+        Rectangle pond = new Rectangle();
+        pond.width = 4;
+        pond.height = 3;
+        do {
+            pond.x = (random.nextInt(28) + 9);
+            pond.y = (random.nextInt(27) + 9);
+        } while (house.intersects(pond));
+
+        house.x++;
+        house.y++;
+        house.width -= 2;
+        house.height -= 2;
+
+        System.out.println("House(" + house.x + ", " + house.y + ')');
+        System.out.println("Pond(" + pond.x + ", " + pond.y + ')');
+
+        for(int row = 0; row < 8; ++row) {
+            for(int col = 0; col < 48; ++col) {
+                mapTileNum[col][row] = 2;
+            }
+        }
+
+        for(int row = 8; row < 40; ++row) {
+            for(int col = 0; col < 48; ++col) {
+                if(col < 8) {
+                    mapTileNum[col][row] = 2;
+                }
+                else if(col < 40) {
+                    if(pond.contains(col,row)) {
+                        mapTileNum[col][row] = 1;
+                    }
+
+                    else if(house.contains(col, row)) {
+                        if(col - house.x < 6) {
+                            mapTileNum[col][row] = 2;
+                        }
+                        else if(col - house.x > 6 && row - house.y < 2) {
+                            mapTileNum[col][row] = 3;
+                        }
+                        else {
+                            mapTileNum[col][row] = 0;
+                        }
+                    }
+
+                    else {
+                        mapTileNum[col][row] = 0;
+                    }
+
+                }
+                else {
+                    mapTileNum[col][row] = 2;
+                }
+            }
+        }
+
+        for(int row = 40; row < 48; ++row) {
+            for(int col = 0; col < 48; ++col) {
+                mapTileNum[col][row] = 2;
+            }
+        }
+
     }
 
     public void loadMap(String path) {
@@ -34,7 +112,7 @@ public class TileManager {
 
             int col = 0;
             int row = 0;
-            while(col < gp.maxWorldCol && row < gp.maxWorldRow) {
+            while(row < gp.maxWorldRow) {
                 String line = br.readLine();
 
                 while(col < gp.maxWorldCol) {
