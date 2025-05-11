@@ -54,12 +54,12 @@ public class TileManager {
             e.printStackTrace();
         }
 
-        for (int[] a : mapTileNum) {
-            for(int b : a) {
-                System.out.print(b + " ");
-            }
-            System.out.println();
-        }
+//        for (int[] a : mapTileNum) {
+//            for(int b : a) {
+//                System.out.print(b + " ");
+//            }
+//            System.out.println();
+//        }
     }
 
     public void getTileImage() {
@@ -67,7 +67,7 @@ public class TileManager {
         setup(1, "water01", true);
         setup(2, "wall", true);
         setup(3, "tree", true);
-        setup(4, "grass00", true);
+        setup(4, "grass00", false);
         setup(5, "grass01", false);
 
     }
@@ -92,13 +92,13 @@ public class TileManager {
 
             int worldX = worldCol * gp.tileSize;
             int worldY = worldRow * gp.tileSize;
-            int screenX = worldX - gp.worldX + gp.screenX;
-            int screenY = worldY - gp.worldY + gp.screenY;
+            int screenX = worldX - gp.player.worldX + gp.player.screenX;
+            int screenY = worldY - gp.player.worldY + gp.player.screenY;
 
-            if(worldX + gp.tileSize > gp.worldX - gp.screenX
-                    && worldX - gp.tileSize < gp.worldX + gp.screenX
-                    && worldY + gp.tileSize > gp.worldY - gp.screenY
-                    && worldY - gp.tileSize < gp.worldY + gp.screenY
+            if(worldX + gp.tileSize > gp.player.worldX - gp.player.screenX
+                    && worldX - gp.tileSize < gp.player.worldX + gp.player.screenX
+                    && worldY + gp.tileSize > gp.player.worldY - gp.player.screenY
+                    && worldY - gp.tileSize < gp.player.worldY + gp.player.screenY
             ) {
                 g2.drawImage(tiles[tileNum].image, screenX, screenY, null);
             }

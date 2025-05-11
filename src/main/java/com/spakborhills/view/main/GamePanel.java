@@ -1,6 +1,7 @@
 package com.spakborhills.view.main;
 
 import com.spakborhills.model.tile.TileManager;
+import com.spakborhills.view.entity.Player;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,18 +19,15 @@ public class GamePanel extends JPanel implements Runnable {
     // SCREEN
     public final int maxScreenCol = 16;
     public final int maxScreenRow = 16;
-    final int screenWidth = tileSize * maxScreenCol;
-    final int screenHeight = tileSize * maxScreenRow;
+    public final int screenWidth = tileSize * maxScreenCol;
+    public final int screenHeight = tileSize * maxScreenRow;
 
     // WORLD
     public final int maxWorldCol = 48;
     public final int maxWorldRow = 48;
 
-    // PLAYER (DUMMY)
-    public int worldX = 18 * tileSize;
-    public int worldY = 8 * tileSize;
-    public int screenX = screenWidth/2;
-    public int screenY = screenHeight/2;
+    //ENTITY & PLAYER
+    public Player player = new Player(this);
 
     int speed = 4;
 
@@ -37,7 +35,8 @@ public class GamePanel extends JPanel implements Runnable {
     int fps = 60;
 
     //SYSTEM
-    KeyHandler keyHandler = new KeyHandler();
+    public KeyHandler keyHandler = new KeyHandler();
+    public CollisionChecker collisionChecker = new CollisionChecker(this);
     Thread gameThread = null;
     TileManager tileManager = new TileManager(this);
 
@@ -51,28 +50,14 @@ public class GamePanel extends JPanel implements Runnable {
 
     // UI THREAD
     public void startGameThread() {
-        System.out.println("CALLED");
+//        System.out.println("CALLED");
         gameThread = new Thread(this);
         gameThread.start();
     }
 
     public void update() {
 //        System.out.println("Called");
-        if(keyHandler.upPressed) {
-            worldY -= speed;
-        }
-
-        if(keyHandler.downPressed) {
-            worldY += speed;
-        }
-
-        if(keyHandler.leftPressed) {
-            worldX -= speed;
-        }
-
-        if(keyHandler.rightPressed) {
-            worldX += speed;
-        }
+        player.update();
     }
 
     @Override
@@ -84,8 +69,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         tileManager.draw(g2);
 
-        g2.setColor(Color.white);
-        g2.fillRect(screenX, screenY, tileSize, tileSize);
+        player.draw(g2);
 
         g2.dispose();
     }
@@ -101,13 +85,13 @@ public class GamePanel extends JPanel implements Runnable {
         long currentTime;
 
         // debugging purpose
-        long timer = 0;
-        long drawCount = 0;
+//        long timer = 0;
+//        long drawCount = 0;
         //-------------------
 
         while (gameThread != null) {
             currentTime = System.nanoTime();
-            timer += currentTime - lastTime;
+//            timer += currentTime - lastTime;
             delta += (currentTime - lastTime) / drawInterval;
             lastTime = currentTime;
             if(delta >= 1) {
@@ -115,14 +99,14 @@ public class GamePanel extends JPanel implements Runnable {
 
                 repaint();
                 delta--;
-                drawCount++;
+//                drawCount++;
             }
 
-            if(timer >= ONE_SECOND) {
-                System.out.println("FPS: " + drawCount);
-                drawCount = 0;
-                timer = 0;
-            }
+//            if(timer >= ONE_SECOND) {
+//                System.out.println("FPS: " + drawCount);
+//                drawCount = 0;
+//                timer = 0;
+//            }
 
         }
     }
