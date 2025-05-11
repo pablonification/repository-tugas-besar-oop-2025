@@ -7,7 +7,9 @@ import com.spakborhills.model.Map.*;
 import com.spakborhills.model.NPC.*;
 // import com.spakborhills.model.Store.*;
 import com.spakborhills.model.Util.*;
+import com.spakborhills.view.main.GamePanel;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Arrays; // Untuk Arrays.asList
 import java.util.HashMap;
@@ -30,6 +32,11 @@ public class Main {
         System.out.println(player.getInventory()); // Cetak inventory
     }
 
+    public static final int TEST_MODE = 0;
+    public static final int UI_MODE = 1;
+    public static int currentMode = UI_MODE;
+
+
     // Helper untuk membuat TimeRange (jika tidak publik)
     // Jika TimeRange publik, ini tidak perlu
     private static Fish.TimeRange createTimeRange(int start, int end) {
@@ -39,6 +46,24 @@ public class Main {
 
 
     public static void main(String[] args) {
+
+        if(currentMode == UI_MODE) {
+            JFrame window = new JFrame();
+            window.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+            window.setResizable(false);
+            window.setTitle("Spakbor Hills");
+
+            GamePanel gamePanel = new GamePanel();
+            window.add(gamePanel);
+
+            window.pack();
+
+            window.setLocationRelativeTo(null); // window displayed at the center of the screen
+            window.setVisible(true);
+
+            gamePanel.startGameThread();
+            return;
+        }
         System.out.println("=============================================");
         System.out.println("=== Memulai Driver Testing Spakbor Hills ===");
         System.out.println("=============================================");
