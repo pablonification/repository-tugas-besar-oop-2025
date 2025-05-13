@@ -59,18 +59,11 @@ public class Seed extends Item {
             return false;
         }
 
-        // Lakukan penanaman pada Tile
-        // Tipe Tile -> Planted dan simpan referensi ke seed ini
-        boolean plantSuccess = tile.plant(this);
-        if(plantSuccess) {
-            System.out.println("Kamu menanam " + this.getName() + " di petak tanah.");
-            // Controller akan hapus 1 seed dari inventory player setelah return true
-            return true;
-        } else {
-            System.out.println("Penanaman gagal. Petak tanah tidak sesuai atau sudah memiliki tanaman lain.");
+        if(tile.getPlantedSeed() != null){
+            System.out.println("Petak ini sudah memiliki tanaman.");
             return false;
         }
-        
+        return true;
     }
 
     public int getDaysToHarvest() {

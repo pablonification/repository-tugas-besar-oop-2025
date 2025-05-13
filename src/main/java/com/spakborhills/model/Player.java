@@ -73,6 +73,7 @@ import com.spakborhills.model.Enum.Gender;
 import com.spakborhills.model.Enum.Direction;
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Enum.RelationshipStatus;
+import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Item.Item;
 // import com.spakborhills.model.Item.Crop;
@@ -83,6 +84,7 @@ import com.spakborhills.model.Item.ProposalRing;
 import com.spakborhills.model.NPC.NPC; // Pastikan ada
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
+import com.spakborhills.model.Util.GameTime;
 // import com.spakborhills.model.Util.GameTime; // Anda mungkin perlu ini di Controller
 import com.spakborhills.model.Util.Inventory;
 import com.spakborhills.model.Util.Recipe; // Pastikan ada
@@ -259,7 +261,7 @@ public class Player {
             System.out.println("Tanah ini tidak bisa dicangkul.");
             return false;
         }
-        targetTile.till();
+        targetTile.setType(TileType.TILLED);
         System.out.println("Kamu mencangkul tanah.");
         return true;
     }
@@ -282,7 +284,7 @@ public class Player {
             System.out.println("Tidak ada yang bisa dipulihkan di sini.");
             return false;
         }
-        targetTile.recover();
+        targetTile.setType(TileType.TILLABLE);
         System.out.println("Kamu memulihkan tanah.");
         return true;
     }
@@ -296,17 +298,22 @@ public class Player {
      *
      * @param seedToPlant Item Seed yang akan ditanam.
      * @param targetTile Objek Tile tempat menanam.
+     * @param currentTime Objek GameTime untuk mendapatkan musim saat ini.
      * @return true jika penanaman berhasil, false jika gagal.
      */
-    public boolean plant(Seed seedToPlant, Tile targetTile) {
-        if (seedToPlant == null) return false;
+    public boolean plant(Seed seedToPlant, Tile targetTile, GameTime currentTime) {
+        if (seedToPlant == null || targetTile == null || currentTime == null) {
+            System.out.println("Input tidak valid untuk menanam.");
+            return false;
+        }
         if (!inventory.hasItem(seedToPlant, 1)) {
             System.out.println("Kamu tidak punya benih " + seedToPlant.getName() + ".");
             return false;
         }
-        boolean success = seedToPlant.use(this, targetTile);
+        boolean success = targetTile.setPlantedSeed(seedToPlant, currentTime.getCurrentSeason());
         if (success) {
             inventory.removeItem(seedToPlant, 1);
+            System.out.println("Kamu menananm " + seedToPlant.getName() + ".");
         }
         return success;
     }
@@ -318,18 +325,19 @@ public class Player {
      * Biaya waktu (5 menit) ditangani oleh Controller.
      *
      * @param targetTile Objek Tile yang akan disiram.
+     * @param currentWeather Objek Weather untuk mendapatkan weather saat ini.
      * @return true jika penyiraman berhasil, false jika gagal.
      */
-    public boolean water(Tile targetTile) {
+    public boolean water(Tile targetTile, Weather currnetWeather) {
         if (!inventory.hasTool("WateringCan")) {
             System.out.println("Kamu butuh penyiram tanaman (WateringCan)!");
             return false;
         }
-        if (targetTile == null || !targetTile.canBeWatered()) {
+        if (targetTile == null || !targetTile.needsWatering(currnetWeather)) {
             System.out.println("Tidak perlu menyiram petak ini.");
             return false;
         }
-        targetTile.water();
+        targetTile.markAsWatered();
         System.out.println("Kamu menyiram tanaman.");
         return true;
     }
@@ -349,7 +357,7 @@ public class Player {
             System.out.println("Tidak ada yang bisa dipanen di sini.");
             return false;
         }
-        List<Item> harvestedItems = targetTile.harvest(itemRegistry);
+        List<Item> harvestedItems = targetTile.processHarvest(itemRegistry);
         if (harvestedItems != null && !harvestedItems.isEmpty()) {
             for (Item crop : harvestedItems) {
                 inventory.addItem(crop, 1);

@@ -65,8 +65,8 @@ package model <<Rectangle>> {
     + getTile(x: int, y: int): Tile
     + isOccupied(x: int, y: int): boolean
     + isWithinBounds(x: int, y: int): boolean
-    // + placeObject(obj: DeployedObject, x: int, y: int): void
-    // + getObjectAt(x: int, y: int): DeployedObject
+    + placeObject(obj: DeployedObject, x: int, y: int): boolean
+    + getObjectAt(x: int, y: int): DeployedObject
   }
   ' TimeListener interface removed for simplicity, logic handled centrally
 
@@ -104,10 +104,12 @@ package model <<Rectangle>> {
     # name: String
     # width: int
     # height: int
-    # mapSymbol: char
+    ' # mapSymbol: char ' tidak relevan karena kita pake GUI
     + getName(): String
     + getSize(): Dimension
-    + getSymbol(): char
+    + getWidth(): int ' Ditambahkan getter
+    + getHeight(): int ' Ditambahkan getter
+    ' + getSymbol(): char ' Mungkin tidak relevan
   }
 
   '=================== CORE DOMAIN ==================
@@ -213,33 +215,55 @@ package model <<Rectangle>> {
   class ShippingBin {
     - itemsToSell: Map<Item, Integer>
     - {static} final int MAX_UNIQUE_SLOTS = 16
-    - lastSellDay: int
+    - lastSellDay: int ' Atribut baru untuk mencegah penjualan >1x sehari
     + addItem(item: Item, qty: int): boolean
-    + canSell(currentDay: int): boolean
-    + processSales(stats: EndGameStatistics, prices: PriceList): int ' Needs PriceList now
+    + canSell(currentDay: int): boolean ' Metode baru
+    + processSales(stats: EndGameStatistics, prices: PriceList): int
     + clearBin(): void
     + getItems(): Map<Item, Integer>
   }
   class Tile {
+    ' --- Atribut (Beberapa sesuai diagram, beberapa penyesuaian) ---
     - type: TileType
     - isWatered: boolean
-    - daysSinceWatered: int ' Renamed for clarity
+    - daysSinceLastWatered: int ' Diagram: daysSinceWatered / waterCounter
     - plantedSeed: Seed
     - growthDays: int
-    - associatedObject: DeployedObject
+    ' - associatedObject: DeployedObject ' (Ada di diagram, dikomen di kode karena DeployedObject belum ada)
+    - {static} final int WATERING_INTERVAL_HOT_WEATHER = 2 ' Atribut baru untuk logika
+
+    ' --- Konstruktor ---
+    + Tile(initialType: TileType)
+
+    ' --- Getters (Sesuai Diagram atau Implisit) ---
     + getType(): TileType
-    + setType(t: TileType): void
-    + water(): void
     + isWatered(): boolean
-    + plant(s: Seed): void
     + getPlantedSeed(): Seed
-    + incrementGrowth(): boolean ' Returns true if harvestable
     + getGrowthDays(): int
-    + associateObject(o: DeployedObject): void
-    + getAssociatedObject(): DeployedObject
-    + resetWaterCounter(): void
-    + incrementDaysSinceWatered(): void
-    + needsWatering(weather: Weather): boolean
+    ' + getAssociatedObject(): DeployedObject ' (Tergantung associatedObject)
+
+    ' --- Setters & Metode Perubahan State Internal (Dipanggil oleh Player/Logic) ---
+    + setType(newType: TileType): void ' Sesuai diagram
+    + markAsWatered(): void ' Perubahan dari water():void di diagram, lebih spesifik perannya
+    + setPlantedSeed(seed: Seed, currentSeason: Season): boolean ' Perubahan dari plant(s:Seed):void, tambah param & return
+    + processHarvest(itemRegistry: Map<String,Item>): List<Item> ' Metode baru untuk logika panen internal
+
+    ' --- Metode Pengecekan Kondisi (Dipanggil oleh Player/Logic) ---
+    + canBeTilled(): boolean ' Metode baru (sebelumnya mungkin implisit)
+    + needsWatering(weather: Weather): boolean ' Sesuai diagram
+    + isHarvestable(): boolean ' Sesuai diagram (sebelumnya return dari incrementGrowth)
+    + canBeRecovered(): boolean ' Metode baru (sebelumnya mungkin implisit)
+
+    ' --- Logika Update Harian (Mengintegrasikan beberapa metode dari diagram) ---
+    + updateDaily(weather: Weather, currentSeason: Season): void
+    '   Menggantikan/mengintegrasikan:
+    '     - incrementGrowth(): boolean (logika pertumbuhan ada di sini)
+    '     - resetWaterCounter(): void (logika reset isWatered ada di sini)
+    '     - incrementDaysSinceWatered(): void (logika penambahan daysSinceLastWatered ada di sini)
+
+    ' --- Metode Terkait DeployedObject (Sesuai diagram, dikomen di kode) ---
+    ' + associateObject(o: DeployedObject): void
+    ' + removeAssociatedObject(): void
   }
   class DeployedObjectPlacement { 
     - deployedObject: DeployedObject
@@ -252,22 +276,49 @@ package model <<Rectangle>> {
 
   '================ TIME =================
   class GameTime {
-    - hour: int
+  ' --- Konstanta ---
+    + {static} final int MINUTES_IN_HOUR = 60
+    + {static} final int HOURS_IN_DAY = 24
+    + {static} final int DAYS_IN_SEASON = 10 ' Penting untuk EndGameStats & logika musim
+    + {static} final int START_HOUR = 6
+    + {static} final int DAY_START_MINUTE = 0
+    + {static} final int NIGHT_START_HOUR = 18
+    + {static} final int PASS_OUT_HOUR = 2
+
+    ' --- Atribut State Waktu ---
     - minute: int
-    - day: int ' Added back
-    - season: Season ' Added back
-    - weather: Weather ' Added back
-    - {static} final int DAYS_IN_SEASON = 10
-    + advance(minutes: int): boolean ' Returns true if day changed
+    - hour: int
+    - dayOfMonth: int ' Menggantikan 'day' untuk kejelasan (hari dalam musim)
+    - currentSeason: Season ' Menggantikan 'season'
+    - currentWeather: Weather ' Menggantikan 'weather'
+    - totalDaysPlayed: int ' Atribut baru untuk statistik
+
+    ' - randomGenerator: Random ' Detail implementasi, tidak perlu di diagram
+
+    ' --- Konstruktor ---
+    + GameTime()
+
+    ' --- Getters ---
+    + getMinute(): int
+    + getHour(): int
+    + getCurrentDay(): int ' Nama lebih jelas dari 'getDayOfMonth'
+    + getCurrentSeason(): Season
+    + getCurrentWeather(): Weather
+    + getTotalDaysPlayed(): int ' Getter baru
+
+    ' --- Metode Informasi Waktu ---
     + getTimeString(): String
     + isDayTime(): boolean
     + isNightTime(): boolean
-    + getCurrentDay(): int
-    + getCurrentSeason(): Season
-    + getCurrentWeather(): Weather
-    + setWeather(w: Weather): void
-    + nextDay(): void ' Increments day, handles season/year change
     + isPastBedtime(): boolean
+
+    ' --- Setters (Terbatas) ---
+    + setWeather(weather: Weather): void ' Untuk event atau testing
+
+    ' --- Metode Utama Logika Waktu ---
+    + advance(minutesToAdd: int): boolean ' Return boolean dipertahankan sesuai diagram awal
+    '   (Controller akan menentukan apakah memanggil nextDay() berdasarkan state lain)
+    + nextDay(): void ' Menangani transisi hari, musim, cuaca baru
   }
 
   '===================== MAPS =======================
@@ -275,34 +326,56 @@ package model <<Rectangle>> {
     - {static} final int WIDTH = 32
     - {static} final int HEIGHT = 32
     - tiles: Tile[][]
-    - deployedObjects: Map<Point, DeployedObject> ' Using Map for easier lookup
+    - deployedObjectsMap: Map<Point, DeployedObject> ' Using Map for easier lookup
+    - placeInitialDeployedObjects(): void
+    - isAreaAvailable(startX: int, startY: int, width: int, height: int): boolean
     + getName(): String
     + getSize(): Dimension
     + getTile(x: int, y: int): Tile
     + isOccupied(x: int, y: int): boolean
+    + isWithinBounds(x: int, y: int): boolean
     + placeObject(obj: DeployedObject, x: int, y: int): void
     + getObjectAt(x: int, y: int): DeployedObject
+    + updateDailyTiles(weather: Weather, currentSeason: Season): void ' Parameter ditambah
+    ' + removeObject(objToRemove: DeployedObject): boolean ' Metode baru (opsional)
   }
   class WorldMap implements MapArea { 
     - name: String ' e.g., "Forest", "Mountain", "Ocean"
-    - tiles: Tile[][] ' Simplified representation, maybe not needed if abstract
+    - subLocations: Map<LocationType, MapArea> ' Menyimpan MapArea spesifik
+    - genericTiles: Tile[][] ' Simplified representation, maybe not needed if abstract
     + getName(): String
     + getSize(): Dimension
     + getTile(x: int, y: int): Tile ' Might return null or generic tile
     + isOccupied(x: int, y: int): boolean
+    + isWithinBounds(x: int, y: int): boolean
     + placeObject(obj: DeployedObject, x: int, y: int): void
     + getObjectAt(x: int, y: int): DeployedObject
+    + getSpecificArea(type: LocationType): MapArea ' new
   }
   class Store implements MapArea {
-    - name: String = "Store"
-    - availableItems: List<String> 
-    + getName(): String
-    + getSize(): Dimension ' Small fixed size?
-    + getTile(x: int, y: int): Tile ' Basic floor tiles
-    + isOccupied(x: int, y: int): boolean
-    + placeObject(obj: DeployedObject, x: int, y: int): void
-    + getObjectAt(x: int, y: int): DeployedObject
-    + getAvailableItems(priceList: PriceList): List<Item> ' Get actual items with prices
+- name: String = "Toko Spakbor"
+  - tiles: Tile[][] ' Tata letak internal toko
+  - itemNamesForSale: List<String> ' Daftar NAMA item yang dijual
+  ' - internalObjects: Map<Point, DeployedObject> ' Opsional, jika ada objek di dalam toko
+  - {static} final int STORE_WIDTH
+  - {static} final int STORE_HEIGHT
+
+  + Store()
+  - initializeItemsForSale(): void ' Helper private
+
+  ' --- Metode Spesifik Store ---
+  + getAvailableItems(itemRegistry: Map<String,Item>, priceList: PriceList): List<Item>
+  + sellToPlayer(player: Player, itemToBuy: Item, quantity: int, priceList: PriceList): boolean
+
+  ' --- Implementasi MapArea ---
+  + getName(): String
+  + getSize(): Dimension
+  + getTile(x: int, y: int): Tile
+  + isWithinBounds(x: int, y: int): boolean
+  + isOccupied(x: int, y: int): boolean
+  + placeObject(obj: DeployedObject, x: int, y: int): boolean
+  ' - isAreaAvailableInternal(startX, startY, width, height): boolean ' Helper private
+  + getObjectAt(x: int, y: int): DeployedObject
   }
 
   '=================== ITEMS ==================
@@ -356,43 +429,61 @@ package model <<Rectangle>> {
   '=================== OTHER ==================
   class Recipe {
     - name: String
-    - ingredients: Map<String,Integer> ' Item name -> quantity
-    - resultItemName: String ' Name of the Food item produced
-    - fuelRequired: String ' e.g., "Firewood" or "Coal"
-    - unlockCondition: String ' e.g., "Default", "Fish10", "HarvestParsnip"
+    - ingredients: Map<String,Integer> ' Nama Item Bahan -> Kuantitas
+    - resultItemName: String           ' Nama Item Food hasil
+    - fuelRequired: String             ' Nama Item bahan bakar (null jika tidak ada)
+    - unlockCondition: String          ' String identifier kondisi unlock
+
+    + Recipe(name: String, ingredients: Map<String,Integer>, resultItemName: String, fuelRequired: String, unlockCondition: String)
+
     + getName(): String
-    + getIngredients(): Map<String,Integer>
+    + getIngredients(): Map<String,Integer> ' Returns unmodifiable map
     + getResultItemName(): String
-    + checkUnlock(stats: EndGameStatistics): boolean ' Check against stats
     + getFuelRequired(): String
+    + getUnlockConditionString(): String ' Mengembalikan string kondisi mentah
+
+    + isUnlocked(statistics: EndGameStatistics, farm: Farm): boolean ' Memeriksa kondisi unlock
   }
   class PriceList {
-    - buyPrices: Map<String,Integer>
-    - sellPrices: Map<String,Integer>
-    + getBuyPrice(itemName:String): int
-    + getSellPrice(itemName:String): int
-    + loadFromFile(path:String): void
+' --- Atribut ---
+    - buyPrices: Map<String,Integer>  ' Nama item (lowercase) -> Harga Beli
+    - sellPrices: Map<String,Integer> ' Nama item (lowercase) -> Harga Jual
+
+    ' --- Konstruktor ---
+    + PriceList()
+
+    ' --- Metode Publik Utama ---
+    + getBuyPrice(itemName: String): int
+    + getBuyPrice(item: Item): int ' Convenience overload
+    + getSellPrice(itemName: String): int
+    + getSellPrice(item: Item): int ' Convenience overload
+    + loadFromFile(filePath: String): void
+
+    ' --- Metode Helper (bisa private atau package-private) ---
+    + addPrice(itemName: String, buyPrice: int, sellPrice: int): void ' Untuk mengisi data
+    + initializeDefaultPrices(): void ' Opsional untuk testing
   }
   class EndGameStatistics {
     - totalIncome: int
     - totalExpenditure: int
-    - seasonalIncome: Map<Season, Integer> ' Added back
-    - seasonalExpenditure: Map<Season, Integer> ' Added back
+    - seasonalIncome: Map<Season, Integer>
+    - seasonalExpenditure: Map<Season, Integer>
     - totalDaysPlayed: int
     - npcFriendshipStatus: Map<String, RelationshipStatus> ' NPC Name -> Status
     - npcHeartPoints: Map<String, Integer> ' NPC Name -> Hearts
     - chatFrequency: Map<String, Integer> ' NPC Name -> Count
     - giftFrequency: Map<String, Integer> ' NPC Name -> Count
-    - visitFrequency: Map<String, Integer> ' NPC Name -> Count (Harder to track?)
+    - visitFrequency: Map<String, Integer> ' NPC Name -> Count
     - cropsHarvested: Map<String, Integer> ' Crop Name -> Count
     - fishCaught: Map<String, Map<FishRarity, Integer>> ' Fish Name -> Rarity -> Count
-    + computeAll(farm: Farm): void ' Takes Farm object to access all data
-    + recordIncome(amount: int, season: Season): void ' Methods to update stats incrementally
+
+    + computeAll(farm: Farm): void ' Takes Farm object to access all data (Mungkin tidak perlu jika update inkremental)
+    + recordIncome(amount: int, season: Season): void
     + recordExpenditure(amount: int, season: Season): void
     + incrementDay(): void
     + recordChat(npcName: String): void
     + recordGift(npcName: String): void
-    + recordVisit(npcName: String): void
+    + recordVisit(npcName: String): void ' Sulit dilacak tanpa event eksplisit
     + recordHarvest(cropName: String, quantity: int): void
     + recordFishCatch(fishName: String, fishRarity: FishRarity): void
     + updateNpcStatus(npcName: String, status: RelationshipStatus, hearts: int): void
@@ -543,11 +634,15 @@ WorldMap "1" ..|> MapArea
 Store "1" ..|> MapArea
 
 FarmMap "1" *-- "*" Tile
+FarmMap "1" o-- "*" DeployedObject : manages via map > ' Relasi ke DeployedObject
 WorldMap "1" *-- "*" Tile 
 Store "1" *-- "*" Tile
 
 ShippingBin --> EndGameStatistics : updates >
 ShippingBin --> PriceList : uses >
+
+Tile "1" o-- "0..1" DeployedObject : associatedWith > ' Tile bisa punya satu DeployedObject
+Tile "1" o-- "0..1" Seed : hasPlanted >
 
 EndGameStatistics --> Farm : computes from <
 
@@ -562,6 +657,10 @@ Item <|-- ProposalRing
 EdibleItem <|.. Fish
 EdibleItem <|.. Crop
 EdibleItem <|.. Food
+
+DeployedObject <|-- House
+DeployedObject <|-- Pond
+DeployedObject <|-- ShippingBinObject
 
 PriceList --> Item : references >
 
