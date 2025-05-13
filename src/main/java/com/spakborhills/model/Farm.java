@@ -200,7 +200,7 @@ public class Farm {
 
       // 5. Update statistik game
       if (statistics != null) {
-        statistics.incrementDay();
+        statistics.incrementDay(gameTime.getCurrentSeason());
       }
 
       // 6. (Bonus) Update Pasar jika fitur Free Market diimplementasikan

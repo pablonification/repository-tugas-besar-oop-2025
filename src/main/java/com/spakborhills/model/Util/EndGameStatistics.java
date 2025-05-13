@@ -8,8 +8,10 @@ import com.spakborhills.model.NPC.NPC;
 import com.spakborhills.model.Player; 
 
 import java.util.HashMap;
+import java.util.HashSet; // Untuk item pernah dipanen/dimiliki
 import java.util.List;
 import java.util.Map;
+import java.util.Set; // Untuk item pernah dipanen/dimiliki
 import java.util.Collections;
 
 /**
@@ -23,89 +25,92 @@ public class EndGameStatistics {
     private int totalExpenditure;
     private final Map<Season, Integer> seasonalIncome;
     private final Map<Season, Integer> seasonalExpenditure;
+    private final Map<Season, Integer> daysPlayedInSeason; // BARU: Melacak hari per musim
+
     private int totalDaysPlayed;
 
-    // Statistik NPC
     private final Map<String, RelationshipStatus> npcFriendshipStatus;
     private final Map<String, Integer> npcHeartPoints;
     private final Map<String, Integer> chatFrequency;
     private final Map<String, Integer> giftFrequency;
-    private final Map<String, Integer> visitFrequency; 
+    private final Map<String, Integer> visitFrequency; // Diaktifkan
 
-    // Statistik Item
-    private final Map<String, Integer> cropsHarvested; // Nama Crop -> Jumlah
-    // Fish Name -> (FishRarity -> Jumlah)
+    private final Map<String, Integer> cropsHarvestedCount; // Nama Crop -> Jumlah
+    private final Set<String> uniqueCropsHarvested;      // BARU: Nama Crop unik yang pernah dipanen
     private final Map<String, Map<FishRarity, Integer>> fishCaught;
+    private final Set<String> uniqueFishCaught;          // BARU: Nama Ikan unik yang pernah ditangkap
 
-    /**
-     * Konstruktor untuk EndGameStatistics.
-     * Menginisialisasi semua statistik ke nilai awal.
-     *
-     * @param initialNpcs List NPC awal untuk inisialisasi map status NPC.
-     * @param initialPlayer Player untuk mendapatkan pengeluaran awal (jika ada).
-     */
+    // BARU: Untuk melacak item kunci yang pernah dimiliki/event untuk unlock resep
+    private final Set<String> keyEventsOrItemsObtained;
+
     public EndGameStatistics(List<NPC> initialNpcs, Player initialPlayer) {
         this.totalIncome = 0;
-        this.totalExpenditure = 0; 
+        this.totalExpenditure = 0;
         this.seasonalIncome = new HashMap<>();
         this.seasonalExpenditure = new HashMap<>();
-        this.totalDaysPlayed = 0; // Atau 1 jika dihitung dari hari pertama, entar pertimbangkan lagi aja
+        this.daysPlayedInSeason = new HashMap<>(); // BARU
+        this.totalDaysPlayed = 0;
 
         this.npcFriendshipStatus = new HashMap<>();
         this.npcHeartPoints = new HashMap<>();
         this.chatFrequency = new HashMap<>();
         this.giftFrequency = new HashMap<>();
-        this.visitFrequency = new HashMap<>();
+        this.visitFrequency = new HashMap<>(); // Diaktifkan
 
-        this.cropsHarvested = new HashMap<>();
+        this.cropsHarvestedCount = new HashMap<>();
+        this.uniqueCropsHarvested = new HashSet<>(); // BARU
         this.fishCaught = new HashMap<>();
+        this.uniqueFishCaught = new HashSet<>(); // BARU
+        this.keyEventsOrItemsObtained = new HashSet<>(); // BARU
 
-        // Inisialisasi map musiman
         for (Season s : Season.values()) {
-            if (s != Season.ANY) { 
+            if (s != Season.ANY) {
                 this.seasonalIncome.put(s, 0);
                 this.seasonalExpenditure.put(s, 0);
+                this.daysPlayedInSeason.put(s, 0); // BARU
             }
         }
 
-        // Inisialisasi status awal NPC
         if (initialNpcs != null) {
             for (NPC npc : initialNpcs) {
                 this.npcFriendshipStatus.put(npc.getName(), npc.getRelationshipStatus());
                 this.npcHeartPoints.put(npc.getName(), npc.getHeartPoints());
                 this.chatFrequency.put(npc.getName(), 0);
                 this.giftFrequency.put(npc.getName(), 0);
-                this.visitFrequency.put(npc.getName(), 0);
+                this.visitFrequency.put(npc.getName(), 0); // Inisialisasi
             }
         }
-
-        // Jika ada pengeluaran awal dari Player (misal, membeli sesuatu sebelum game dimulai)
-        // if (initialPlayer != null) {
-        //     this.totalExpenditure += initialPlayer.getInitialExpenditure(); // Perlu metode di Player
+        // Pengeluaran awal bisa dicatat jika Player punya metode untuk itu
+        // if (initialPlayer != null && initialPlayer.getInitialExpenditure() > 0) {
+        //     recordExpenditure(initialPlayer.getInitialExpenditure(), Season.SPRING); // Asumsi musim awal
         // }
     }
 
+    // --- Metode Perekaman Data Inkremental ---
 
     public void recordIncome(int amount, Season season) {
-        if (amount > 0) {
+        if (amount > 0 && season != null && season != Season.ANY) {
             this.totalIncome += amount;
-            if (season != Season.ANY) {
-                this.seasonalIncome.put(season, this.seasonalIncome.getOrDefault(season, 0) + amount);
-            }
+            this.seasonalIncome.put(season, this.seasonalIncome.getOrDefault(season, 0) + amount);
         }
     }
 
     public void recordExpenditure(int amount, Season season) {
-        if (amount > 0) {
+        if (amount > 0 && season != null && season != Season.ANY) {
             this.totalExpenditure += amount;
-            if (season != Season.ANY) {
-                this.seasonalExpenditure.put(season, this.seasonalExpenditure.getOrDefault(season, 0) + amount);
-            }
+            this.seasonalExpenditure.put(season, this.seasonalExpenditure.getOrDefault(season, 0) + amount);
         }
     }
 
-    public void incrementDay() {
+    /**
+     * Dipanggil setiap hari baru dimulai.
+     * @param currentSeason Musim saat ini.
+     */
+    public void incrementDay(Season currentSeason) {
         this.totalDaysPlayed++;
+        if (currentSeason != null && currentSeason != Season.ANY) {
+            this.daysPlayedInSeason.put(currentSeason, this.daysPlayedInSeason.getOrDefault(currentSeason, 0) + 1);
+        }
     }
 
     public void recordChat(String npcName) {
@@ -120,7 +125,6 @@ public class EndGameStatistics {
         }
     }
 
-    // recordVisit bisa lebih kompleks, tergantung bagaimana "visit" ditrackj
     public void recordVisit(String npcName) {
         if (npcName != null && !npcName.isBlank()) {
             this.visitFrequency.put(npcName, this.visitFrequency.getOrDefault(npcName, 0) + 1);
@@ -129,7 +133,15 @@ public class EndGameStatistics {
 
     public void recordHarvest(String cropName, int quantity) {
         if (cropName != null && !cropName.isBlank() && quantity > 0) {
-            this.cropsHarvested.put(cropName, this.cropsHarvested.getOrDefault(cropName, 0) + quantity);
+            this.cropsHarvestedCount.put(cropName, this.cropsHarvestedCount.getOrDefault(cropName, 0) + quantity);
+            this.uniqueCropsHarvested.add(cropName); // Catat jenis crop unik yang dipanen
+            if (cropName.equalsIgnoreCase("Parsnip")) { // Contoh untuk unlock resep
+                this.keyEventsOrItemsObtained.add("HARVEST_PARSNIP");
+            }
+            if (cropName.equalsIgnoreCase("Hot Pepper")) {
+                this.keyEventsOrItemsObtained.add("OBTAINED_HOT_PEPPER");
+            }
+            // Tambahkan event lain jika perlu
         }
     }
 
@@ -138,13 +150,16 @@ public class EndGameStatistics {
             this.fishCaught.putIfAbsent(fishName, new HashMap<>());
             Map<FishRarity, Integer> rarityMap = this.fishCaught.get(fishName);
             rarityMap.put(fishRarity, rarityMap.getOrDefault(fishRarity, 0) + 1);
+            this.uniqueFishCaught.add(fishName); // Catat jenis ikan unik
+            if (fishName.equalsIgnoreCase("Pufferfish")) {
+                this.keyEventsOrItemsObtained.add("FISH_PUFFERFISH");
+            }
+            if (fishName.equalsIgnoreCase("Legend")) {
+                this.keyEventsOrItemsObtained.add("FISH_LEGEND");
+            }
         }
     }
 
-    /**
-     * Mengupdate status dan heart points NPC.
-     * Dipanggil saat ada perubahan signifikan (misal, setelah gifting, proposing, marrying).
-     */
     public void updateNpcStatus(String npcName, RelationshipStatus status, int hearts) {
         if (npcName != null && !npcName.isBlank()) {
             this.npcFriendshipStatus.put(npcName, status);
@@ -152,80 +167,51 @@ public class EndGameStatistics {
         }
     }
 
-
-    // INI BENERAN HARUS DI ADJUST DEH
     /**
-     * Menghitung rata-rata pendapatan per musim.
-     * @param season Musim yang diinginkan.
-     * @return Rata-rata pendapatan, atau 0 jika tidak ada data/hari.
+     * Mencatat event kunci atau perolehan item kunci untuk unlock resep.
+     * @param eventKey Kunci string unik untuk event/item (misal, "OBTAINED_HOT_PEPPER").
      */
-    public double getAverageSeasonalIncome(Season season) {
-        if (season == Season.ANY || totalDaysPlayed == 0) return 0; // Tidak ada rata-rata untuk ANY
-        // Perlu cara untuk mengetahui berapa banyak hari yang telah berlalu di musim tertentu
-        // Untuk simplifikasi, kita bisa bagi dengan total hari / jumlah musim yang telah lewat
-        // Atau, bagi dengan jumlah hari dalam satu musim jika game sudah melewati musim itu.
-        // Ini bisa jadi kompleks. Untuk sekarang, kita bagi dengan total hari saja (kurang akurat).
-        int income = seasonalIncome.getOrDefault(season, 0);
-        // Asumsi sederhana: bagi dengan total hari / 4 (jika semua musim sudah dilewati)
-        // Atau jika ingin lebih akurat, perlu melacak jumlah hari per musim yang telah dimainkan.
-        // Untuk sekarang, kita buat rata-rata sederhana:
-        if (totalDaysPlayed > 0) {
-            // Ini adalah rata-rata pendapatan di musim X per total hari main, bukan per hari di musim X
-            // return (double) income / totalDaysPlayed;
-            // Lebih baik: jika kita tahu jumlah hari di musim itu yang sudah lewat
-            int daysInOneSeason = GameTime.DAYS_IN_SEASON; // Asumsi ada konstanta ini di GameTime
-            int seasonsPassed = (totalDaysPlayed / daysInOneSeason);
-            if (totalDaysPlayed % daysInOneSeason > 0 && season == getCurrentSeasonFromDays(totalDaysPlayed)) {
-                seasonsPassed++; // Hitung musim saat ini jika belum selesai
-            }
-            if (seasonsPassed > 0) {
-                 // Ini masih belum sempurna, karena hanya menghitung rata-rata jika musim sudah lewat penuh
-                 // atau sedang berjalan.
-                 // Untuk statistik akhir, mungkin lebih baik hitung total pendapatan musim / jumlah hari di musim itu
-                 // jika musim itu sudah selesai.
-                 return (double) income / Math.max(1, seasonsPassed * daysInOneSeason / 4.0); // Placeholder kasar
+    public void recordKeyEventOrItem(String eventKey) {
+        if (eventKey != null && !eventKey.isBlank()) {
+            this.keyEventsOrItemsObtained.add(eventKey);
+        }
+    }
+
+    // --- Metode untuk Mengecek Kondisi (digunakan oleh Recipe.isUnlocked) ---
+    public boolean hasAchieved(String eventKey) {
+        return this.keyEventsOrItemsObtained.contains(eventKey);
+    }
+
+    public int getTotalFishCaughtCount() {
+        int total = 0;
+        for (Map<FishRarity, Integer> rarityMap : fishCaught.values()) {
+            for (int count : rarityMap.values()) {
+                total += count;
             }
         }
-        return 0;
-    }
-     // Helper untuk mendapatkan musim saat ini berdasarkan total hari (perlu disesuaikan dengan GameTime)
-    private Season getCurrentSeasonFromDays(int totalDays) {
-        int dayInYear = (totalDays -1) % (GameTime.DAYS_IN_SEASON * 4) + 1;
-        if (dayInYear <= GameTime.DAYS_IN_SEASON) return Season.SPRING;
-        if (dayInYear <= GameTime.DAYS_IN_SEASON * 2) return Season.SUMMER;
-        if (dayInYear <= GameTime.DAYS_IN_SEASON * 3) return Season.FALL;
-        return Season.WINTER;
+        return total;
     }
 
+    public boolean hasHarvestedAnyCrop() {
+        return !this.uniqueCropsHarvested.isEmpty();
+    }
+
+
+    // --- Metode untuk Menghitung Statistik Turunan & Mendapatkan Ringkasan ---
+    public double getAverageSeasonalIncome(Season season) {
+        if (season == null || season == Season.ANY) return 0;
+        int income = seasonalIncome.getOrDefault(season, 0);
+        int days = daysPlayedInSeason.getOrDefault(season, 0);
+        return (days > 0) ? (double) income / days : 0;
+    }
 
     public double getAverageSeasonalExpenditure(Season season) {
-        // Logika serupa dengan getAverageSeasonalIncome
-        if (season == Season.ANY || totalDaysPlayed == 0) return 0;
+        if (season == null || season == Season.ANY) return 0;
         int expenditure = seasonalExpenditure.getOrDefault(season, 0);
-        // Logika pembagian yang lebih akurat diperlukan di sini juga.
-        if (totalDaysPlayed > 0) {
-            return (double) expenditure / Math.max(1, totalDaysPlayed / 4.0); // Placeholder kasar
-        }
-        return 0;
+        int days = daysPlayedInSeason.getOrDefault(season, 0);
+        return (days > 0) ? (double) expenditure / days : 0;
     }
 
-    /**
-     * Metode computeAll(farm: Farm) dari diagram mungkin tidak diperlukan jika
-     * semua data dicatat secara inkremental. Jika diperlukan untuk kalkulasi akhir
-     * atau validasi, bisa ditambahkan.
-     * Untuk saat ini, kita asumsikan perekaman inkremental sudah cukup.
-     */
-    // public void computeAll(Farm farm) {
-    //     // Metode ini bisa digunakan untuk mengkalkulasi ulang semua statistik dari state Farm saat ini
-    //     // jika perekaman inkremental terlewat atau untuk validasi.
-    //     // Contoh: this.totalDaysPlayed = farm.getCurrentTime().getTotalDaysPlayed();
-    //     //         this.totalIncome = ... (perlu cara mengambil histori transaksi)
-    // }
-
-    /**
-     * Menghasilkan ringkasan statistik dalam format String untuk ditampilkan.
-     * @return String berisi ringkasan statistik.
-     */
     public String getSummary() {
         StringBuilder sb = new StringBuilder();
         sb.append("--- Statistik Akhir Permainan ---\n");
@@ -233,15 +219,16 @@ public class EndGameStatistics {
         sb.append("Total Pendapatan: ").append(totalIncome).append("g\n");
         sb.append("Total Pengeluaran: ").append(totalExpenditure).append("g\n");
 
-        sb.append("\nPendapatan per Musim:\n");
+        sb.append("\nPendapatan per Musim (Rata-rata per hari di musim itu):\n");
         for (Season s : Season.values()) {
-            if (s != Season.ANY) {
-                sb.append("  - ").append(s).append(": ").append(seasonalIncome.getOrDefault(s, 0)).append("g");
-                sb.append(" (Rata-rata: ").append(String.format("%.2f", getAverageSeasonalIncome(s))).append("g/hari di musim itu)\n"); // Perlu logika rata-rata yg benar
-                sb.append("\n");
+            if (s != Season.ANY && daysPlayedInSeason.getOrDefault(s, 0) > 0) {
+                sb.append(String.format("  - %s: %dg (Rata-rata: %.2fg)\n",
+                                        s,
+                                        seasonalIncome.getOrDefault(s, 0),
+                                        getAverageSeasonalIncome(s)));
             }
         }
-        // Tambahkan pengeluaran per musim jika perlu
+        // Tambahkan pengeluaran per musim jika perlu dengan format serupa
 
         sb.append("\nStatus NPC:\n");
         for (Map.Entry<String, RelationshipStatus> entry : npcFriendshipStatus.entrySet()) {
@@ -255,13 +242,13 @@ public class EndGameStatistics {
               .append("\n");
         }
 
-        sb.append("\nTanaman Dipanen:\n");
-        if (cropsHarvested.isEmpty()) sb.append("  Belum ada tanaman yang dipanen.\n");
-        for (Map.Entry<String, Integer> entry : cropsHarvested.entrySet()) {
+        sb.append("\nTanaman Dipanen (Total):\n");
+        if (cropsHarvestedCount.isEmpty()) sb.append("  Belum ada tanaman yang dipanen.\n");
+        for (Map.Entry<String, Integer> entry : cropsHarvestedCount.entrySet()) {
             sb.append("  - ").append(entry.getKey()).append(": ").append(entry.getValue()).append(" buah\n");
         }
 
-        sb.append("\nIkan Ditangkap:\n");
+        sb.append("\nIkan Ditangkap (Total per Jenis & Rarity):\n");
         if (fishCaught.isEmpty()) sb.append("  Belum ada ikan yang ditangkap.\n");
         for (Map.Entry<String, Map<FishRarity, Integer>> entry : fishCaught.entrySet()) {
             sb.append("  - ").append(entry.getKey()).append(":\n");
@@ -339,7 +326,7 @@ public class EndGameStatistics {
      * @return Map yang unmodifiable.
      */
     public Map<String, Integer> getCropsHarvested() {
-        return Collections.unmodifiableMap(cropsHarvested);
+        return Collections.unmodifiableMap(cropsHarvestedCount);
     }
 
     /**
