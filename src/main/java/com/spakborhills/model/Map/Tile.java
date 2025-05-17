@@ -109,7 +109,7 @@ public class Tile {
             Item cropBase = itemRegistry.get(cropName);
 
             // Reset state tile setelah panen
-            this.setType(TileType.TILLABLE);
+            this.setType(TileType.TILLED);
 
             if (cropBase instanceof Crop){
                 List<Item> harvestedItems = new ArrayList<>();
@@ -134,13 +134,14 @@ public class Tile {
     }
 
     public boolean needsWatering(Weather weather){
-        if(!canBeWateredInternalCheck() || this.isWatered || weather == Weather.RAINY){
+        if (this.isWatered || weather == Weather.RAINY) { // Already watered or raining? No need.
             return false;
         }
-        if(weather == Weather.SUNNY && this.daysSinceLastWatered >= WATERING_INTERVAL_HOT_WEATHER -1){
-            return true;
+        // If tilled or planted, and not already watered/raining, it needs water.
+        if (this.type == TileType.TILLED || this.type == TileType.PLANTED) {
+            return true; 
         }
-        return this.type == TileType.PLANTED;
+        return false; // Not a type that can be watered (e.g. DEPLOYED_OBJECT, or already handled TILLABLE if it can't be watered)
     }
 
     public boolean canBeRecovered(){
@@ -176,6 +177,13 @@ public class Tile {
                 this.daysSinceLastWatered = 0;
             } else {
                 this.daysSinceLastWatered++;
+                // Check for hot weather watering condition to "use" daysSinceLastWatered
+                if (weather == Weather.SUNNY && this.daysSinceLastWatered >= WATERING_INTERVAL_HOT_WEATHER) {
+                    // Plant is not growing anyway (due to being in this 'else' block).
+                    // This check explicitly uses daysSinceLastWatered.
+                    // A log message could be added here for debugging or future features, e.g.:
+                    // System.out.println("INFO: Plant " + this.plantedSeed.getName() + " at risk: " + this.daysSinceLastWatered + " days dry in SUNNY weather.");
+                }
             }
         } else {
             this.daysSinceLastWatered = 0;
