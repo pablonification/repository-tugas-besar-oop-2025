@@ -34,21 +34,21 @@ package com.spakborhills.model;
 
 import java.util.List;
 import java.util.Optional;
-// import java.util.Map;
+import java.util.Map;
 
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Enum.RelationshipStatus;
-// import com.spakborhills.model.Item.Item; // Item dasar
-import com.spakborhills.model.NPC.NPC; // Kelas abstrak NPC
-import com.spakborhills.model.Map.FarmMap; // Kelas FarmMap
-import com.spakborhills.model.Map.MapArea; // Interface MapArea
-import com.spakborhills.model.Map.WorldMap; // Kelas/Interface WorldMap (perlu dibuat)
-// import com.spakborhills.model.Store; // Kelas Store (perlu dibuat)
-import com.spakborhills.model.Util.GameTime; // Kelas GameTime
-import com.spakborhills.model.Util.PriceList; // Kelas PriceList (perlu dibuat)
-import com.spakborhills.model.Util.Recipe; // Kelas Recipe
-import com.spakborhills.model.Util.ShippingBin; // Kelas ShippingBin
-import com.spakborhills.model.Util.EndGameStatistics; // Kelas EndGameStatistics (perlu dibuat)
+import com.spakborhills.model.Item.Item;
+import com.spakborhills.model.NPC.NPC;
+import com.spakborhills.model.Map.FarmMap;
+import com.spakborhills.model.Map.MapArea;
+import com.spakborhills.model.Map.WorldMap;
+import com.spakborhills.model.Store;
+import com.spakborhills.model.Util.GameTime;
+import com.spakborhills.model.Util.PriceList;
+import com.spakborhills.model.Util.Recipe;
+import com.spakborhills.model.Util.ShippingBin;
+import com.spakborhills.model.Util.EndGameStatistics;
 
 
 public class Farm {
@@ -63,6 +63,7 @@ public class Farm {
     private ShippingBin shippingBin;
     private EndGameStatistics statistics;
     private PriceList priceList;
+    private Map<String, Item> itemRegistry;
     
 /**
      * Konstruktor untuk Farm. Menginisialisasi seluruh state dunia game.
@@ -80,17 +81,19 @@ public class Farm {
      * @param statistics  Objek EndGameStatistics yang sudah diinisialisasi.
      * @param priceList   Objek PriceList yang sudah diinisialisasi.
      */
-    public Farm(String name, Player player, FarmMap farmMap, WorldMap worldMap, Store store, List<NPC> npcs, List<Recipe> recipes, GameTime gameTime, ShippingBin shippingBin, EndGameStatistics statistics, PriceList priceList) {
+    public Farm(String name, Player player, FarmMap farmMap, WorldMap worldMap, Store store, List<NPC> npcs, List<Recipe> recipes, GameTime gameTime, ShippingBin shippingBin, EndGameStatistics statistics, PriceList priceList, Map<String, Item> itemRegistry) {
       this.name = name;
       this.player = player;
       this.farmMap = farmMap;
       this.worldMap = worldMap;
+      this.store = store;
       this.npcs = List.copyOf(npcs); // immutable
       this.recipes = List.copyOf(recipes); // immutable
       this.gameTime = gameTime;
       this.shippingBin = shippingBin;
       this.statistics = statistics;
       this.priceList = priceList;
+      this.itemRegistry = itemRegistry;
       System.out.println("Selamat datang di Kebun '" + name + "'!");
     }
 
@@ -138,16 +141,17 @@ public class Farm {
       return priceList;
     }
     
-
+    public Map<String, Item> getItemRegistry() {
+        return itemRegistry;
+    }
 
     /**
      * Mencari NPC berdasarkan nama (tidak case-sensitive).
      * @param npcName Nama NPC yang dicari.
      * @return Optional berisi NPC jika ditemukan, Optional kosong jika tidak.
      */
-    public Optional<NPC> findNPC(String npcName) { // tanya kenapa Optional<NPC>
+    public Optional<NPC> findNPC(String npcName) {
       if(npcName == null || npcName.isBlank()) {
-        // throw new IllegalArgumentException("Nama NPC tidak boleh kosong");
         return Optional.empty();
       }
       return npcs.stream()
@@ -162,7 +166,6 @@ public class Farm {
      */
     public Optional<Recipe> findRecipe(String recipeName) {
       if(recipeName == null || recipeName.isBlank()) {
-        // throw new IllegalArgumentException("Nama Resep tidak boleh kosong");
         return Optional.empty();
       }
       return recipes.stream()
@@ -210,6 +213,8 @@ public class Farm {
         System.out.println("--- Hari baru telah dimulai ---");
     }
 
+      
+
 /**
      * Memeriksa apakah salah satu kondisi milestone End Game (Halaman 34) sudah tercapai.
      * @return true jika salah satu milestone tercapai, false jika belum.
@@ -243,22 +248,15 @@ public class Farm {
           case FARM:
               return this.farmMap;
           case STORE:
-              // return this.store;
               return this.worldMap.getSpecificArea(LocationType.STORE);
-          // Kasus untuk FOREST_RIVER, MOUNTAIN_LAKE, OCEAN, NPC_HOME, POND
-          // perlu penanganan spesifik tergantung implementasi WorldMap Anda.
-          // Mungkin WorldMap memiliki metode getSpecificArea(LocationType)
-          // atau lokasi ini direpresentasikan secara berbeda.
-          // Untuk saat ini, kita kembalikan null atau WorldMap jika relevan.
           case FOREST_RIVER:
           case MOUNTAIN_LAKE:
           case OCEAN:
-          case NPC_HOME: // Mungkin bagian dari WorldMap?
-              // return this.worldMap; // Asumsi WorldMap mencakup area ini
-              return this.worldMap.getSpecificArea(type); // Akan mengembalikan WorldMap generik jika tidak ada sub-lokasi
-          case POND: // Pond ada di dalam FarmMap, bukan MapArea terpisah
+          case NPC_HOME:
+              return this.worldMap.getSpecificArea(type);
+          case POND:
               System.out.println("Pond berada di dalam FarmMap.");
-              return this.farmMap; // Kembalikan map yang mengandungnya
+              return this.farmMap;
           default:
               System.err.println("Tipe MapArea tidak dikenal: " + type);
               return null;

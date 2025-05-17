@@ -7,6 +7,13 @@ import com.spakborhills.model.Map.*;
 import com.spakborhills.model.NPC.*;
 // import com.spakborhills.model.Store.*;
 import com.spakborhills.model.Util.*;
+import com.spakborhills.model.Util.GameTime;
+import com.spakborhills.model.Util.ShippingBin;
+import com.spakborhills.model.Store;
+import com.spakborhills.model.Util.Recipe;
+import com.spakborhills.model.Player;
+import com.spakborhills.model.Farm;
+import com.spakborhills.model.Item.Item;
 
 import java.util.ArrayList;
 import java.util.Arrays; // Untuk Arrays.asList
@@ -17,6 +24,14 @@ import java.util.Optional;
 import java.util.Set; // Untuk Set di Fish
 import java.awt.Point;
 // import java.awt.Dimension;
+
+// Swing imports for GUI
+import javax.swing.SwingUtilities;
+import com.spakborhills.view.GameFrame; // Import for GameFrame
+import com.spakborhills.model.Util.EndGameStatistics;
+import com.spakborhills.model.Util.PriceList;
+import com.spakborhills.model.Enum.Gender;
+import com.spakborhills.controller.GameController; // Ensure this import is present
 
 /**
  * Main class untuk testing Spakbor Hills.
@@ -37,8 +52,8 @@ public class Main {
     }
 
     // Helper untuk membuat TimeRange
-    private static Fish.TimeRange createTimeRange(int start, int end) {
-        return new Fish.TimeRange(start, end);
+    private static com.spakborhills.model.Item.Fish.TimeRange createTimeRange(int start, int end) {
+        return new com.spakborhills.model.Item.Fish.TimeRange(start, end);
     }
 
     // Helper untuk mencetak batas section
@@ -59,19 +74,46 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        printSectionHeader("MEMULAI COMPREHENSIVE TESTING SPAKBOR HILLS");
+        // printSectionHeader("MEMULAI COMPREHENSIVE TESTING SPAKBOR HILLS");
 
-        // === SETUP ITEM REGISTRY ===
-        printSubsectionHeader("Setup Item Registry & Komponen Dasar");
         Map<String, Item> itemRegistry = setupItemRegistry();
         if (itemRegistry == null || itemRegistry.isEmpty()) {
-            System.err.println("ERROR: Gagal setup Item Registry. Testing dihentikan.");
+            System.err.println("ERROR: Gagal setup Item Registry. GUI tidak dapat dimulai.");
             return;
         }
-        System.out.println("Item Registry berhasil dibuat dengan " + itemRegistry.size() + " item.");
+        // System.out.println("Item Registry berhasil dibuat dengan " + itemRegistry.size() + " item.");
 
-        // === SETUP GAME COMPONENTS ===
         FarmMap farmMap = new FarmMap();
+        GameTime gameTime = new GameTime();
+        ShippingBin shippingBin = new ShippingBin();
+        Store store = new Store();
+        WorldMap worldMap = new WorldMap("Spakbor Hills World", store);
+        List<NPC> npcList = setupNPCs();
+        List<Recipe> recipeList = setupRecipes();
+        PriceList priceList = setupPriceList();
+
+        Player player = new Player("Hero", Gender.MALE, "My Farm", farmMap, 5, 5, itemRegistry);
+        EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), player);
+
+        Farm farm = new Farm(
+            player.getFarmName(), player, farmMap, worldMap, store,
+            npcList, recipeList, gameTime, shippingBin, statistics, priceList,
+            itemRegistry
+        );
+
+        // Create GameController instance
+        GameController gameController = new GameController(farm);
+
+        // Launch the GUI
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new GameFrame(farm, gameController);
+            }
+        });
+
+        // Comment out the rest of the test cases
+        /*
         GameTime gameTime = new GameTime();
         ShippingBin shippingBin = new ShippingBin();
         Store store = new Store();
@@ -96,7 +138,8 @@ public class Main {
             EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), player);
             farm = new Farm(
                 player.getFarmName(), player, farmMap, worldMap, store,
-                npcList, recipeList, gameTime, shippingBin, statistics, setupPriceList()
+                npcList, recipeList, gameTime, shippingBin, statistics, setupPriceList(),
+                itemRegistry
             );
             System.out.println("Objek Farm berhasil dibuat.");
         } catch (Exception e) {
@@ -141,6 +184,7 @@ public class Main {
         testEndGameConditions(player, farm);
 
         printSectionHeader("COMPREHENSIVE TESTING SELESAI");
+        */
     }
 
     /**

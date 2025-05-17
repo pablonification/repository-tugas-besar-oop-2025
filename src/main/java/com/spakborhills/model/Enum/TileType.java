@@ -10,9 +10,12 @@
 package com.spakborhills.model.Enum;
 
 public enum TileType {
+    GRASS,
     TILLABLE,
     TILLED,
     PLANTED,
-    WATERED,
+    OBSTACLE,
+    WATER,
+    ENTRY_POINT,
     DEPLOYED_OBJECT 
 }
