@@ -44,11 +44,22 @@ public class Inventory {
      */
     public void addItem(Item item, int quantity){
       if(item == null || quantity <= 0){
-        // throw new IllegalArgumentException("Item atau kuantitas tidak valid");
         return;
       }
-      this.items.put(item, items.getOrDefault(item, 0) + quantity);
-      // System.out.println("Berhasil menambahkan " + quantity + " " + item.getName() + " ke inventory.");
+      long currentQuantity = items.getOrDefault(item, 0); // Get as int, then cast for sum
+      long newQuantityLong = currentQuantity + quantity;
+      
+      int finalQuantity;
+      if (newQuantityLong > Integer.MAX_VALUE) {
+        finalQuantity = Integer.MAX_VALUE;
+      } else if (newQuantityLong < 0 && quantity > 0 && currentQuantity >=0 ) { // Check for overflow to negative specifically
+        finalQuantity = Integer.MAX_VALUE; 
+      } else if (newQuantityLong < 0) { // If it's still negative (e.g. current was already negative due to bad data, or quantity was huge negative)
+        finalQuantity = 0; // Cap at 0 if it becomes negative by other means (should ideally not happen)
+      }else {
+        finalQuantity = (int)newQuantityLong;
+      }
+      this.items.put(item, finalQuantity);
     }
 
 /**

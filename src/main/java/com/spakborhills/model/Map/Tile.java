@@ -2,139 +2,225 @@ package com.spakborhills.model.Map;
 
 import com.spakborhills.model.Item.Seed;
 import com.spakborhills.model.Item.Item;
-import com.spakborhills.model.Item.Crop; // Import Crop
+import com.spakborhills.model.Item.Crop;
 import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
+import com.spakborhills.model.Enum.Season;
+import com.spakborhills.model.Object.DeployedObject;
+
 import java.util.Map;
 import java.util.List;
-import java.util.ArrayList; // Import ArrayList
+import java.util.ArrayList;
 import java.util.Collections;
 
 public class Tile {
     private TileType type;
     private boolean isWatered;
+    private int daysSinceLastWatered;
     private Seed plantedSeed;
-    private int growthDays; // Tambahkan untuk isHarvestable yang lebih baik
+    private int growthDays;
+    private DeployedObject associatedObject;
+    private static final int WATERING_INTERVAL_HOT_WEATHER = 2;
 
-    public Tile(TileType initialType) {
-        this.type = initialType;
+    public Tile(TileType type) {
+        this.type = type;
         this.isWatered = false;
+        this.daysSinceLastWatered = 0;
         this.plantedSeed = null;
-        this.growthDays = 0; // Inisialisasi
+        this.growthDays = 0;
+        this.associatedObject = null;
     }
 
-    public TileType getType() { return type; }
-    public void setType(TileType t) { this.type = t; }
-    public Seed getPlantedSeed() { return plantedSeed; }
-    public boolean isWatered() { return this.isWatered; }
-    public int getGrowthDays() { return growthDays; } // Getter untuk growthDays
+    // Getters
+    public TileType getType(){
+        return type;
+    }
 
-    // --- Metode Aksi (Diperbaiki) ---
-    public void till() {
-        if (type == TileType.TILLABLE) {
-            this.type = TileType.TILLED;
-            System.out.println("Tile dicangkul."); // Pesan lebih simpel
-        } else {
-            // Tidak perlu pesan error di sini, Player.till sudah cek canBeTilled
+    public boolean isWatered(){
+        return isWatered;
+    }
+    
+    public Seed getPlantedSeed(){
+        return plantedSeed;
+    }
+
+    public int getGrowthDays(){
+        return growthDays;
+    }
+    
+    public DeployedObject getAssociatedObject(){
+        return associatedObject;
+    }
+
+    // Setters
+    public void setType(TileType newType){
+        this.type = newType;
+        // Jika tipe berubah, reset state lain
+        if (newType == TileType.TILLABLE || newType == TileType.TILLED){
+            isWatered = false;
+            daysSinceLastWatered = 0;
+            plantedSeed = null;
+            growthDays = 0;
         }
     }
 
-    public void water() {
-        // Cek kondisi di sini atau biarkan Player.water yang cek canBeWatered()
-        if (canBeWatered()) { // Cek kondisi valid
-             this.isWatered = true; // <-- PERBAIKAN: Ubah state
-             System.out.println("Tile disiram.");
-        } else {
-            // Tidak perlu pesan error jika Player sudah cek
+    public void markAsWatered(){
+        if (canBeWateredInternalCheck()){
+            this.isWatered = true;
+            this.daysSinceLastWatered = 0;
         }
     }
 
-    public boolean plant(Seed seed) {
-        if (type == TileType.TILLED && this.plantedSeed == null) {
-            this.plantedSeed = seed;
-            this.type = TileType.PLANTED;
-            this.growthDays = 0; // Reset growth days saat tanam
-            this.isWatered = false; // Perlu disiram setelah tanam
-            // System.out.println("Stub: Menanam " + seed.getName()); // Pesan sudah ada di Player.plant
+    /**
+     * Menanam benih di tile ini. Dipanggil oleh Player.plant().
+     * Diagram memiliki plant(s: Seed): void, ini adalah implementasi internalnya.
+     * @param seed Benih yang akan ditanam.
+     * @param currentSeason Musim saat ini untuk validasi.
+     * @return true jika berhasil menanam, false jika gagal.
+     */
+    public boolean setPlantedSeed(Seed seed, Season currentSeason){
+        if (this.type == TileType.TILLED && this.plantedSeed == null && seed != null){
+            if(seed.getTargetSeason() != Season.ANY && seed.getTargetSeason() != currentSeason){
+                return false;
+            }
+            plantedSeed = seed;
+            growthDays = 0;
+            type = TileType.PLANTED;
+            isWatered = false;
+            daysSinceLastWatered = 0;
             return true;
         }
-        return false; // Gagal jika tidak tilled atau sudah ada tanaman
+        return false;
     }
 
-    // Perlu itemRegistry untuk membuat objek Crop
-    public List<Item> harvest(Map<String, Item> itemRegistry) {
-        if (isHarvestable()) {
-            System.out.println("Memanen tanaman...");
-            String cropName = this.plantedSeed.getCropYieldName();
-            int quantity = this.plantedSeed.getQuantityPerHarvest();
-            Item cropBase = itemRegistry.get(cropName); // Ambil contoh Crop dari registry
+    public boolean canBeWateredInternalCheck(){
+        return this.type == TileType.TILLED || this.type == TileType.PLANTED;
+    }
+    
+    /**
+     * Memproses panen dari tile ini. Dipanggil oleh Player.harvest().
+     * @param itemRegistry Registry item untuk membuat objek Crop.
+     * @return List berisi Item hasil panen, atau null jika tidak ada yang bisa dipanen.
+     */
+    public List<Item> processHarvest(Map<String, Item> itemRegistry){
+        if (isHarvestable()){
+            String cropName = plantedSeed.getCropYieldName();
+            int quantity = plantedSeed.getQuantityPerHarvest();
+            Item cropBase = itemRegistry.get(cropName);
 
-            // Reset tile state
-            Seed harvestedSeedInfo = this.plantedSeed; // Simpan info seed sebelum di-reset
-            this.type = TileType.TILLED;
-            this.plantedSeed = null;
-            this.isWatered = false;
-            this.growthDays = 0;
+            // Reset state tile setelah panen
+            this.setType(TileType.TILLED);
 
-            if (cropBase instanceof Crop) {
+            if (cropBase instanceof Crop){
                 List<Item> harvestedItems = new ArrayList<>();
-                for (int i = 0; i < quantity; i++) {
-                    // Idealnya, buat instance baru atau kloning, tapi untuk stub bisa pakai yg sama
-                    harvestedItems.add(cropBase);
+                for (int i = 0; i < quantity; i++){
+                    harvestedItems.add(new Crop(cropBase.getName(), cropBase.getBuyPrice(), cropBase.getSellPrice()));
                 }
                 return harvestedItems;
             } else {
-                 System.err.println("PERINGATAN: Crop '" + cropName + "' tidak ditemukan di registry atau bukan tipe Crop.");
-                 return Collections.emptyList(); // Kembalikan list kosong jika crop tidak ada
+                System.err.println("PERINGATAN!\n (Tile.processHarvest): Crop '" + cropName + "' tidak ditemukan/valid di registry.");
+                return Collections.emptyList();
             }
         }
-        return null; // Kembalikan null jika tidak bisa dipanen
+        return null;
     }
 
-    public void recover() {
-        if (type == TileType.TILLED || type == TileType.PLANTED) {
-            this.type = TileType.TILLABLE;
-            this.plantedSeed = null;
-            this.isWatered = false;
-            this.growthDays = 0;
-            System.out.println("Tile dipulihkan.");
-        }
+    public boolean canBeTilled(){
+        return this.type  == TileType.TILLABLE && this.plantedSeed == null;
     }
 
-    // --- Metode Pengecekan (Diperbaiki) ---
-    public boolean canBeTilled() { return this.type == TileType.TILLABLE; }
-    public boolean canBeWatered() {
-        // Bisa disiram jika Tilled atau Planted DAN belum disiram
-        return (this.type == TileType.TILLED || this.type == TileType.PLANTED) && !this.isWatered;
-    }
-    public boolean isHarvestable() {
-        // Logika panen sebenarnya: jika ada tanaman DAN growthDays >= daysToHarvest
+    public boolean isHarvestable(){
         return this.type == TileType.PLANTED && this.plantedSeed != null && this.growthDays >= this.plantedSeed.getDaysToHarvest();
-        // Untuk stub awal, bisa: return this.type == TileType.PLANTED && this.plantedSeed != null;
     }
-    public boolean canBeRecovered() { return this.type == TileType.TILLED || this.type == TileType.PLANTED; }
 
-    // Metode untuk update harian (stub dengan logika pertumbuhan minimal)
-    public void updateDaily(Weather weather) {
-        boolean needsWaterToday = !this.isWatered && weather == Weather.SUNNY;
+    public boolean needsWatering(Weather weather){
+        if (this.isWatered || weather == Weather.RAINY) { // Already watered or raining? No need.
+            return false;
+        }
+        // If tilled or planted, and not already watered/raining, it needs water.
+        if (this.type == TileType.TILLED || this.type == TileType.PLANTED) {
+            return true; 
+        }
+        return false; // Not a type that can be watered (e.g. DEPLOYED_OBJECT, or already handled TILLABLE if it can't be watered)
+    }
 
-        if (this.type == TileType.PLANTED && this.plantedSeed != null) {
-            // Hanya tumbuh jika disiram atau hujan
-            if (this.isWatered || weather == Weather.RAINY) {
-                this.growthDays++;
-                // System.out.println("Tanaman " + plantedSeed.getName() + " tumbuh hari ke-" + growthDays);
-            } else if (needsWaterToday) {
-                // Tanaman tidak tumbuh jika butuh air dan tidak disiram/hujan
-                 System.out.println("Tanaman " + plantedSeed.getName() + " butuh air!");
+    public boolean canBeRecovered(){
+        return this.type == TileType.TILLED || this.type == TileType.PLANTED;
+    }
+
+    /**
+     * Mengupdate kondisi tile di akhir hari (pertumbuhan, status air).
+     * Diagram memiliki incrementGrowth, resetWaterCounter, incrementDaysSinceWatered.
+     * Metode ini mengintegrasikan logika tersebut.
+     * @param weather Cuaca hari ini.
+     * @param currentSeason Musim saat ini.
+     */
+    public void updateDaily(Weather weather, Season currentSeason){
+        // Siram otomatis jika hujan
+        if(weather == Weather.RAINY && canBeWateredInternalCheck()){
+            isWatered = true;
+            daysSinceLastWatered = 0;
+        }
+
+        // Update pertumbuhan tanaman
+        if(this.type == TileType.PLANTED && this.plantedSeed != null){
+            if(this.plantedSeed.getTargetSeason() != Season.ANY && this.plantedSeed.getTargetSeason() != currentSeason){
+                System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena perubahan musim.");
+                this.setType(TileType.TILLABLE);
+                return;
             }
-        }
 
-        // Reset status siram untuk hari berikutnya (jika tidak hujan)
-        if (weather != Weather.RAINY) {
-            this.isWatered = false;
-        } else if (this.type == TileType.TILLED || this.type == TileType.PLANTED) {
-            // Otomatis tersiram jika hujan
-            this.isWatered = true;
+            if(this.isWatered){
+                if(!isHarvestable()){
+                    this.growthDays++;
+                }
+                this.daysSinceLastWatered = 0;
+            } else {
+                this.daysSinceLastWatered++;
+                // Check for hot weather watering condition to "use" daysSinceLastWatered
+                if (weather == Weather.SUNNY && this.daysSinceLastWatered >= WATERING_INTERVAL_HOT_WEATHER) {
+                    // Plant is not growing anyway (due to being in this 'else' block).
+                    // This check explicitly uses daysSinceLastWatered.
+                    // A log message could be added here for debugging or future features, e.g.:
+                    // System.out.println("INFO: Plant " + this.plantedSeed.getName() + " at risk: " + this.daysSinceLastWatered + " days dry in SUNNY weather.");
+                }
+            }
+        } else {
+            this.daysSinceLastWatered = 0;
+        }
+        this.isWatered = false;
+    }
+    
+    /**
+     * Mengasosiasikan DeployedObject dengan tile ini.
+     * Mengubah tipe tile menjadi DEPLOYED_OBJECT.
+     * @param obj Objek yang akan ditempatkan.
+     * @return true jika berhasil ditempatkan, false jika tile sudah ditempati atau tidak valid.
+     */
+    public boolean associateObject(DeployedObject obj){
+        if(this.type == TileType.DEPLOYED_OBJECT || this.associatedObject != null){
+            System.err.println("Tile (" + this.hashCode() % 1000 + ") sudah ditempati oleh objek lain.");
+            return false;
+        }
+        if(this.plantedSeed != null){
+            System.err.println("Tidak bisa menempatkan objek di atas tanaman!");
+        }
+        this.associatedObject = obj;
+        this.setType(TileType.DEPLOYED_OBJECT);
+        System.out.println("Objek '" + obj.getName() + "' ditempatkan di Tile (" + this.hashCode() % 1000 + ").");
+        return true;
+    }
+
+    /**
+     * Menghapus asosiasi DeployedObject dari tile ini.
+     * Mengubah tipe tile kembali menjadi TILLABLE.
+     */
+    public void removeAssociatedObject(){
+        if(this.associatedObject != null){
+            System.out.println("Objek '" + this.associatedObject.getName() + "' dihapus dari Tile (" + this.hashCode() % 1000 + ").");
+            this.associatedObject = null;
+            this.setType(TileType.TILLABLE);
         }
     }
+
 }

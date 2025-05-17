@@ -1,39 +1,145 @@
-// STUB
-package com.spakborhills.model.Util;
+package com.spakborhills.model.Util; 
 
 import com.spakborhills.model.Item.Item;
+import com.spakborhills.model.Enum.Season; 
+
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-// import com.spakborhills.model.Util.EndGameStatistics;
-// import com.spakborhills.model.Util.PriceList;
 
-
+/**
+ * Mengelola logika untuk Shipping Bin, tempat pemain menjual item.
+ * Penjualan diproses di akhir hari.
+ * Berdasarkan spesifikasi Halaman 23-24.
+ */
 public class ShippingBin {
-    private Map<Item, Integer> itemsToSell = new HashMap<>();
-    private static final int MAX_UNIQUE_SLOTS = 16; // Sesuai spek Halaman 24
 
-    // Stub: Logika sebenarnya perlu cek MAX_UNIQUE_SLOTS
+    private final Map<Item, Integer> itemsToSell;
+    private static final int MAX_UNIQUE_SLOTS = 16; // hal 23
+
+    // Untuk melacak hari terakhir penjualan dilakukan, mencegah >1x penjualan per hari (Halaman 23)
+    private int lastSellDay;
+
+    /**
+     * Konstruktor untuk ShippingBin.
+     * Menginisialisasi bin kosong dan lastSellDay (misal ke 0 atau -1 agar penjualan pertama valid).
+     */
+    public ShippingBin() {
+        this.itemsToSell = new HashMap<>();
+        this.lastSellDay = 0; // atau -1, agar biar di hari pertama (day 1) bisa dilakukan
+    }
+
+    /**
+     * Memeriksa apakah pemain dapat melakukan penjualan pada hari ini.
+     * Pemain hanya bisa melakukan penjualan sekali sehari (Halaman 23).
+     *
+     * @param currentDay Hari saat ini dalam game.
+     * @return true jika pemain bisa menjual hari ini, false jika sudah menjual.
+     */
+    public boolean canSellToday(int currentDay) {
+        return currentDay > this.lastSellDay;
+    }
+
+    /**
+     * Menambahkan item ke dalam bin untuk dijual.
+     * Memeriksa batasan jumlah slot item unik.
+     *
+     * @param item     Objek Item yang akan ditambahkan.
+     * @param quantity Jumlah item yang akan ditambahkan (harus > 0).
+     * @return true jika item berhasil ditambahkan, false jika gagal (misal, bin penuh untuk item unik baru).
+     */
     public boolean addItem(Item item, int quantity) {
-        if (itemsToSell.size() >= MAX_UNIQUE_SLOTS && !itemsToSell.containsKey(item)) {
-             System.out.println("Stub: Shipping Bin penuh untuk item unik baru.");
-             return false;
+        if (item == null || quantity <= 0) {
+            System.err.println("ERROR: Tidak bisa menambahkan item null atau kuantitas tidak valid ke Shipping Bin.");
+            return false;
         }
+
+        // Cek apakah item sudah ada di bin atau apakah masih ada slot
+        if (!itemsToSell.containsKey(item) && itemsToSell.size() >= MAX_UNIQUE_SLOTS) {
+            System.out.println("Shipping Bin sudah penuh untuk jenis item baru (maks " + MAX_UNIQUE_SLOTS + " jenis item unik).");
+            return false;
+        }
+
         itemsToSell.put(item, itemsToSell.getOrDefault(item, 0) + quantity);
-        System.out.println("Stub: Menambahkan " + quantity + " " + item.getName() + " ke Shipping Bin.");
+        // System.out.println(quantity + " " + item.getName() + " ditambahkan ke Shipping Bin."); // Feedback bisa di Player/Controller
         return true;
     }
 
-    // Stub: Logika sebenarnya akan hitung harga pakai PriceList & update stats
-    public int processSales(EndGameStatistics stats, PriceList priceList) {
-        System.out.println("Stub: Memproses penjualan Shipping Bin.");
-        int totalIncome = 0;
-        // Iterasi itemsToSell, panggil priceList.getSellPrice(), tambahkan ke totalIncome
-        // Panggil stats.recordIncome(...)
-        return totalIncome; // Stub: Kembalikan 0
+    /**
+     * Memproses semua item di Shipping Bin pada akhir hari (saat Player tidur).
+     * Menghitung total pendapatan, mengupdate statistik, dan mengosongkan bin.
+     *
+     * @param statistics Objek EndGameStatistics untuk mencatat pendapatan.
+     * @param priceList  Objek PriceList untuk mendapatkan harga jual item.
+     * @param currentDay Hari saat ini, untuk menandai hari penjualan.
+     * @param currentSeason Musim saat ini, untuk statistik pendapatan musiman.
+     * @return Total pendapatan dari penjualan.
+     */
+    public int processSales(EndGameStatistics statistics, PriceList priceList, int currentDay, Season currentSeason) {
+        if (itemsToSell.isEmpty()) {
+            return 0;
+        }
+
+        int totalIncomeToday = 0;
+        System.out.println("Memproses penjualan dari Shipping Bin...");
+
+        for (Map.Entry<Item, Integer> entry : itemsToSell.entrySet()) {
+            Item item = entry.getKey();
+            int quantity = entry.getValue();
+            int sellPricePerUnit = priceList.getSellPrice(item); 
+
+            if (sellPricePerUnit < 0) { 
+                System.err.println("ERROR: Item '" + item.getName() + "' tidak memiliki harga jual valid atau tidak bisa dijual.");
+                continue;
+            }
+
+            int itemIncome = sellPricePerUnit * quantity;
+            totalIncomeToday += itemIncome;
+
+            System.out.println("  - Menjual " + quantity + " " + item.getName() + " seharga " + itemIncome + "g (" + sellPricePerUnit + "g/unit)");
+
+            // Catat ke statistik (jika perlu detail per item)
+            // statistics.recordItemSold(item.getName(), quantity, itemIncome, currentSeason);
+        }
+
+        if (totalIncomeToday > 0 && statistics != null) {
+            statistics.recordIncome(totalIncomeToday, currentSeason); // Catat total pendapatan harian
+        }
+
+        this.lastSellDay = currentDay; 
+        // clearBin(); // Pengosongan bin dilakukan setelah pemanggilan ini di Farm.nextDay()
+        return totalIncomeToday;
     }
 
+    /**
+     * Mengosongkan semua item dari Shipping Bin.
+     * Dipanggil setelah penjualan diproses di akhir hari.
+     */
     public void clearBin() {
-        itemsToSell.clear();
-        System.out.println("Stub: Shipping Bin dikosongkan.");
+        this.itemsToSell.clear();
+    }
+
+    /**
+     * Mendapatkan representasi Map dari item yang saat ini ada di Shipping Bin.
+     * Mengembalikan view yang tidak bisa dimodifikasi.
+     *
+     * @return Map<Item, Integer> yang unmodifiable berisi item dan kuantitasnya.
+     */
+    public Map<Item, Integer> getItems() {
+        return Collections.unmodifiableMap(this.itemsToSell);
+    }
+
+    // Metode toString untuk debugging (opsional)
+    @Override
+    public String toString() {
+        if (itemsToSell.isEmpty()) {
+            return "Shipping Bin Kosong.";
+        }
+        StringBuilder sb = new StringBuilder("Isi Shipping Bin (Untuk Dijual):\n");
+        for (Map.Entry<Item, Integer> entry : itemsToSell.entrySet()) {
+            sb.append("- ").append(entry.getKey().getName())
+              .append(" x ").append(entry.getValue()).append("\n");
+        }
+        return sb.toString();
     }
 }

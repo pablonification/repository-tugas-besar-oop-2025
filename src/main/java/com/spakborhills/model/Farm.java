@@ -175,7 +175,7 @@ public class Farm {
 
       // Proses penjualan ShippingBin
       // Asumsi processSales mengembalikan total pendapatan dan mengupdate statistik internal
-      int income = shippingBin.processSales(this.statistics, this.priceList);
+      int income = shippingBin.processSales(this.statistics, this.priceList, this.gameTime.getCurrentDay(), this.gameTime.getCurrentSeason());
       player.addGold(income);
       shippingBin.clearBin(); // Reset ShippingBin untuk hari berikutnya
       if(income > 0) {
@@ -191,17 +191,19 @@ public class Farm {
 
       // Update pertumbuhan tanaman
       if(farmMap != null) {
-        farmMap.updateDailyTiles(gameTime.getCurrentWeather());
+        farmMap.updateDailyTiles(gameTime.getCurrentWeather(), gameTime.getCurrentSeason());
         System.out.println("Tanaman di kebun berhasil tumbuh...");
       }
 
       // 4. Reset Status Harian Lainnya (jika ada)
         // Contoh: reset batas bicara/hadiah NPC per hari (logika ini mungkin ada di Controller/NPC)
 
-      // Update statistik game
-      statistics.incrementDay();
+      // 5. Update statistik game
+      if (statistics != null) {
+        statistics.incrementDay(gameTime.getCurrentSeason());
+      }
 
-// 6. (Bonus) Update Pasar jika fitur Free Market diimplementasikan
+      // 6. (Bonus) Update Pasar jika fitur Free Market diimplementasikan
         // market.updatePrices();
 
 
@@ -241,7 +243,8 @@ public class Farm {
           case FARM:
               return this.farmMap;
           case STORE:
-              return this.store;
+              // return this.store;
+              return this.worldMap.getSpecificArea(LocationType.STORE);
           // Kasus untuk FOREST_RIVER, MOUNTAIN_LAKE, OCEAN, NPC_HOME, POND
           // perlu penanganan spesifik tergantung implementasi WorldMap Anda.
           // Mungkin WorldMap memiliki metode getSpecificArea(LocationType)
@@ -251,7 +254,8 @@ public class Farm {
           case MOUNTAIN_LAKE:
           case OCEAN:
           case NPC_HOME: // Mungkin bagian dari WorldMap?
-              return this.worldMap; // Asumsi WorldMap mencakup area ini
+              // return this.worldMap; // Asumsi WorldMap mencakup area ini
+              return this.worldMap.getSpecificArea(type); // Akan mengembalikan WorldMap generik jika tidak ada sub-lokasi
           case POND: // Pond ada di dalam FarmMap, bukan MapArea terpisah
               System.out.println("Pond berada di dalam FarmMap.");
               return this.farmMap; // Kembalikan map yang mengandungnya

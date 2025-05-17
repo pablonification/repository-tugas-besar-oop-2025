@@ -1,19 +1,8 @@
-/*
- *   interface MapArea {
-    + getName(): String
-    + getSize(): Dimension
-    + getTile(x: int, y: int): Tile
-    + isOccupied(x: int, y: int): boolean
-    + placeObject(obj: DeployedObject, x: int, y: int): void
-    + getObjectAt(x: int, y: int): DeployedObject
-  }
- */
-// STUB
 package com.spakborhills.model.Map;
 
 import java.awt.Dimension;
 // import com.spakborhills.model.Map.Tile;
-// import com.spakborhills.model.Object.DeployedObject;
+import com.spakborhills.model.Object.DeployedObject;
 
 public interface MapArea {
     public String getName();
@@ -21,4 +10,6 @@ public interface MapArea {
     public Tile getTile(int x, int y);
     public boolean isOccupied(int x, int y);
     public boolean isWithinBounds(int x, int y);
+    public boolean placeObject(DeployedObject obj, int x, int y);
+    public DeployedObject getObjectAt(int x, int y);
 }
