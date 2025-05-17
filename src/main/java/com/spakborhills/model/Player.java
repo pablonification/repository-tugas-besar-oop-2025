@@ -369,6 +369,7 @@ public class Player {
                 inventory.addItem(crop, 1);
             }
             System.out.println("Kamu memanen " + harvestedItems.get(0).getName() + "!");
+            System.out.println(">>>>>>>>Debugging di inventory\n" + this.getInventory());
             return true;
         } else {
             System.out.println("Gagal memanen.");
@@ -644,45 +645,57 @@ public class Player {
     }
 
     /**
-     * Menambahkan item ke shipping bin untuk dijual.
-     * Mengasumsikan Controller menyediakan Item dan kuantitas.
-     * Biaya waktu (15 menit setelah selesai) ditangani oleh Controller.
+     * Mencoba menjual item ke Shipping Bin.
+     * Memeriksa apakah pemain memiliki item yang cukup.
+     * Tidak langsung mengubah gold pemain (itu terjadi di akhir hari).
      *
-     * @param itemToSell Item yang dimasukkan ke bin.
-     * @param quantity Jumlah yang dimasukkan ke bin.
+     * @param itemToSell  Item yang akan dijual.
+     * @param quantity    Jumlah item yang akan dijual.
      * @param shippingBin Objek ShippingBin.
-     * @return true jika item berhasil ditambahkan, false jika gagal.
+     * @param currentDay  Hari saat ini dalam game, untuk validasi canSellToday.
+     * @return true jika item berhasil ditaruh di bin, false jika gagal.
      */
-    public boolean sellItemToBin(Item itemToSell, int quantity, ShippingBin shippingBin) {
-         // Validasi input dasar
-         if (itemToSell == null || quantity <= 0 || shippingBin == null) {
-             System.out.println("Input tidak valid untuk menjual item.");
-             return false;
-         }
+    public boolean sellItemToBin(Item itemToSell, int quantity, ShippingBin shippingBin, int currentDay) {
+        if (itemToSell == null || quantity <= 0) {
+            System.err.println(this.name + " mencoba menjual item tidak valid atau kuantitas nol.");
+            return false;
+        }
+        if (shippingBin == null) {
+            System.err.println("ShippingBin tidak boleh null untuk menjual item.");
+            return false;
+        }
 
-         // 1. Periksa apakah pemain memiliki cukup item
-         if (!inventory.hasItem(itemToSell, quantity)) {
-              System.out.println("Kamu tidak punya cukup " + itemToSell.getName() + " untuk dijual.");
-             return false;
-         }
+        // Validasi apakah bisa menjual hari ini - Panggil canSellToday() tanpa argumen
+        if (!shippingBin.canSellToday()) { // Removed currentDay argument
+            System.out.println(this.name + ": Sudah melakukan penjualan via Shipping Bin hari ini. Coba lagi besok.");
+            return false;
+        }
 
-         // 2. Coba tambahkan item ke Shipping Bin
-         // Mengasumsikan metode addItem di ShippingBin mengembalikan boolean
-         // (true jika berhasil, false jika gagal, misal karena bin penuh untuk item unik itu)
-         boolean added = shippingBin.addItem(itemToSell, quantity);
+        if (!this.inventory.hasItem(itemToSell, quantity)) {
+            System.out.println(this.name + " tidak punya cukup " + itemToSell.getName() + " (" + quantity + ") untuk dijual. Hanya punya: " + this.inventory.getItemCount(itemToSell));
+            return false;
+        }
 
-         if (added) {
-             // 3. Jika berhasil ditambahkan ke bin, hapus dari inventory pemain
-             inventory.removeItem(itemToSell, quantity);
-             System.out.println("Kamu memasukkan " + quantity + " " + itemToSell.getName() + " ke Shipping Bin.");
-             // Controller akan menangani biaya waktu setelah pemain selesai sesi penjualan.
-             return true;
-         } else {
-             // Pesan error jika gagal ditambahkan (misalnya, bin penuh)
-             System.out.println("Tidak bisa menambahkan " + itemToSell.getName() + " ke Shipping Bin. Mungkin sudah penuh?");
-             return false;
-         }
-    } 
+        // Coba hapus dari inventory dulu
+        if (this.inventory.removeItem(itemToSell, quantity)) {
+            // Jika berhasil dihapus dari inventory, coba tambahkan ke bin
+            if (shippingBin.addItem(itemToSell, quantity)) {
+                System.out.println(this.name + " menaruh " + quantity + " " + itemToSell.getName() + " ke Shipping Bin.");
+                // Tidak ada pengurangan energi atau perubahan gold di sini
+                // Efek waktu 15 menit akan ditangani Controller jika relevan
+                return true;
+            } else {
+                // Gagal menambahkan ke bin (misal, bin penuh slot unik), kembalikan item ke inventory
+                this.inventory.addItem(itemToSell, quantity); // Rollback
+                System.out.println(this.name + ": Gagal menaruh item ke Shipping Bin (mungkin penuh slot unik). Item dikembalikan ke inventory.");
+                return false;
+            }
+        } else {
+            // Seharusnya tidak sampai sini jika hasItem() dan logika removeItem() benar
+            System.err.println(this.name + ": Gagal menghapus " + itemToSell.getName() + " dari inventory meskipun pengecekan awal berhasil.");
+            return false;
+        }
+    }
 
     // Anda bisa menambahkan metode helper lain di sini jika diperlukan
     // Misalnya:

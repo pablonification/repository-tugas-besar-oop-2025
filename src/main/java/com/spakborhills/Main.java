@@ -169,7 +169,7 @@ public class Main {
         testTimeAndWeather(gameTime, farm, player);
 
         // === SHOP AND ECONOMY TESTS ===
-        testShopAndEconomy(player, store, shippingBin, setupPriceList(), itemRegistry);
+        testShopAndEconomy(player, store, shippingBin, setupPriceList(), itemRegistry, gameTime);
 
         // === FISHING TESTS ===
         testFishing(player, farm, itemRegistry);
@@ -961,7 +961,7 @@ public class Main {
     /**
      * Test Shop and Economy
      */
-    private static void testShopAndEconomy(Player player, Store store, ShippingBin shippingBin, PriceList priceList, Map<String, Item> itemRegistry) {
+    private static void testShopAndEconomy(Player player, Store store, ShippingBin shippingBin, PriceList priceList, Map<String, Item> itemRegistry, GameTime gameTime) {
         printSubsectionHeader("Testing Shop and Economy");
         
         // Test buying from store
@@ -1003,8 +1003,10 @@ public class Main {
         int initialInventoryCount = player.getInventory().getItemCount(parsnip);
         
         System.out.println("Selling 5 Parsnip to bin...");
-        boolean sellResult = player.sellItemToBin(parsnip, 5, shippingBin);
-        
+        // Get current day from the gameTime instance
+        int currentDayForSale = gameTime.getCurrentDay(); // Use passed gameTime
+        boolean sellResult = player.sellItemToBin(parsnip, 5, shippingBin, currentDayForSale);
+
         printTestResult("Sell to Shipping Bin", 
             sellResult && 
             player.getInventory().getItemCount(parsnip) == initialInventoryCount - 5);

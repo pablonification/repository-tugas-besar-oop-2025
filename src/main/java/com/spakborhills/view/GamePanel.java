@@ -9,13 +9,22 @@ import com.spakborhills.model.Enum.Direction; // Import Direction
 import com.spakborhills.controller.GameController; // Import GameController
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Item.Seed;
+import com.spakborhills.model.Item.Equipment; // For filtering, not sold
+import com.spakborhills.model.Item.Crop; // Sellable
+import com.spakborhills.model.Item.Fish; // Sellable
+import com.spakborhills.model.Item.Food; // Sellable
+import com.spakborhills.model.Item.MiscItem; // Sellable
 import com.spakborhills.model.Util.PriceList; // For getting item prices in store
+import com.spakborhills.model.Object.ShippingBinObject; // For checking instance
+import com.spakborhills.model.Util.Inventory;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent; // Import KeyEvent
 import java.awt.event.KeyListener; // Import KeyListener
 import java.util.List;
+import java.util.ArrayList; // For creating list of sellable items
+import java.util.Map; // For iterating inventory
 
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
 
@@ -167,22 +176,33 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             case KeyEvent.VK_D:
                 actionTaken = gameController.requestPlayerMove(Direction.EAST);
                 break;
-            case KeyEvent.VK_E: // Action key for Tilling/Planting
-                // Try tilling first
-                boolean tilled = gameController.requestTillLandAtPlayerPosition();
-                if (tilled) {
+            case KeyEvent.VK_E: // Action key for Harvest/Till/Plant
+                boolean harvested = gameController.requestHarvestAtPlayerPosition();
+                if (harvested) {
                     actionTaken = true;
                 } else {
-                    // If tilling didn't happen (e.g., tile not tillable, or already tilled), try planting
-                    boolean planted = gameController.requestPlantSeedAtPlayerPosition();
-                    if (planted) {
+                    // If harvesting didn't happen, try tilling
+                    boolean tilled = gameController.requestTillLandAtPlayerPosition();
+                    if (tilled) {
                         actionTaken = true;
+                    } else {
+                        // If tilling didn't happen, try planting
+                        boolean planted = gameController.requestPlantSeedAtPlayerPosition();
+                        if (planted) {
+                            actionTaken = true;
+                        }
                     }
                 }
                 break;
-            case KeyEvent.VK_P: // 'P' for Open Store (Changed from 'S' to avoid conflict with move South)
+            case KeyEvent.VK_R: // 'R' for Watering
+                actionTaken = gameController.requestWaterTileAtPlayerPosition();
+                break;
+            case KeyEvent.VK_P: // 'P' for Open Store
                 openStoreDialog();
-                actionTaken = true; // Repaint to show any changes like gold
+                actionTaken = true;
+                break;
+            case KeyEvent.VK_B: // 'B' for Shipping Bin interaction
+                actionTaken = tryOpenShippingBinDialog(); // tryOpenShippingBinDialog will return true if an action occurred
                 break;
         }
 
@@ -255,6 +275,146 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             JOptionPane.showMessageDialog(this, "Invalid input. Please enter numbers.", "Input Error", JOptionPane.ERROR_MESSAGE);
         } finally {
             repaint(); // Always repaint to reflect changes (e.g. gold)
+        }
+    }
+
+    /**
+     * Attempts to open the shipping bin dialog if the player is adjacent to the bin.
+     * @return true if an interaction occurred (dialog shown, sale attempted), false otherwise.
+     */
+    private boolean tryOpenShippingBinDialog() {
+        if (farmModel == null || gameController == null) {
+            System.err.println("GamePanel: FarmModel or GameController is null in tryOpenShippingBinDialog.");
+            return false;
+        }
+        Player player = farmModel.getPlayer();
+        FarmMap farmMap = farmModel.getFarmMap();
+        if (player == null || farmMap == null) {
+            System.err.println("GamePanel: Player or FarmMap is null in tryOpenShippingBinDialog.");
+            return false;
+        }
+
+        int playerX = player.getCurrentTileX();
+        int playerY = player.getCurrentTileY();
+        boolean nearBin = false;
+
+        // Define offsets for N, S, W, E, and also NE, NW, SE, SW for more generous interaction
+        // Order: N, S, W, E (Primary cardinal directions)
+        int[][] neighbors = {
+            {0, -1}, {0, 1}, {-1, 0}, {1, 0},  // N, S, W, E
+            // Optional: Add diagonals if you want interaction from corners
+            // {-1, -1}, {1, -1}, {-1, 1}, {1, 1} // NW, NE, SW, SE
+        };
+
+        for (int[] offset : neighbors) {
+            int checkX = playerX + offset[0];
+            int checkY = playerY + offset[1];
+
+            if (farmMap.isWithinBounds(checkX, checkY)) {
+                Tile adjacentTile = farmMap.getTile(checkX, checkY);
+                // Assuming Tile has getAssociatedObject() that returns DeployedObject or null
+                if (adjacentTile != null && adjacentTile.getAssociatedObject() instanceof ShippingBinObject) {
+                    nearBin = true;
+                    break; 
+                }
+            }
+        }
+
+        if (nearBin) {
+            System.out.println("Player is near the Shipping Bin. Opening sell dialog...");
+            return showSellDialog(); // showSellDialog will handle repaint and return true if action taken
+        } else {
+            System.out.println("Player is not near the Shipping Bin.");
+            // JOptionPane.showMessageDialog(this, "You are not close enough to the Shipping Bin.", "Shipping Bin", JOptionPane.INFORMATION_MESSAGE);
+            return false; // No interaction occurred
+        }
+    }
+
+    /**
+     * Shows a dialog for the player to select items from their inventory to sell.
+     * Handles the interaction for choosing an item and quantity, then calls the controller.
+     * @return true if a sale was successfully made and game state changed (time advanced), false otherwise.
+     */
+    private boolean showSellDialog() {
+        if (farmModel == null || gameController == null || farmModel.getPlayer() == null) {
+            System.err.println("GamePanel: Critical model component null in showSellDialog.");
+            return false;
+        }
+        Player player = farmModel.getPlayer();
+        Inventory inventory = player.getInventory();
+        if (inventory == null || inventory.getItems().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Your inventory is empty.", "Shipping Bin", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        }
+
+        List<Item> sellableItems = new ArrayList<>();
+        StringBuilder sellListText = new StringBuilder("Select an item to sell (or Cancel):\n-------------------------------------\n");
+        int itemNumber = 1;
+
+        // Populate list of sellable items
+        for (Map.Entry<Item, Integer> entry : inventory.getItems().entrySet()) {
+            Item item = entry.getKey();
+            // Filter: Only allow Crop, Fish, Food, MiscItem to be sold
+            if (item instanceof Crop || item instanceof Fish || item instanceof Food || item instanceof MiscItem) {
+                if (entry.getValue() > 0) { // Only list items player actually has
+                    sellableItems.add(item);
+                    sellListText.append(String.format("%d. %s (Qty: %d)\n", itemNumber++, item.getName(), entry.getValue()));
+                }
+            }
+        }
+
+        if (sellableItems.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "You have no items that can be sold to the Shipping Bin.", "Shipping Bin", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        }
+        sellListText.append("-------------------------------------\nEnter item number to sell:");
+
+        String itemChoiceStr = JOptionPane.showInputDialog(this, sellListText.toString(), "Sell to Shipping Bin", JOptionPane.PLAIN_MESSAGE);
+        if (itemChoiceStr == null) { // User pressed Cancel or closed dialog
+            return false; 
+        }
+
+        try {
+            int selectedIdx = Integer.parseInt(itemChoiceStr.trim()) - 1;
+            if (selectedIdx < 0 || selectedIdx >= sellableItems.size()) {
+                JOptionPane.showMessageDialog(this, "Invalid item number selected.", "Error", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+            Item selectedItem = sellableItems.get(selectedIdx);
+            int maxQuantity = inventory.getItemCount(selectedItem);
+
+            String quantityStr = JOptionPane.showInputDialog(this, "Enter quantity of '" + selectedItem.getName() + "' to sell (Max: " + maxQuantity + "):", "Sell Quantity", JOptionPane.PLAIN_MESSAGE);
+            if (quantityStr == null) { // User cancelled
+                return false; 
+            }
+
+            int quantityToSell = Integer.parseInt(quantityStr.trim());
+            if (quantityToSell <= 0) {
+                JOptionPane.showMessageDialog(this, "Quantity must be positive.", "Error", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+            if (quantityToSell > maxQuantity) {
+                JOptionPane.showMessageDialog(this, "You don't have that many " + selectedItem.getName() + " to sell.", "Error", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+            // Attempt to sell through controller
+            boolean success = gameController.requestSellItemToBin(selectedItem.getName(), quantityToSell);
+            
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Successfully placed " + quantityToSell + " " + selectedItem.getName() + " in the Shipping Bin!\nGold will be received overnight.", "Sale Successful", JOptionPane.INFORMATION_MESSAGE);
+                farmModel.getCurrentTime().advance(15); // Advance time by 15 minutes as per spec
+                return true; // Indicate that an action leading to state change occurred
+            } else {
+                // Controller or Player model should have printed specific error to console
+                // e.g., if already sold today or bin has too many unique items.
+                JOptionPane.showMessageDialog(this, "Could not place item in Shipping Bin.\n(Have you already sold today, or is the bin full of unique items?)", "Sale Failed", JOptionPane.WARNING_MESSAGE);
+                return false; // No successful sale, no time advance, but dialog was shown
+            }
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Invalid number entered. Please enter a valid number.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     }
 

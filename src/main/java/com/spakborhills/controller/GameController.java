@@ -12,6 +12,7 @@ import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Map.FarmMap;
 import com.spakborhills.model.Map.Tile;
 import com.spakborhills.model.Util.GameTime;
+import com.spakborhills.model.Util.ShippingBin;
 import java.util.Map;
 import java.util.List; // For returning list of items
 import java.util.ArrayList; // For creating list of items
@@ -153,6 +154,97 @@ public class GameController {
     }
 
     /**
+     * Attempts to water the tile at the player's current position.
+     * @return true if the watering action was successful and the view should update, false otherwise.
+     */
+    public boolean requestWaterTileAtPlayerPosition() {
+        if (farmModel == null) {
+            System.err.println("GameController: Farm model is null, cannot water tile.");
+            return false;
+        }
+        Player player = farmModel.getPlayer();
+        FarmMap farmMap = farmModel.getFarmMap();
+        GameTime gameTime = farmModel.getCurrentTime(); // Needed for player.water()
+
+        if (player == null || farmMap == null || gameTime == null) {
+            System.err.println("GameController: Player, FarmMap, or GameTime is null, cannot water tile.");
+            return false;
+        }
+
+        // Prevent action if already passed out (at min energy)
+        if (player.getEnergy() <= Player.MIN_ENERGY) {
+            System.out.println("Player is too tired to water tile.");
+            return false; 
+        }
+
+        // Check if player has Watering Can
+        // Assuming item name is exactly "Watering Can" as in ItemRegistry setup
+        if (!player.getInventory().hasTool("Watering Can")) {
+            System.out.println("Player does not have a Watering Can.");
+            // Consider adding a message to GamePanel if desired, for now, console is fine.
+            return false;
+        }
+
+        Tile targetTile = farmMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
+        if (targetTile == null) {
+            System.err.println("GameController: Tile at player position is null for watering.");
+            return false;
+        }
+
+        // Player.water() should handle logic for whether the tile can be watered,
+        // energy consumption, and returning success/failure.
+        boolean watered = player.water(targetTile, gameTime.getCurrentWeather());
+        if (watered) {
+            System.out.println("Watered tile at (" + player.getCurrentTileX() + "," + player.getCurrentTileY() + ")");
+            checkPassOut(); // Check for pass out condition after successful watering
+        }
+        return watered;
+    }
+
+    /**
+     * Attempts to harvest the crop at the player's current position.
+     * @return true if the harvesting action was successful and the view should update, false otherwise.
+     */
+    public boolean requestHarvestAtPlayerPosition() {
+        if (farmModel == null) {
+            System.err.println("GameController: Farm model is null, cannot harvest.");
+            return false;
+        }
+        Player player = farmModel.getPlayer();
+        FarmMap farmMap = farmModel.getFarmMap();
+        Map<String, Item> itemRegistry = farmModel.getItemRegistry(); // For Player.harvest()
+
+        if (player == null || farmMap == null || itemRegistry == null) {
+            System.err.println("GameController: Player, FarmMap, or ItemRegistry is null, cannot harvest.");
+            return false;
+        }
+
+        if (player.getEnergy() <= Player.MIN_ENERGY) {
+            System.out.println("Player is too tired to harvest.");
+            return false;
+        }
+
+        Tile targetTile = farmMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
+        if (targetTile == null || !targetTile.isHarvestable()) {
+            // System.out.println("GameController: Nothing to harvest at player position or tile is null.");
+            return false; // Nothing to harvest or tile invalid
+        }
+
+        // Player.harvest() should handle: 
+        // 1. Calling targetTile.processHarvest(itemRegistry)
+        // 2. Adding the returned items to its inventory
+        // 3. Deducting energy (e.g., 5 energy per crop)
+        // 4. Returning true/false
+        boolean harvested = player.harvest(targetTile, itemRegistry);
+
+        if (harvested) {
+            System.out.println("Successfully harvested from tile (" + player.getCurrentTileX() + "," + player.getCurrentTileY() + ")");
+            checkPassOut(); // Check for pass out condition after successful harvesting
+        }
+        return harvested;
+    }
+
+    /**
      * Checks if the player should pass out due to low energy.
      * If so, initiates the pass out sequence (sleep, next day).
      */
@@ -245,5 +337,56 @@ public class GameController {
             // No direct energy cost for buying, so no checkPassOut() here unless specified.
         }
         return success;
+    }
+
+    /**
+     * Handles the player's request to sell an item to the Shipping Bin.
+     * @param itemName The name of the item to sell.
+     * @param quantity The quantity to sell.
+     * @return true if the item was successfully placed in the bin, false otherwise.
+     */
+    public boolean requestSellItemToBin(String itemName, int quantity) {
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getShippingBin() == null || 
+            farmModel.getItemRegistry() == null || farmModel.getCurrentTime() == null) {
+            System.err.println("GameController: Critical model component is null. Cannot process sell request.");
+            return false;
+        }
+        if (itemName == null || itemName.isBlank()){
+            System.err.println("GameController: Item name cannot be null or blank for selling.");
+            return false;
+        }
+        if (quantity <= 0) {
+            System.err.println("GameController: Quantity to sell must be positive.");
+            return false;
+        }
+
+        Player player = farmModel.getPlayer();
+        ShippingBin shippingBin = farmModel.getShippingBin();
+        Map<String, Item> itemRegistry = farmModel.getItemRegistry();
+        GameTime gameTime = farmModel.getCurrentTime();
+
+        Item itemToSell = itemRegistry.get(itemName);
+        if (itemToSell == null) {
+            System.err.println("GameController: Item '" + itemName + "' not found in registry for selling.");
+            return false;
+        }
+
+        // Validasi canSellToday dari ShippingBin sebelum memanggil Player.sellItemToBin
+        if (!shippingBin.canSellToday()) {
+            System.out.println("GameController: Cannot sell today, already sold items via Shipping Bin.");
+            return false;
+        }
+
+        // Panggil metode player yang sudah divalidasi
+        boolean sold = player.sellItemToBin(itemToSell, quantity, shippingBin, gameTime.getCurrentDay());
+        if (sold) {
+            System.out.println("GameController: Request to sell " + quantity + " of " + itemName + " processed.");
+            // Pertimbangkan jika ada efek waktu 15 menit yang perlu di-trigger di sini
+            // gameTime.advance(15); // Jika interaksi dianggap langsung selesai dan memakan waktu
+            // Namun, spesifikasi (No. 20) menyatakan "Menghentikan waktu selama penjualan dan 
+            // menghabiskan waktu 15 menit dalam game setelah selesai Selling."
+            // Ini mungkin lebih cocok ditangani di GamePanel setelah dialog ditutup.
+        }
+        return sold;
     }
 } 
