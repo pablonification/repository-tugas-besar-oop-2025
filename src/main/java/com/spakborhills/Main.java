@@ -227,7 +227,7 @@ public class Main {
             
             // === EQUIPMENT ===
             Equipment hoe = new Equipment("Hoe", "Hoe");
-            Equipment wateringCan = new Equipment("Watering Can", "Watering Can");
+            Equipment wateringCan = new Equipment("Watering Can", "WateringCan");
             Equipment pickaxe = new Equipment("Pickaxe", "Pickaxe");
             Equipment fishingRod = new Equipment("Fishing Rod", "Fishing Rod");
             
@@ -1006,7 +1006,7 @@ public class Main {
         // Get current day from the gameTime instance
         int currentDayForSale = gameTime.getCurrentDay(); // Use passed gameTime
         boolean sellResult = player.sellItemToBin(parsnip, 5, shippingBin, currentDayForSale);
-
+        
         printTestResult("Sell to Shipping Bin", 
             sellResult && 
             player.getInventory().getItemCount(parsnip) == initialInventoryCount - 5);

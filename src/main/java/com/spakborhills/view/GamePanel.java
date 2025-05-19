@@ -29,7 +29,7 @@ import java.util.Map; // For iterating inventory
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
 
     private static final int TILE_SIZE = 32;
-    private static final int INFO_PANEL_HEIGHT = 50; // Height for player info display
+    private static final int INFO_PANEL_HEIGHT = 80; // Increased height for more info
     private Farm farmModel;
     private GameController gameController;
 
@@ -73,15 +73,71 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         g.fillRect(0, 0, getWidth(), INFO_PANEL_HEIGHT); // Background for info panel
 
         g.setColor(Color.WHITE);
-        String info = String.format("Name: %s | Energy: %d | Gold: %d G",
+        g.setFont(new Font("Arial", Font.PLAIN, 12)); // Set font for clarity
+
+        // Baris 1: Nama, Energi, Gold
+        String playerStats = String.format("Name: %s | Energy: %d | Gold: %d G",
                                     player.getName(), player.getEnergy(), player.getGold());
-        g.drawString(info, 10, 20);
+        g.drawString(playerStats, 10, 20);
+
+        // Baris 2: Waktu, Hari, Musim, Cuaca
         String timeInfo = String.format("Time: %s | Day: %d | Season: %s | Weather: %s",
                                     farmModel.getCurrentTime().getTimeString(),
                                     farmModel.getCurrentTime().getCurrentDay(),
                                     farmModel.getCurrentTime().getCurrentSeason(),
                                     farmModel.getCurrentTime().getCurrentWeather());
-        g.drawString(timeInfo, 10, 40);
+        g.drawString(timeInfo, 10, 35);
+
+        // Baris 3: Selected Item
+        Item selectedItem = player.getSelectedItem();
+        String selectedItemName = (selectedItem != null) ? selectedItem.getName() : "None";
+        g.drawString("Selected: " + selectedItemName, 10, 50);
+
+        // Baris 4: Inventory Hotbar (menggantikan Toolbelt)
+        if (gameController != null) {
+            List<Item> allPlayerItems = gameController.getPlayerInventoryItems(); // Menggunakan metode baru
+            StringBuilder hotbarString = new StringBuilder("Items: ");
+            if (allPlayerItems.isEmpty()) {
+                hotbarString.append("Inventory Empty");
+            } else {
+                // Tampilkan maksimal N item pertama untuk menghindari string terlalu panjang
+                // Atau bisa dibuat lebih canggih untuk menampilkan item di sekitar selectedItem
+                int displayLimit = 5; // Tampilkan maksimal 5 item di hotbar teks ini
+                for (int i = 0; i < allPlayerItems.size(); i++) {
+                    if (i >= displayLimit && !(selectedItem != null && allPlayerItems.get(i).equals(selectedItem))) {
+                        // Jika sudah mencapai batas dan item saat ini bukan yang terpilih, cek apakah selectedItem ada di sisa list
+                        boolean selectedItemFurther = false;
+                        if (selectedItem != null) {
+                            for (int j = i; j < allPlayerItems.size(); j++) {
+                                if (allPlayerItems.get(j).equals(selectedItem)) {
+                                    selectedItemFurther = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!selectedItemFurther || i > displayLimit + 2) { // Beri sedikit ruang jika selected item jauh
+                            hotbarString.append("... (" + (allPlayerItems.size() - i) + " more)");
+                            break;
+                        }
+                    }
+
+                    Item currentItem = allPlayerItems.get(i);
+                    boolean isSelected = (selectedItem != null && selectedItem.equals(currentItem));
+                    if (isSelected) {
+                        hotbarString.append("[");
+                    }
+                    hotbarString.append(currentItem.getName());
+                    if (isSelected) {
+                        hotbarString.append("]");
+                    }
+                    if (i < allPlayerItems.size() - 1 && (i < displayLimit -1 || (selectedItem !=null && allPlayerItems.get(i+1).equals(selectedItem) ) ) ) {
+                         // Hanya tambah separator jika belum item terakhir DAN (masih dalam batas ATAU item berikutnya adalah yg terpilih)
+                        hotbarString.append(" | ");
+                    }
+                }
+            }
+            g.drawString(hotbarString.toString(), 10, 65);
+        }
     }
 
     private void drawFarmMap(Graphics g) {
@@ -105,13 +161,28 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                             }
                             break;
                         case TileType.PLANTED:
-                            // Simple green for planted, could be more detailed
-                            tileColor = Color.GREEN.darker(); 
-                            if (tile.isWatered()) {
-                                tileColor = new Color(0,100,0); // Darker, wet green
-                            }
-                            if (tile.isHarvestable()) {
-                                tileColor = Color.YELLOW; // Ready to harvest
+                            Seed currentSeed = tile.getPlantedSeed();
+                            if (currentSeed != null) {
+                                if (tile.isHarvestable()) {
+                                    tileColor = Color.YELLOW; // Ready to harvest
+                                } else {
+                                    // Calculate growth progress
+                                    double growthProgress = (double) tile.getGrowthDays() / currentSeed.getDaysToHarvest();
+                                    if (growthProgress < 0.33) {
+                                        tileColor = new Color(0, 120, 0); // Young plant
+                                    } else if (growthProgress < 0.66) {
+                                        tileColor = new Color(50, 150, 0); // Medium growth
+                                    } else {
+                                        tileColor = new Color(100, 180, 0); // Mature, not yet harvestable
+                                    }
+                                    if (tile.isWatered()) {
+                                        // Darken the color slightly if watered
+                                        tileColor = tileColor.darker();
+                                    }
+                                }
+                            } else {
+                                // Fallback if seed is somehow null but type is PLANTED (should not happen ideally)
+                                tileColor = Color.PINK; // Error color
                             }
                             break;
                         case TileType.OBSTACLE:
@@ -176,26 +247,48 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             case KeyEvent.VK_D:
                 actionTaken = gameController.requestPlayerMove(Direction.EAST);
                 break;
-            case KeyEvent.VK_E: // Action key for Harvest/Till/Plant
-                boolean harvested = gameController.requestHarvestAtPlayerPosition();
-                if (harvested) {
+            case KeyEvent.VK_E: // Action key for selected item or general interaction
+                Item currentItem = farmModel.getPlayer().getSelectedItem(); 
+                boolean actionProcessed = false; 
+
+                if (currentItem instanceof Equipment) {
+                    String toolType = ((Equipment) currentItem).getToolType();
+                    if (toolType.equalsIgnoreCase("Hoe")) {
+                        actionProcessed = gameController.requestTillLandAtPlayerPosition();
+                    } else if (toolType.equalsIgnoreCase("WateringCan")) {
+                        actionProcessed = gameController.requestWaterTileAtPlayerPosition();
+                    } else if (toolType.equalsIgnoreCase("Pickaxe")) { 
+                        actionProcessed = gameController.requestRecoverLandAtPlayerPosition();
+                    } 
+                } else if (currentItem instanceof Seed) { // Handling for Seed planting
+                    actionProcessed = gameController.requestPlantSeedAtPlayerPosition();
+                }
+
+                if (actionProcessed) {
                     actionTaken = true;
                 } else {
-                    // If harvesting didn't happen, try tilling
-                    boolean tilled = gameController.requestTillLandAtPlayerPosition();
-                    if (tilled) {
+                    // Fallback: if no specific item action was done (or failed), try harvesting
+                    boolean harvested = gameController.requestHarvestAtPlayerPosition();
+                    if (harvested) {
                         actionTaken = true;
+                        // System.out.println("[GamePanel.VK_E] Harvest action successful as fallback.");
                     } else {
-                        // If tilling didn't happen, try planting
-                        boolean planted = gameController.requestPlantSeedAtPlayerPosition();
-                        if (planted) {
-                            actionTaken = true;
-                        }
+                        // If currentItem was null or not an Equipment/Seed that had a successful action, 
+                        // and harvest also failed, then print this.
+                        System.out.println("[GamePanel.VK_E] No specific action for '" + (currentItem != null ? currentItem.getName() : "None") + "' or action failed; harvest also failed.");
                     }
                 }
                 break;
-            case KeyEvent.VK_R: // 'R' for Watering
+            case KeyEvent.VK_R: // Explicit 'R' for Watering - KEPT FOR NOW, but 'E' with WateringCan is preferred
                 actionTaken = gameController.requestWaterTileAtPlayerPosition();
+                break;
+            case KeyEvent.VK_1: // Select Previous Item (was Tool)
+                gameController.selectPreviousItem(); // MODIFIED
+                actionTaken = true; // Repaint to show new selected item
+                break;
+            case KeyEvent.VK_2: // Select Next Item (was Tool)
+                gameController.selectNextItem(); // MODIFIED
+                actionTaken = true; // Repaint to show new selected item
                 break;
             case KeyEvent.VK_P: // 'P' for Open Store
                 openStoreDialog();

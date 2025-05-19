@@ -76,6 +76,7 @@ import com.spakborhills.model.Enum.RelationshipStatus;
 import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Item.Item;
+import com.spakborhills.model.Enum.Season;
 // import com.spakborhills.model.Item.Crop;
 import com.spakborhills.model.Item.EdibleItem;
 import com.spakborhills.model.Item.Seed;
@@ -89,6 +90,7 @@ import com.spakborhills.model.Util.GameTime;
 import com.spakborhills.model.Util.Inventory;
 import com.spakborhills.model.Util.Recipe; // Pastikan ada
 import com.spakborhills.model.Util.ShippingBin; // Pastikan ada
+import com.spakborhills.model.Item.Equipment; // Pastikan import Equipment ada
 
 public class Player {
     // --- Konstanta ---
@@ -109,6 +111,7 @@ public class Player {
     private int currentTileX;
     private int currentTileY;
     private String favoriteItemName;
+    private Item selectedItem; // Ditambahkan
 
     /**
      * Konstruktor untuk kelas Player.
@@ -134,6 +137,7 @@ public class Player {
         this.currentTileY = startY;
         this.favoriteItemName = ""; // Default kosong
         this.partner = null; // Mulai single
+        this.selectedItem = null; // Inisialisasi selectedItem
 
         // Inisialisasi inventory dengan item default (Halaman 23)
         if (itemRegistry != null) {
@@ -144,10 +148,57 @@ public class Player {
             Item fishingRod = itemRegistry.get("Fishing Rod");
 
             if (parsnipSeeds != null) this.inventory.addItem(parsnipSeeds, 15); else System.err.println("PERINGATAN: Parsnip Seeds tidak ditemukan di registry.");
-            if (hoe != null) this.inventory.addItem(hoe, 1); else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
-            if (wateringCan != null) this.inventory.addItem(wateringCan, 1); else System.err.println("PERINGATAN: Watering Can tidak ditemukan di registry.");
-            if (pickaxe != null) this.inventory.addItem(pickaxe, 1); else System.err.println("PERINGATAN: Pickaxe tidak ditemukan di registry.");
-            if (fishingRod != null) this.inventory.addItem(fishingRod, 1); else System.err.println("PERINGATAN: Fishing Rod tidak ditemukan di registry.");
+            if (hoe != null) {
+                this.inventory.addItem(hoe, 1);
+                if (this.selectedItem == null) { // Set Hoe sebagai default jika belum ada
+                    this.selectedItem = hoe;
+                }
+            } else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
+            if (wateringCan != null) {
+                this.inventory.addItem(wateringCan, 1);
+                if (this.selectedItem == null || !(this.selectedItem instanceof Equipment && ((Equipment)this.selectedItem).getToolType().equals("WateringCan"))) { // Prioritaskan WateringCan jika ada
+                    // Atau jika selectedItem bukan watering can, ganti dengan watering can
+                    // Jika ingin Hoe jadi default utama, tukar logika ini atau set selectedItem ke hoe setelah semua item ditambah
+                     if (this.selectedItem == null && hoe == null) { // Jika Hoe tidak ada dan selectedItem masih null
+                        this.selectedItem = wateringCan;
+                    } else if (hoe != null && this.selectedItem == hoe) { 
+                        // Jika selectedItem sudah Hoe, biarkan. Jika ingin selalu ganti ke WateringCan jika ada, hapus kondisi ini.
+                        // Untuk sekarang, jika ada Hoe dan Watering Can, Hoe akan jadi selected default.
+                        // Jika ingin WC jadi default, maka set this.selectedItem = wateringCan di sini.
+                        // Saya akan set Hoe sebagai default jika ada, baru WC jika Hoe tidak ada.
+                    } else if (hoe == null) { // Jika Hoe tidak ada, jadikan WC sebagai default
+                         this.selectedItem = wateringCan;
+                    }
+                }
+            } else System.err.println("PERINGATAN: Watering Can tidak ditemukan di registry.");
+            if (pickaxe != null) {
+                this.inventory.addItem(pickaxe, 1);
+                 if (this.selectedItem == null && hoe == null && wateringCan == null) { // Jika belum ada tool terpilih
+                    this.selectedItem = pickaxe;
+                }
+            } else System.err.println("PERINGATAN: Pickaxe tidak ditemukan di registry.");
+            if (fishingRod != null) {
+                this.inventory.addItem(fishingRod, 1);
+                if (this.selectedItem == null && hoe == null && wateringCan == null && pickaxe == null) { // Jika belum ada tool terpilih
+                    this.selectedItem = fishingRod;
+                }
+            } else System.err.println("PERINGATAN: Fishing Rod tidak ditemukan di registry.");
+            
+            // Fallback: jika setelah semua item default dicek dan selectedItem masih null (misal semua item tool gagal di-load)
+            // coba ambil item pertama dari inventory jika ada.
+            if (this.selectedItem == null && !this.inventory.getItems().isEmpty()) {
+                for (Item itemInInventory : this.inventory.getItems().keySet()) {
+                    if (itemInInventory instanceof Equipment) {
+                        this.selectedItem = itemInInventory;
+                        break;
+                    }
+                }
+                // Jika masih null, ambil item apapun
+                if (this.selectedItem == null) {
+                     this.selectedItem = this.inventory.getItems().keySet().iterator().next();
+                }
+            }
+
 
         } else {
             System.err.println("PERINGATAN: ItemRegistry (Map) null. Inventory tidak diinisialisasi.");
@@ -167,12 +218,21 @@ public class Player {
     public int getCurrentTileY() { return currentTileY; }
     public Point getPosition() { return new Point(currentTileX, currentTileY); }
     public String getFavoriteItemName() { return favoriteItemName; }
+    public Item getSelectedItem() { return selectedItem; } // Ditambahkan
 
     // --- Setters ---
     public void setPartner(NPC partner) { this.partner = partner; }
     public void setPosition(int x, int y) { this.currentTileX = x; this.currentTileY = y; }
     public void setCurrentMap(MapArea map) { this.currentMap = map; }
     public void setFavoriteItemName(String itemName) { this.favoriteItemName = itemName; }
+    public void setSelectedItem(Item item) { // Ditambahkan
+        // Opsional: Cek apakah item ada di inventory sebelum di-set
+        // if (inventory.hasItem(item, 1) || item == null) { // item bisa null jika ingin "unequip"
+             this.selectedItem = item;
+        // } else {
+        //     System.err.println("Error: Mencoba memilih item yang tidak ada di inventory.");
+        // }
+    }
 
     // --- Pengubah State ---
     public void changeEnergy(int amount) {
@@ -255,21 +315,38 @@ public class Player {
      * @return true jika pencangkulan berhasil, false jika gagal.
      */
     public boolean till(Tile targetTile) {
+        // Validasi dasar
         if (targetTile == null) {
-            System.out.println("Target tile tidak boleh null untuk mencangkul.");
+            System.out.println("Tidak ada tile target untuk dicangkul.");
             return false;
         }
-        if (!inventory.hasTool("Hoe")) {
-            System.out.println("Kamu butuh cangkul (Hoe)!");
+
+        // Periksa apakah pemain memiliki Hoe dan sedang dipilih
+        boolean hasHoe = false;
+        if (selectedItem instanceof Equipment) {
+            Equipment currentTool = (Equipment) selectedItem;
+            if (currentTool.getToolType().equalsIgnoreCase("Hoe")) {
+                hasHoe = true;
+            }
+        }
+
+        if (!hasHoe) {
+            System.out.println("Kamu membutuhkan Hoe untuk mencangkul tanah dan Hoe harus dipilih.");
+            // Bisa juga cek inventory.hasTool("Hoe") jika selectedItem bukan Hoe tapi ada di inv
             return false;
         }
+        
+        // Periksa apakah tile bisa dicangkul
         if (!targetTile.canBeTilled()) {
-            System.out.println("Tanah ini tidak bisa dicangkul.");
+            System.out.println("Tile ini tidak bisa dicangkul.");
+            // (Misalnya sudah dicangkul, ada objek, atau tipe yang tidak bisa dicangkul)
             return false;
         }
+
+        // Lakukan aksi pencangkulan (mengubah tipe Tile)
         targetTile.setType(TileType.TILLED);
-        changeEnergy(-5); // hanya untuk testing
-        return true;
+        System.out.println("Tanah berhasil dicangkul!");
+        return true; // Berhasil
     }
 
     /**
@@ -282,16 +359,25 @@ public class Player {
      * @return true jika pemulihan berhasil, false jika gagal.
      */
     public boolean recoverLand(Tile targetTile) {
-        if (!inventory.hasTool("Pickaxe")) {
-            System.out.println("Kamu butuh beliung (Pickaxe)!");
+        boolean hasPickaxe = false;
+        if (selectedItem instanceof Equipment) {
+            Equipment currentTool = (Equipment) selectedItem;
+            if (currentTool.getToolType().equalsIgnoreCase("Pickaxe")) {
+                hasPickaxe = true;
+            }
+        }
+
+        if (!hasPickaxe) {
+            System.out.println("[Player.recoverLand] Action failed: Pickaxe is not selected. Selected: " + (selectedItem != null ? selectedItem.getName() : "None"));
             return false;
         }
+
         if (targetTile == null || !targetTile.canBeRecovered()) {
-            System.out.println("Tidak ada yang bisa dipulihkan di sini.");
+            System.out.println("[Player.recoverLand] Action failed: Nothing to recover or tile is null. Tile type: " + (targetTile != null ? targetTile.getType() : "null"));
             return false;
         }
         targetTile.setType(TileType.TILLABLE);
-        System.out.println("Kamu memulihkan tanah.");
+        System.out.println("[Player.recoverLand] Action success: Land recovered.");
         return true;
     }
 
@@ -308,20 +394,53 @@ public class Player {
      * @return true jika penanaman berhasil, false jika gagal.
      */
     public boolean plant(Seed seedToPlant, Tile targetTile, GameTime currentTime) {
-        if (seedToPlant == null || targetTile == null || currentTime == null) {
-            System.out.println("Input tidak valid untuk menanam.");
+        if (seedToPlant == null) {
+            System.out.println("[Player.plant] Error: Seed to plant is null.");
             return false;
         }
-        if (!inventory.hasItem(seedToPlant, 1)) {
-            System.out.println("Kamu tidak punya benih " + seedToPlant.getName() + ".");
+        if (targetTile == null) {
+            System.out.println("[Player.plant] Error: Target tile is null.");
             return false;
         }
-        boolean success = targetTile.setPlantedSeed(seedToPlant, currentTime.getCurrentSeason());
-        if (success) {
-            inventory.removeItem(seedToPlant, 1);
-            System.out.println("Kamu menananm " + seedToPlant.getName() + ".");
+        if (currentTime == null) {
+            System.out.println("[Player.plant] Error: GameTime (currentTime) is null.");
+            return false;
         }
-        return success;
+
+        if (targetTile.getType() != TileType.TILLED) { 
+            System.out.println("[Player.plant] Action failed: Tile is not tilled. Tile type: " + targetTile.getType());
+            return false;
+        }
+
+        if (targetTile.getPlantedSeed() != null) {
+            System.out.println("[Player.plant] Action failed: Tile already has a plant.");
+            return false;
+        }
+
+        // Corrected season check using getTargetSeason() and direct comparison
+        Season currentSeasonValue = currentTime.getCurrentSeason();
+        Season seedTargetSeasonValue = seedToPlant.getTargetSeason();
+        if (seedTargetSeasonValue != Season.ANY && seedTargetSeasonValue != currentSeasonValue) {
+            System.out.println("[Player.plant] Action failed: " + seedToPlant.getName() + " cannot be planted in " + currentSeasonValue + ". Required season: " + seedTargetSeasonValue + ".");
+            return false;
+        }
+
+        if (inventory.hasItem(seedToPlant, 1)) {
+            // Menggunakan metode setPlantedSeed dari Tile.java yang menerima Seed dan Season
+            boolean plantSuccess = targetTile.setPlantedSeed(seedToPlant, currentSeasonValue); 
+            if (plantSuccess) {
+                inventory.removeItem(seedToPlant, 1);
+                System.out.println("[Player.plant] Action success: " + seedToPlant.getName() + " planted.");
+                return true;
+            } else {
+                // Pesan error spesifik dari Tile.setPlantedSeed() jika ada, atau pesan ini jika gagal karena alasan lain di sana
+                System.out.println("[Player.plant] Action failed: Tile.setPlantedSeed returned false (check Tile's internal logic, e.g. season check there too).");
+                return false;
+            }
+        } else {
+            System.out.println("[Player.plant] Action failed: Player does not have " + seedToPlant.getName() + ".");
+            return false;
+        }
     }
 
     /**
@@ -331,20 +450,49 @@ public class Player {
      * Biaya waktu (5 menit) ditangani oleh Controller.
      *
      * @param targetTile Objek Tile yang akan disiram.
-     * @param currentWeather Objek Weather untuk mendapatkan weather saat ini.
-     * @return true jika penyiraman berhasil, false jika gagal.
+     * @return true jika berhasil menyiram, false jika gagal.
      */
-    public boolean water(Tile targetTile, Weather currentWeather) {
-        if (!inventory.hasTool("Watering Can")) {
-            System.out.println("Kamu butuh penyiram tanaman (Watering Can)!");
+    public boolean water(Tile targetTile, Weather currentWeather) { // currentWeather tidak digunakan di sini karena Tile.markAsWatered() tidak memerlukannya secara langsung
+                                                                    // Tile.updateDaily() yang akan menghandle efek hujan
+        if (targetTile == null) {
+            System.out.println("[Player.water] Error: Target tile is null.");
             return false;
         }
-        if (targetTile == null || !targetTile.needsWatering(currentWeather)) {
-            System.out.println("Tidak perlu menyiram petak ini.");
+
+        boolean hasWateringCan = false;
+        if (selectedItem instanceof Equipment) {
+            Equipment currentTool = (Equipment) selectedItem;
+            String actualToolType = currentTool.getToolType(); // Get the tool type
+            System.out.println("[Player.water] Debug: Selected item is Equipment. Name: " + currentTool.getName() + ", Actual ToolType: '" + actualToolType + "'"); 
+            
+            if (actualToolType != null && actualToolType.equalsIgnoreCase("WateringCan")) {
+                hasWateringCan = true;
+            } else {
+                System.out.println("[Player.water] Debug: ToolType mismatch or null. Expected 'WateringCan' (case-insensitive), got '" + actualToolType + "'. Comparison result: " + (actualToolType != null && actualToolType.equalsIgnoreCase("WateringCan")) );
+            }
+        } else if (selectedItem != null) {
+            System.out.println("[Player.water] Debug: Selected item '" + selectedItem.getName() + "' is NOT an instance of Equipment. It is: " + selectedItem.getClass().getName());
+        } else {
+            System.out.println("[Player.water] Debug: selectedItem is null.");
+        }
+
+        if (!hasWateringCan) {
+            System.out.println("[Player.water] Action failed because hasWateringCan is false. (Original log message was: Watering Can is not selected or current item is not Equipment). Selected: " + (selectedItem != null ? selectedItem.getName() : "None"));
             return false;
         }
+
+        if (!targetTile.canBeWateredInternalCheck()) {
+            System.out.println("[Player.water] Action failed: Tile cannot be watered (not TILLED or PLANTED). Tile type: " + targetTile.getType());
+            return false;
+        }
+        
+        if (targetTile.isWatered()) {
+            System.out.println("[Player.water] Info: Tile is already watered.");
+            return false; 
+        }
+
         targetTile.markAsWatered();
-        System.out.println("Kamu menyiram tanaman.");
+        System.out.println("[Player.water] Action success: Tile watered!");
         return true;
     }
 
@@ -662,14 +810,14 @@ public class Player {
         }
         if (shippingBin == null) {
             System.err.println("ShippingBin tidak boleh null untuk menjual item.");
-            return false;
-        }
+             return false;
+         }
 
         // Validasi apakah bisa menjual hari ini - Panggil canSellToday() tanpa argumen
         if (!shippingBin.canSellToday()) { // Removed currentDay argument
             System.out.println(this.name + ": Sudah melakukan penjualan via Shipping Bin hari ini. Coba lagi besok.");
-            return false;
-        }
+             return false;
+         }
 
         if (!this.inventory.hasItem(itemToSell, quantity)) {
             System.out.println(this.name + " tidak punya cukup " + itemToSell.getName() + " (" + quantity + ") untuk dijual. Hanya punya: " + this.inventory.getItemCount(itemToSell));
@@ -683,8 +831,8 @@ public class Player {
                 System.out.println(this.name + " menaruh " + quantity + " " + itemToSell.getName() + " ke Shipping Bin.");
                 // Tidak ada pengurangan energi atau perubahan gold di sini
                 // Efek waktu 15 menit akan ditangani Controller jika relevan
-                return true;
-            } else {
+             return true;
+         } else {
                 // Gagal menambahkan ke bin (misal, bin penuh slot unik), kembalikan item ke inventory
                 this.inventory.addItem(itemToSell, quantity); // Rollback
                 System.out.println(this.name + ": Gagal menaruh item ke Shipping Bin (mungkin penuh slot unik). Item dikembalikan ke inventory.");
@@ -693,9 +841,9 @@ public class Player {
         } else {
             // Seharusnya tidak sampai sini jika hasItem() dan logika removeItem() benar
             System.err.println(this.name + ": Gagal menghapus " + itemToSell.getName() + " dari inventory meskipun pengecekan awal berhasil.");
-            return false;
-        }
-    }
+             return false;
+         }
+    } 
 
     // Anda bisa menambahkan metode helper lain di sini jika diperlukan
     // Misalnya:

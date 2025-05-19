@@ -16,6 +16,10 @@ import com.spakborhills.model.Util.ShippingBin;
 import java.util.Map;
 import java.util.List; // For returning list of items
 import java.util.ArrayList; // For creating list of items
+import java.util.stream.Collectors; // Diperlukan untuk stream
+import com.spakborhills.model.Item.Equipment;
+import java.util.Collections;
+import java.util.Comparator;
 // GamePanel might be needed later for more complex interactions or direct view updates
 // import com.spakborhills.view.GamePanel;
 // GameTime might be needed if Farm.nextDay() isn't comprehensive enough for all time updates
@@ -79,10 +83,9 @@ public class GameController {
             return false;
         }
 
-        // Prevent action if already passed out (at min energy)
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to till land.");
-            return false; // Return false as no state changed that needs repaint for *this* action
+            return false; 
         }
 
         Tile targetTile = farmMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
@@ -93,7 +96,9 @@ public class GameController {
 
         boolean tilled = player.till(targetTile);
         if (tilled) {
-            checkPassOut(); // Check for pass out condition after successful tilling
+            player.changeEnergy(-5); // Biaya energi untuk mencangkul
+            System.out.println("Tilled land. Energy: " + player.getEnergy());
+            checkPassOut(); 
         }
         return tilled;
     }
@@ -113,7 +118,6 @@ public class GameController {
 
         if (player == null || farmMap == null || gameTime == null) {
             System.err.println("GameController: Player, FarmMap, or GameTime is null, cannot plant.");
-            // If gameTime is null here, it's likely due to an incorrect import or initialization issue elsewhere.
             return false;
         }
 
@@ -123,31 +127,21 @@ public class GameController {
         }
 
         Tile targetTile = farmMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
-        if (targetTile == null || targetTile.getType() != TileType.TILLED) {
-            return false; 
-        }
-
-        Seed seedToPlant = null;
-        if (player.getInventory() != null && player.getInventory().getItems() != null) {
-            for (Map.Entry<Item, Integer> entry : player.getInventory().getItems().entrySet()) {
-                if (entry.getKey() instanceof Seed && entry.getValue() > 0) {
-                    Seed currentSeed = (Seed) entry.getKey();
-                    if (currentSeed.getTargetSeason() == gameTime.getCurrentSeason() || 
-                        currentSeed.getTargetSeason() == Season.ANY) {
-                        seedToPlant = currentSeed;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (seedToPlant == null) {
+        if (targetTile == null) {
+            System.err.println("[GameController] Target tile is null. Cannot plant.");
             return false;
         }
 
+        Item selected = player.getSelectedItem();
+        if (!(selected instanceof Seed)) {
+            return false; 
+        }
+        Seed seedToPlant = (Seed) selected;
+
         boolean planted = player.plant(seedToPlant, targetTile, gameTime);
         if (planted) {
-            System.out.println("Planted " + seedToPlant.getName());
+            player.changeEnergy(-5); 
+            System.out.println("Planted " + seedToPlant.getName() + " at ("+ player.getCurrentTileX() + "," + player.getCurrentTileY() +"). Energy: " + player.getEnergy());
             checkPassOut();
         }
         return planted;
@@ -164,26 +158,21 @@ public class GameController {
         }
         Player player = farmModel.getPlayer();
         FarmMap farmMap = farmModel.getFarmMap();
-        GameTime gameTime = farmModel.getCurrentTime(); // Needed for player.water()
+        GameTime gameTime = farmModel.getCurrentTime(); // Dipertahankan jika Player.water() membutuhkannya di masa depan, atau untuk konsistensi
 
         if (player == null || farmMap == null || gameTime == null) {
             System.err.println("GameController: Player, FarmMap, or GameTime is null, cannot water tile.");
             return false;
         }
 
-        // Prevent action if already passed out (at min energy)
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to water tile.");
             return false; 
         }
 
-        // Check if player has Watering Can
-        // Assuming item name is exactly "Watering Can" as in ItemRegistry setup
-        if (!player.getInventory().hasTool("Watering Can")) {
-            System.out.println("Player does not have a Watering Can.");
-            // Consider adding a message to GamePanel if desired, for now, console is fine.
-            return false;
-        }
+        // Pemeriksaan kepemilikan Watering Can dan apakah itu item yang dipilih
+        // sekarang ditangani di dalam player.water() melalui player.getSelectedItem()
+        // Jadi, kita tidak perlu cek inventory.hasTool("Watering Can") di sini lagi.
 
         Tile targetTile = farmMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
         if (targetTile == null) {
@@ -191,13 +180,14 @@ public class GameController {
             return false;
         }
 
-        // Player.water() should handle logic for whether the tile can be watered,
-        // energy consumption, and returning success/failure.
         boolean watered = player.water(targetTile, gameTime.getCurrentWeather());
         if (watered) {
-            System.out.println("Watered tile at (" + player.getCurrentTileX() + "," + player.getCurrentTileY() + ")");
-            checkPassOut(); // Check for pass out condition after successful watering
+            player.changeEnergy(-5); // Biaya energi untuk menyiram
+            System.out.println("Watered tile at (" + player.getCurrentTileX() + "," + player.getCurrentTileY() + "). Energy: " + player.getEnergy());
+            checkPassOut(); 
         }
+        // Jika tidak berhasil (misal, tile tidak bisa disiram, atau tidak ada watering can dipilih), 
+        // player.water() akan return false dan pesan error akan dicetak dari Player.java
         return watered;
     }
 
@@ -239,9 +229,47 @@ public class GameController {
 
         if (harvested) {
             System.out.println("Successfully harvested from tile (" + player.getCurrentTileX() + "," + player.getCurrentTileY() + ")");
+            player.changeEnergy(-5); // Jika ada biaya energi untuk panen
             checkPassOut(); // Check for pass out condition after successful harvesting
         }
         return harvested;
+    }
+
+    /**
+     * Attempts to recover the land at the player's current position using a Pickaxe.
+     * @return true if the recovery action was successful, false otherwise.
+     */
+    public boolean requestRecoverLandAtPlayerPosition() {
+        if (farmModel == null) {
+            System.err.println("GameController: Farm model is null, cannot recover land.");
+            return false;
+        }
+        Player player = farmModel.getPlayer();
+        FarmMap farmMap = farmModel.getFarmMap();
+
+        if (player == null || farmMap == null) {
+            System.err.println("GameController: Player or FarmMap is null, cannot recover land.");
+            return false;
+        }
+
+        if (player.getEnergy() <= Player.MIN_ENERGY) {
+            System.out.println("Player is too tired to recover land.");
+            return false;
+        }
+
+        Tile targetTile = farmMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
+        if (targetTile == null) {
+            System.err.println("GameController: Tile at player position is null for recovery.");
+            return false;
+        }
+
+        boolean recovered = player.recoverLand(targetTile);
+        if (recovered) {
+            player.changeEnergy(-5); // Biaya energi untuk memulihkan tanah
+            System.out.println("Recovered land. Energy: " + player.getEnergy());
+            checkPassOut();
+        }
+        return recovered;
     }
 
     /**
@@ -388,5 +416,112 @@ public class GameController {
             // Ini mungkin lebih cocok ditangani di GamePanel setelah dialog ditutup.
         }
         return sold;
+    }
+
+    /**
+     * Mengambil daftar semua Item yang dimiliki pemain di inventory.
+     * Berguna untuk ditampilkan di UI atau untuk mekanisme pemilihan item.
+     * @return List dari Item, atau list kosong jika tidak ada.
+     */
+    public List<Item> getPlayerInventoryItems() {
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getPlayer().getInventory() == null) {
+            return new ArrayList<>();
+        }
+        Player player = farmModel.getPlayer();
+        // Mengambil semua item unik dari inventory
+        List<Item> items = new ArrayList<>(player.getInventory().getItems().keySet());
+        
+        // Urutkan item berdasarkan nama untuk konsistensi tampilan/pemilihan
+        // Bisa juga diurutkan berdasarkan kategori atau kriteria lain jika perlu
+        Collections.sort(items, Comparator.comparing(Item::getName));
+        return items;
+    }
+
+    /**
+     * Memilih item berikutnya dari daftar item di inventory pemain.
+     */
+    public void selectNextItem() {
+        if (farmModel == null || farmModel.getPlayer() == null) return;
+        Player player = farmModel.getPlayer();
+        List<Item> allItems = getPlayerInventoryItems(); // Dapat semua item
+
+        if (allItems.isEmpty()) {
+            player.setSelectedItem(null); 
+            System.out.println("Inventory kosong. Tidak ada item untuk dipilih.");
+            return;
+        }
+
+        Item currentSelectedItem = player.getSelectedItem();
+        int currentIndex = -1;
+        if (currentSelectedItem != null) {
+            for (int i = 0; i < allItems.size(); i++) {
+                if (allItems.get(i).equals(currentSelectedItem)) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+        }
+
+        int nextIndex = (currentIndex + 1) % allItems.size();
+        player.setSelectedItem(allItems.get(nextIndex));
+        System.out.println("Selected item: " + player.getSelectedItem().getName());
+    }
+
+    /**
+     * Memilih item sebelumnya dari daftar item di inventory pemain.
+     */
+    public void selectPreviousItem() {
+        if (farmModel == null || farmModel.getPlayer() == null) return;
+        Player player = farmModel.getPlayer();
+        List<Item> allItems = getPlayerInventoryItems(); // Dapat semua item
+
+        if (allItems.isEmpty()) {
+            player.setSelectedItem(null); 
+            System.out.println("Inventory kosong. Tidak ada item untuk dipilih.");
+            return;
+        }
+
+        Item currentSelectedItem = player.getSelectedItem();
+        int currentIndex = -1;
+        if (currentSelectedItem != null) {
+            for (int i = 0; i < allItems.size(); i++) {
+                if (allItems.get(i).equals(currentSelectedItem)) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        int prevIndex;
+        if (currentIndex <= 0) { // Jika tidak ditemukan atau item pertama
+            prevIndex = allItems.size() - 1; // Putar ke item terakhir
+        } else {
+            prevIndex = currentIndex - 1;
+        }
+        player.setSelectedItem(allItems.get(prevIndex));
+        System.out.println("Selected item: " + player.getSelectedItem().getName());
+    }
+
+    // Metode getPlayerTools() yang lama bisa dihapus atau diubah jika masih perlu 
+    // khusus untuk Equipment. Untuk sekarang, kita fokus pada item umum.
+    /**
+     * Mengambil daftar Equipment (alat) yang dimiliki pemain.
+     * @return List dari Equipment, atau list kosong jika tidak ada.
+     */
+    public List<Equipment> getPlayerTools() {
+        if (farmModel == null || farmModel.getPlayer() == null) {
+            return new ArrayList<>();
+        }
+        Player player = farmModel.getPlayer();
+        List<Equipment> tools = new ArrayList<>();
+        if (player.getInventory() != null && player.getInventory().getItems() != null) {
+            for (Item item : player.getInventory().getItems().keySet()) {
+                if (item instanceof Equipment) {
+                    tools.add((Equipment) item);
+                }
+            }
+        }
+        Collections.sort(tools, Comparator.comparing(Item::getName));
+        return tools;
     }
 } 

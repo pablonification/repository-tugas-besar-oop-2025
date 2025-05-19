@@ -21,6 +21,7 @@ public class Tile {
     private int growthDays;
     private DeployedObject associatedObject;
     private static final int WATERING_INTERVAL_HOT_WEATHER = 2;
+    private static final int MAX_DAYS_WITHOUT_WATER_BEFORE_DEATH = 3;
 
     public Tile(TileType type) {
         this.type = type;
@@ -114,7 +115,7 @@ public class Tile {
             if (cropBase instanceof Crop){
                 List<Item> harvestedItems = new ArrayList<>();
                 for (int i = 0; i < quantity; i++){
-                    harvestedItems.add(new Crop(cropBase.getName(), cropBase.getBuyPrice(), cropBase.getSellPrice()));
+                    harvestedItems.add(cropBase);
                 }
                 return harvestedItems;
             } else {
@@ -183,8 +184,14 @@ public class Tile {
             } else {
                 // Was not watered by player before nextDay() AND it did not rain today
                 this.daysSinceLastWatered++;
-                // Optional: Add logic if daysSinceLastWatered exceeds a threshold (e.g., plant dies or stops growing permanently)
-                // For now, it just means no growth today.
+                System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") tidak disiram hari ini. daysSinceLastWatered: " + this.daysSinceLastWatered);
+                if (this.daysSinceLastWatered > MAX_DAYS_WITHOUT_WATER_BEFORE_DEATH) {
+                    System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena tidak disiram terlalu lama.");
+                    this.setType(TileType.TILLED); // Kembali jadi tanah olahan kering
+                    // plantedSeed, growthDays, dll akan direset oleh setType(TILLED)
+                    this.isWatered = false; // Pastikan juga reset ini
+                    return; // Tidak perlu proses lebih lanjut untuk tile ini
+                }
             }
         } else {
             // Not a planted tile, or no seed, so reset watering counters.
