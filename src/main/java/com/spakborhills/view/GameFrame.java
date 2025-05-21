@@ -23,6 +23,11 @@ public class GameFrame extends JFrame {
         gamePanel = new GamePanel(farm, this.gameController);
         add(gamePanel);
 
+        // Set GamePanel reference in GameController after GamePanel is created
+        if (this.gameController != null) {
+            this.gameController.setGamePanel(gamePanel);
+        }
+
         pack(); // Sizes the frame based on its components' preferred sizes
         setLocationRelativeTo(null); // Center the window on the screen
         setVisible(true);

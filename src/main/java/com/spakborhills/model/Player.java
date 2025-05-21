@@ -85,6 +85,7 @@ import com.spakborhills.model.Item.ProposalRing;
 import com.spakborhills.model.NPC.NPC; // Pastikan ada
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
+import com.spakborhills.model.Map.FarmMap; // Impor FarmMap
 import com.spakborhills.model.Util.GameTime;
 // import com.spakborhills.model.Util.GameTime; // Anda mungkin perlu ini di Controller
 import com.spakborhills.model.Util.Inventory;
@@ -553,7 +554,7 @@ public class Player {
 
         if (itemToEat instanceof EdibleItem) {
             // Cek dulu apakah pemain punya item tersebut sebelum mencoba mengurangi
-            if (!inventory.hasItem(itemToEat, 1)) {
+        if (!inventory.hasItem(itemToEat, 1)) {
                 System.out.println("Player.eat: Pemain tidak memiliki " + itemToEat.getName() + " untuk dimakan.");
                 return false; // Seharusnya tidak terjadi jika itemToEat adalah selectedItem yang valid dari inventory
             }
@@ -567,8 +568,8 @@ public class Player {
                 // Untuk saat ini, jika energi penuh dan item memberi energi positif, makan dibatalkan untuk hemat item.
                 // Jika item memberi energi negatif (poison?), mungkin tetap dikonsumsi.
                 // Untuk simplicity, kita batalkan jika energi penuh & restore positif.
-                return false;
-            }
+            return false;
+        }
             
             // Hapus item dari inventory DULU, baru tambah energi.
             // Ini mencegah situasi di mana energi bertambah tapi item gagal dihapus (meskipun kecil kemungkinannya di sini).
@@ -894,6 +895,43 @@ public class Player {
              return false;
          }
     } 
+
+    /**
+     * Menangani kondisi pemain pingsan.
+     * Energi diatur setengah, hari diproses, dan pendapatan dari hari itu dikembalikan.
+     * @param farm Referensi ke Farm model untuk memproses hari berikutnya.
+     * @return int pendapatan dari penjualan pada hari berikutnya.
+     */
+    public int passOut(Farm farm) { // Farm model needed to trigger nextDay
+        System.out.println(getName() + " pingsan karena kelelahan!");
+        
+        int targetEnergy = MAX_ENERGY / 2;
+        int currentEnergy = getEnergy();
+        changeEnergy(targetEnergy - currentEnergy); // Gunakan changeEnergy untuk mengatur ke target
+
+        int income = farm.forceSleepAndProcessNextDay(); 
+        System.out.println("Bangun keesokan harinya dengan energi: " + getEnergy() + "."); // Tambahkan titik di akhir
+        return income;
+    }
+
+    /**
+     * Memeriksa apakah posisi pemain saat ini berada di salah satu entry/exit point
+     * pada peta saat ini.
+     * @return true jika pemain berada di entry point map saat ini, false jika tidak atau map tidak punya entry points.
+     */
+    public boolean isOnEntryPoint() {
+        if (this.currentMap == null || this.currentMap.getEntryPoints() == null) {
+            return false;
+        }
+        List<Point> entryPoints = this.currentMap.getEntryPoints();
+        Point playerPosition = new Point(this.currentTileX, this.currentTileY);
+        for (Point entryPoint : entryPoints) {
+            if (entryPoint.equals(playerPosition)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // Anda bisa menambahkan metode helper lain di sini jika diperlukan
     // Misalnya:

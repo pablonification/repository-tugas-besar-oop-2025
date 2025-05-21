@@ -36,35 +36,38 @@ Menangani kasus item habis setelah dimakan (selectedItem di-update oleh controll
 [SELESAI] Feedback Visual/Audio: Konfirmasi via perubahan energi di info panel dan log konsol.
 Fase 2: Ekonomi & Interaksi Dunia Luar
 Toko (Store):
-[SEBAGIAN SUDAH] GUI Toko: Dialog untuk menampilkan item yang dijual (Crop, Seed, Food, Equipment tertentu).
+[IMPLEMENTED] GUI Toko (Beli): Dialog JOptionPane via tombol 'T' untuk menampilkan item yang dijual dari Store.java (Crop, Seed, Food, Equipment tertentu).
 Menampilkan harga beli dari PriceList.
-[SEBAGIAN SUDAH] Pembelian Item:
-Input jumlah dari pemain.
-Memvalidasi gold pemain.
-Menambahkan item ke inventory pemain & mengurangi gold.
-[UNTUK DILAKUKAN] Penyempurnaan GUI Toko: Tampilan yang lebih baik, mungkin kategori item.
+[IMPLEMENTED] Pembelian Item (via GUI Toko):
+Input jumlah dari pemain (JOptionPane).
+Memvalidasi gold pemain (dilakukan oleh Store.sellToPlayer).
+Menambahkan item ke inventory pemain & mengurangi gold (dilakukan oleh Store.sellToPlayer).
+Feedback via JOptionPane.
+[UNTUK DILAKUKAN] Penyempurnaan GUI Toko: Tampilan yang lebih baik (misal, JDialog kustom, kategori item, tombol +/- untuk jumlah).
+[UNTUK DILAKUKAN] Interaksi dengan NPC Emily untuk membuka toko (jika diperlukan sebagai alternatif tombol 'T').
 Shipping Bin:
-[SEBAGIAN SUDAH] GUI Shipping Bin: Dialog untuk memilih item dari inventory pemain yang bisa dijual (Crop, Fish, Food, MiscItem).
-[SEBAGIAN SUDAH] Penjualan Item:
+[IMPLEMENTED] GUI Shipping Bin: Dialog untuk memilih item dari inventory pemain yang bisa dijual (Crop, Fish, Food, MiscItem) via tombol 'B'.
+[IMPLEMENTED] Penjualan Item:
 Input jumlah.
 Memindahkan item dari inventory ke "bin" (logika di ShippingBin.java).
 Pembatasan 16 slot item unik.
 Penjualan hanya sekali sehari.
-[SEBAGIAN SUDAH] Pemrosesan Akhir Hari (Farm.nextDay()):
+[IMPLEMENTED] Pemrosesan Akhir Hari (Farm.nextDay()):
 Menghitung total penjualan dari ShippingBin berdasarkan PriceList.
 Menambahkan gold ke pemain.
 Mengosongkan ShippingBin.
-[UNTUK DILAKUKAN] Feedback yang Jelas: Pesan bahwa gold akan diterima besok, dll.
+[SELESAI] Feedback yang Jelas: Pesan bahwa gold akan diterima besok (saat item ditaruh) dan dialog JOptionPane di awal hari berikutnya (via GamePanel.showEndOfDayMessage) jika ada penjualan atau kejadian pingsan.
 Gold & Inventory Display:
 [SELESAI] Sudah ditampilkan di Info Panel, pastikan selalu update setelah transaksi.
 Visiting (Pindah Map):
-[UNTUK DILAKUKAN] Logika Pemicu: Pemain bergerak ke tepi Farm Map.
-[UNTUK DILAKUKAN] GUI Pemilihan Lokasi: Menu/dialog untuk memilih tujuan (Rumah NPC, Forest River, Mountain Lake, Ocean, Store).
-[UNTUK DILAKUKAN] GameController.requestVisit(destination):
-Memanggil player.visit().
-Mengubah currentMap di Player dan FarmModel.
-Memuat dan merender peta baru di GamePanel. (Ini bagian besar, GamePanel perlu bisa render peta non-farm).
-[UNTUK DILAKUKAN] Representasi World Map: Bisa berupa peta visual sederhana atau hanya daftar lokasi.
+[SEBAGIAN SUDAH] Logika Pemicu: Pemain bergerak ke tepi Farm Map (tile tipe ENTRY_POINT). Player.isOnEntryPoint() mendeteksi ini.
+[SELESAI] GUI Pemilihan Lokasi: GamePanel.showWorldMapSelectionDialog() menampilkan JOptionPane dengan daftar tujuan dari LocationType saat pemain di entry point. Pilihan SEKARANG memicu perpindahan map via GameController.
+[CATATAN] Akses Toko (Store): Saat ini Toko bisa diakses via tombol 'T' langsung. Rencana jangka panjang adalah Toko diakses sebagai salah satu tujuan dari GUI Pemilihan Lokasi setelah pemain mencapai Entry Point di FarmMap dan memilih 'STORE'. Tombol 'T' bisa dipertimbangkan untuk dihapus atau menjadi shortcut khusus jika desain akhir memungkinkan.
+[SELESAI] GameController.requestVisit(destination):
+[SELESAI] Memanggil player.visit().
+[SELESAI] Mengubah currentMap di Player dan FarmModel.
+[SELESAI] Memuat dan merender peta baru di GamePanel. (GamePanel kini render player.getCurrentMap() dengan camera).
+[SEBAGIAN SUDAH] Representasi World Map: Bisa berupa peta visual sederhana atau hanya daftar lokasi. (Daftar lokasi berfungsi, peta generik dirender, tampilan unik per area belum ada).
 Fase 3: Aksi Lanjutan & Interaksi NPC
 Fishing (Memancing):
 [UNTUK DILAKUKAN] Kondisi Memancing: Pemain di dekat tile air (Pond, Forest River, Mountain Lake, Ocean) dan Fishing Rod dipilih.
@@ -130,3 +133,17 @@ View Player Info bisa berupa dialog yang menampilkan atribut pemain.
 Statistics bisa memicu tampilan statistik jika sudah ada.
 Implementasi Bonus (jika dikerjakan):
 Furnitures, Keyboard/Mouse Input (sudah sebagian), Free Market, Gambling, Save/Load, NPC Easter Egg. Masing-masing akan punya sub-task sendiri.
+
+
+
+Hotkey:
+T: Toko/Store
+E: Action seperti Cangkul, nanam, siram, harvest
+F: Makan
+B: ShippingBin (Jual)
+P:
+1, 2: Swap Tools
+C: Cheat weather dan season
+
+Question:
+Store bukannya di WorldMap ya?

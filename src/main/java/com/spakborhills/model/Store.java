@@ -10,7 +10,7 @@ import com.spakborhills.model.Object.DeployedObject;
 import com.spakborhills.model.Util.PriceList; 
 
 import java.awt.Dimension;
-// import java.awt.Point; 
+import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +25,7 @@ public class Store implements MapArea{
     private final String name = "Toko Spakbor Hills";
     private final Tile[][] tiles;
     private final List<String> itemNamesForSale;
-    // private Map<Point, DeployedObject> internalObjects; // Jika ada objek di dalam toko
+    private final List<Point> entryPoints;
 
     private static final int STORE_WIDTH = 10; // ini adjust aja nanti
     private static final int STORE_HEIGHT = 8;
@@ -36,21 +36,41 @@ public class Store implements MapArea{
      */
     public Store(){
         this.tiles = new Tile[STORE_HEIGHT][STORE_WIDTH];
-        // this.internalObjects = new HashMap<>(); // ini kalo mau ada objek baru kaya cart
+        this.entryPoints = new ArrayList<>();
 
         for (int y = 0; y < STORE_HEIGHT; y++){
             for (int x = 0; x < STORE_WIDTH; x++){
-                tiles[y][x] = new Tile(TileType.TILLABLE);
+                tiles[y][x] = new Tile(TileType.GRASS);
             }
         }
         // Tambahkan objek internal seperti konter, rak, dll. jika perlu
         // placeObject(new CounterObject(), 3, 2);
 
+        defineEntryPoints();
         this.itemNamesForSale = new ArrayList<>();
         initializeItemsForSale();
 
-        System.out.println("Toko '" + name + "' berhasil dibuat.");
+        System.out.println("Toko '" + name + "' berhasil dibuat dengan entry points.");
     }
+
+    private void defineEntryPoints() {
+        if (STORE_WIDTH > 0 && STORE_HEIGHT > 0) {
+            Point doorLocation = new Point(STORE_WIDTH / 2, STORE_HEIGHT - 1);
+            if (isWithinBounds(doorLocation.x, doorLocation.y)) {
+                this.entryPoints.add(doorLocation);
+                Tile entryTile = getTile(doorLocation.x, doorLocation.y);
+                if (entryTile != null) {
+                    entryTile.setType(TileType.ENTRY_POINT);
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<Point> getEntryPoints() {
+        return new ArrayList<>(this.entryPoints);
+    }
+
     /**
      * Menginisialisasi daftar nama item yang dijual di toko.
      * Berdasarkan spesifikasi (Seeds, beberapa Food, Koran).
@@ -68,19 +88,26 @@ public class Store implements MapArea{
         itemNamesForSale.add("Pumpkin Seeds");
         itemNamesForSale.add("Grape Seeds");
 
-        // Food yang bisa dibeli (Halaman 31)
-        itemNamesForSale.add("Fish n' Chips"); // Resep dibeli di store
-        itemNamesForSale.add("Fish Sandwich"); // Resep dibeli di store
-        // Makanan lain mungkin tidak dibeli langsung tapi resepnya
+        // Food yang bisa dibeli (Spesifikasi Items Halaman 20)
+        itemNamesForSale.add("Fish n' Chips");
+        itemNamesForSale.add("Baguette");
+        itemNamesForSale.add("Sashimi");
+        itemNamesForSale.add("Wine");
+        itemNamesForSale.add("Pumpkin Pie");
+        itemNamesForSale.add("Veggie Soup");
+        itemNamesForSale.add("Fish Stew");
+        itemNamesForSale.add("Fish Sandwich");
+        itemNamesForSale.add("Cooked Pig's Head");
+        // Item Food seperti Fugu, Spakbor Salad, The Legends of Spakbor memiliki harga beli '-' (tidak dijual)
 
-        // Crops yang bisa dibeli (Halaman 19)
-        itemNamesForSale.add("Parsnip"); // Harga Beli 50g
-        itemNamesForSale.add("Cauliflower"); // Harga Beli 200g
-        itemNamesForSale.add("Wheat"); // Harga Beli 50g
-        itemNamesForSale.add("Blueberry"); // Harga Beli 150g
-        itemNamesForSale.add("Tomato"); // Harga Beli 90g
-        itemNamesForSale.add("Pumpkin"); // Harga Beli 300g
-        itemNamesForSale.add("Grape"); // Harga Beli 100g
+        // Crops yang bisa dibeli (Spesifikasi Items Halaman 19)
+        itemNamesForSale.add("Parsnip");
+        itemNamesForSale.add("Cauliflower");
+        itemNamesForSale.add("Wheat");
+        itemNamesForSale.add("Blueberry");
+        itemNamesForSale.add("Tomato");
+        itemNamesForSale.add("Pumpkin");
+        itemNamesForSale.add("Grape");
         // Crop lain seperti Potato, Hot Pepper, Melon, Cranberry punya harga beli '-' atau tidak ada,
         // jadi tidak dimasukkan sebagai item yang bisa dibeli di sini.
 

@@ -6,8 +6,10 @@ import com.spakborhills.model.Object.DeployedObject; // Jika ada objek di world 
 import com.spakborhills.model.Store; 
 
 import java.awt.Dimension;
-// import java.awt.Point;
+import java.awt.Point;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,6 +25,7 @@ public class WorldMap implements MapArea {
     private final Tile[][] genericTiles; 
     private static final int GENERIC_WIDTH = 20; 
     private static final int GENERIC_HEIGHT = 20;
+    private final List<Point> entryPoints;
 
     /**
      * Konstruktor untuk WorldMap.
@@ -32,6 +35,7 @@ public class WorldMap implements MapArea {
     public WorldMap(String name, Store storeInstance) {
         this.name = (name == null || name.isBlank()) ? "World" : name;
         this.subLocations = new HashMap<>();
+        this.entryPoints = new ArrayList<>();
 
         if (storeInstance != null) {
             this.subLocations.put(LocationType.STORE, storeInstance);
@@ -43,11 +47,48 @@ public class WorldMap implements MapArea {
         this.genericTiles = new Tile[GENERIC_HEIGHT][GENERIC_WIDTH];
         for (int y = 0; y < GENERIC_HEIGHT; y++) {
             for (int x = 0; x < GENERIC_WIDTH; x++) {
-                // Tile default bisa berupa rumput atau jalan
-                genericTiles[y][x] = new Tile(TileType.TILLABLE); // Atau tipe baru seperti GRASS/PATH
+                genericTiles[y][x] = new Tile(TileType.GRASS); // Default to GRASS for world map areas
             }
         }
-        System.out.println("WorldMap '" + name + "' berhasil dibuat.");
+        defineEntryPoints(); // Define default entry points for the generic world map
+        System.out.println("WorldMap '" + this.name + "' berhasil dibuat dengan entry points.");
+    }
+
+    private void defineEntryPoints() {
+        // Define some default entry points on the edges of the generic WorldMap grid
+        // These points, when stepped on, would trigger the world map selection dialog.
+        // Example: Mid-points of each edge
+        if (GENERIC_WIDTH > 0 && GENERIC_HEIGHT > 0) {
+            // Top edge, middle
+            addEntryPoint(new Point(GENERIC_WIDTH / 2, 0));
+            // Bottom edge, middle
+            addEntryPoint(new Point(GENERIC_WIDTH / 2, GENERIC_HEIGHT - 1));
+            // Left edge, middle
+            addEntryPoint(new Point(0, GENERIC_HEIGHT / 2));
+            // Right edge, middle
+            addEntryPoint(new Point(GENERIC_WIDTH - 1, GENERIC_HEIGHT / 2));
+        }
+        // Mark these tiles as ENTRY_POINT type
+        for (Point p : this.entryPoints) {
+            if (isWithinBounds(p.x, p.y)) {
+                Tile tile = getTile(p.x, p.y);
+                if (tile != null) { // Should not be null if within bounds and initialized
+                    tile.setType(TileType.ENTRY_POINT);
+                }
+            }
+        }
+    }
+
+    private void addEntryPoint(Point point) {
+        // Check for duplicates and ensure it's within bounds (though defineEntryPoints should ensure this)
+        if (!this.entryPoints.contains(point) && isWithinBounds(point.x, point.y)) {
+            this.entryPoints.add(point);
+        }
+    }
+
+    @Override
+    public List<Point> getEntryPoints() {
+        return new ArrayList<>(this.entryPoints); // Return a copy
     }
 
     @Override
@@ -133,6 +174,6 @@ public class WorldMap implements MapArea {
      * @return Objek MapArea jika ada, atau WorldMap ini sendiri jika tipe merujuk ke area generik.
      */
     public MapArea getSpecificArea(LocationType type) {
-        return subLocations.getOrDefault(type, this); // Kembalikan 'this' (WorldMap generik) jika sub-lokasi tidak ada
+        return subLocations.getOrDefault(type, this);
     }
 }

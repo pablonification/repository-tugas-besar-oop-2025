@@ -19,6 +19,8 @@ import com.spakborhills.model.Object.ShippingBinObject; // For checking instance
 import com.spakborhills.model.Util.Inventory;
 import com.spakborhills.model.Enum.Weather; // Tambahkan impor untuk Weather
 import com.spakborhills.model.Enum.Season; // Tambahkan impor untuk Season
+import com.spakborhills.model.Map.MapArea;
+import com.spakborhills.model.Store; // Corrected import for Store
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,7 +36,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final int INFO_PANEL_HEIGHT = 80; // Increased height for more info
     private Farm farmModel;
     private GameController gameController;
-    private static final Font DIALOG_FONT = new Font("Arial", Font.PLAIN, 18); // Added font for dialogs
+    private static final Font DIALOG_FONT = new Font("Arial", Font.PLAIN, 20); // Updated font size to 20
 
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
@@ -55,21 +57,25 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getPlayer().getCurrentMap() == null) {
+            g.setColor(Color.BLACK);
+            g.fillRect(0, 0, getWidth(), getHeight());
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 16));
+            g.drawString("Loading Game Data...", 20, getHeight() / 2);
+            return;
+        }
 
-        // Draw Player Info at the top
         drawPlayerInfo(g);
 
-        // Translate graphics context for map and player drawing below info panel
-        Graphics g2 = g.create(); // Create a new graphics context to not affect info panel
-        g2.translate(0, INFO_PANEL_HEIGHT);
-
-        if (farmModel != null && farmModel.getFarmMap() != null) {
-            drawFarmMap((Graphics) g2); // Cast to Graphics
-        }
-        if (farmModel != null && farmModel.getPlayer() != null) {
-            drawPlayer((Graphics) g2); // Cast to Graphics
-        }
-        g2.dispose(); // Dispose of the translated graphics context
+        // The map drawing area is below the info panel
+        // All coordinates for map drawing should be offset by INFO_PANEL_HEIGHT for Y
+        // The camera logic within drawCurrentMap will handle the map's internal scrolling (camX, camY)
+        // and screen positioning (screenX, screenY) relative to the panel dimensions.
+        drawCurrentMap(g); 
+        
+        // Player is drawn relative to the map, so its drawing logic also needs to consider camX, camY, and INFO_PANEL_HEIGHT
+        drawPlayer(g); 
     }
 
     private void drawPlayerInfo(Graphics g) {
@@ -148,95 +154,164 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
     }
 
-    private void drawFarmMap(Graphics g) {
-        FarmMap map = farmModel.getFarmMap();
-        for (int row = 0; row < map.getSize().height; row++) {
-            for (int col = 0; col < map.getSize().width; col++) {
-                Tile tile = map.getTile(col, row);
-                if (tile != null) {
+    private void drawCurrentMap(Graphics g) {
+        Player player = farmModel.getPlayer();
+        MapArea currentMap = player.getCurrentMap();
+
+        Dimension mapSize = currentMap.getSize();
+        int mapWidthInTiles = mapSize.width;
+        int mapHeightInTiles = mapSize.height;
+        int mapWidthInPixels = mapWidthInTiles * TILE_SIZE;
+        int mapHeightInPixels = mapHeightInTiles * TILE_SIZE;
+
+        // Visible area for the map (below info panel)
+        int viewportWidth = getWidth();
+        int viewportHeight = getHeight() - INFO_PANEL_HEIGHT;
+
+        // Kamera berpusat pada pemain
+        // Player's position in pixels relative to the entire map
+        int playerCenterXInMap = player.getCurrentTileX() * TILE_SIZE + TILE_SIZE / 2;
+        int playerCenterYInMap = player.getCurrentTileY() * TILE_SIZE + TILE_SIZE / 2;
+        
+        // camX and camY are the top-left coordinates of the visible part of the map
+        int camX = playerCenterXInMap - viewportWidth / 2;
+        int camY = playerCenterYInMap - viewportHeight / 2;
+
+        // Batasi kamera agar tidak keluar dari batas peta
+        camX = Math.max(0, Math.min(camX, mapWidthInPixels - viewportWidth));
+        camY = Math.max(0, Math.min(camY, mapHeightInPixels - viewportHeight));
+        
+        // Handle jika map lebih kecil dari panel viewport
+        if (mapWidthInPixels < viewportWidth) {
+            camX = (mapWidthInPixels - viewportWidth) / 2; // Center map horizontally
+        }
+        if (mapHeightInPixels < viewportHeight) {
+             camY = (mapHeightInPixels - viewportHeight) / 2; // Center map vertically
+        }
+
+        for (int yTile = 0; yTile < mapHeightInTiles; yTile++) {
+            for (int xTile = 0; xTile < mapWidthInTiles; xTile++) {
+                Tile tile = currentMap.getTile(xTile, yTile);
+                if (tile == null) continue;
+
+                // Position of the tile on the screen
+                int screenX = xTile * TILE_SIZE - camX;
+                int screenY = yTile * TILE_SIZE - camY + INFO_PANEL_HEIGHT; // Offset by info panel height
+
+                // Culling: Hanya gambar tile yang terlihat di layar (within the map viewport)
+                if (screenX + TILE_SIZE <= 0 || screenX >= getWidth() ||
+                    screenY + TILE_SIZE <= INFO_PANEL_HEIGHT || screenY >= getHeight()) {
+                    continue;
+                }
+                
                     Color tileColor;
                     switch (tile.getType()) {
-                        case TileType.GRASS:
-                            tileColor = new Color(34, 177, 76); // Green
+                    case GRASS:
+                        tileColor = new Color(34, 139, 34); // ForestGreen
                             break;
-                        case TileType.TILLABLE:
-                            tileColor = new Color(181, 101, 29); // Brown
+                    case TILLABLE: 
+                        tileColor = new Color(210, 180, 140); // Tan
                             break;
-                        case TileType.TILLED:
-                            tileColor = new Color(139, 69, 19); // Darker Brown
+                    case TILLED: 
+                        tileColor = new Color(139, 69, 19); // SaddleBrown
                             if (tile.isWatered()) {
-                                tileColor = new Color(90, 45, 10); // Darker, wet brown
+                           tileColor = new Color(90, 45, 10); // Darker, wet brown (adjusted from saddle brown)
                             }
                             break;
-                        case TileType.PLANTED:
-                            Seed currentSeed = tile.getPlantedSeed();
-                            if (currentSeed != null) {
+                    case PLANTED:
                                 if (tile.isHarvestable()) {
-                                    tileColor = Color.YELLOW; // Ready to harvest - Distinct color
+                            tileColor = Color.YELLOW; 
+                        } else {
+                            Seed plantedSeed = tile.getPlantedSeed();
+                            if (plantedSeed != null && plantedSeed.getDaysToHarvest() > 0) {
+                                double growthPercentage = (double) tile.getGrowthDays() / plantedSeed.getDaysToHarvest();
+                                if (growthPercentage < 0.33) {
+                                    tileColor = new Color(144, 238, 144); // LightGreen
+                                } else if (growthPercentage < 0.66) {
+                                    tileColor = new Color(60, 179, 113);  // MediumSeaGreen
                                 } else {
-                                    // Calculate growth progress for distinct colors
-                                    // Ensure daysToHarvest is not zero to avoid division by zero if seed data is incorrect
-                                    double growthProgress = 0;
-                                    if (currentSeed.getDaysToHarvest() > 0) {
-                                         growthProgress = (double) tile.getGrowthDays() / currentSeed.getDaysToHarvest();
+                                    tileColor = new Color(34, 139, 34);   // ForestGreen
                                     }
-
-                                    if (growthProgress < 0.33) {
-                                        tileColor = new Color(152, 251, 152); // PaleGreen - Tahap Awal
-                                    } else if (growthProgress < 0.66) {
-                                        tileColor = new Color(60, 179, 113); // MediumSeaGreen - Tahap Tengah
-                                    } else if (growthProgress < 1.0) { // Less than 1.0, as 1.0 should be YELLOW (harvestable)
-                                        tileColor = new Color(34, 139, 34);  // ForestGreen - Tahap Akhir (matang, belum siap panen)
-                                    } else { // Should ideally be caught by isHarvestable, but as a fallback for >= 1.0
-                                        tileColor = Color.YELLOW; // Fallback to harvestable color
-                                    }
-
                                     if (tile.isWatered()) {
-                                        // Darken the color slightly if watered to show it's wet
-                                        // but ensure it's still distinguishable from the next growth stage
-                                        // One simple way: make it a bit darker, but not too much.
-                                        // Or, add a small blueish tint if complex color mixing is desired.
-                                        // For simplicity, let's use darker(). It might blend for very dark greens.
-                                        // A more robust way would be to define specific watered colors for each stage.
-                                        tileColor = tileColor.darker();
-                                    }
+                                     tileColor = tileColor.darker(); // Darken if watered
                                 }
                             } else {
-                                // Fallback if seed is somehow null but type is PLANTED (should not happen ideally)
-                                tileColor = Color.PINK; // Error color
+                                 tileColor = new Color(0,100,0); // Default for PLANTED if no valid seed info
                             }
+                        }
+                        break;
+                    case WATER: // Assuming TileType.WATER for water sources
+                        tileColor = new Color(0, 100, 200); // Darker Blue
+                        break;
+                    case ENTRY_POINT:
+                        tileColor = Color.MAGENTA; 
                             break;
-                        case TileType.OBSTACLE:
+                    case OBSTACLE:
                             tileColor = Color.DARK_GRAY;
-                            break;
-                        case TileType.WATER:
-                            tileColor = Color.BLUE;
-                            break;
-                        case TileType.ENTRY_POINT:
-                            tileColor = Color.ORANGE;
                             break;
                         default:
                             tileColor = Color.LIGHT_GRAY;
                             break;
                     }
                     g.setColor(tileColor);
-                    g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    g.setColor(Color.BLACK); // Border
-                    g.drawRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
+                g.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                g.setColor(Color.BLACK);
+                g.drawRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
             }
         }
     }
 
     private void drawPlayer(Graphics g) {
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getPlayer().getCurrentMap() == null) return;
+
         Player player = farmModel.getPlayer();
-        g.setColor(Color.RED);
-        // Player is drawn as an oval, slightly smaller than the tile size
-        int playerSize = TILE_SIZE - (TILE_SIZE / 4); 
-        int playerOffset = (TILE_SIZE - playerSize) / 2;
-        g.fillOval(player.getCurrentTileX() * TILE_SIZE + playerOffset, 
-                   player.getCurrentTileY() * TILE_SIZE + playerOffset, 
-                   playerSize, playerSize);
+        MapArea currentMap = player.getCurrentMap();
+        Dimension mapSize = currentMap.getSize();
+        
+        int mapWidthInTiles = mapSize.width;
+        int mapHeightInTiles = mapSize.height;
+        int mapWidthInPixels = mapWidthInTiles * TILE_SIZE;
+        int mapHeightInPixels = mapHeightInTiles * TILE_SIZE;
+
+        int viewportWidth = getWidth();
+        int viewportHeight = getHeight() - INFO_PANEL_HEIGHT;
+        
+        int playerCenterXInMap = player.getCurrentTileX() * TILE_SIZE + TILE_SIZE / 2;
+        int playerCenterYInMap = player.getCurrentTileY() * TILE_SIZE + TILE_SIZE / 2;
+
+        int camX = playerCenterXInMap - viewportWidth / 2;
+        int camY = playerCenterYInMap - viewportHeight / 2;
+
+        camX = Math.max(0, Math.min(camX, mapWidthInPixels - viewportWidth));
+        camY = Math.max(0, Math.min(camY, mapHeightInPixels - viewportHeight));
+        
+        if (mapWidthInPixels < viewportWidth) {
+            camX = (mapWidthInPixels - viewportWidth) / 2;
+        }
+        if (mapHeightInPixels < viewportHeight) {
+             camY = (mapHeightInPixels - viewportHeight) / 2;
+        }
+
+        // Player position on screen
+        int playerScreenX = player.getCurrentTileX() * TILE_SIZE - camX;
+        int playerScreenY = player.getCurrentTileY() * TILE_SIZE - camY + INFO_PANEL_HEIGHT;
+
+        g.setColor(Color.RED); // Player color
+        g.fillRect(playerScreenX, playerScreenY, TILE_SIZE, TILE_SIZE);
+        
+        // Optionally, draw an outline or a more detailed player sprite
+        g.setColor(Color.BLACK);
+        g.drawRect(playerScreenX, playerScreenY, TILE_SIZE, TILE_SIZE);
+
+        // Draw selected item name above player if an item is selected
+        Item selectedItem = player.getSelectedItem();
+        if (selectedItem != null) {
+            String itemName = selectedItem.getName();
+            g.setColor(Color.WHITE);
+            FontMetrics fm = g.getFontMetrics();
+            int stringWidth = fm.stringWidth(itemName);
+            g.drawString(itemName, playerScreenX + (TILE_SIZE - stringWidth) / 2, playerScreenY - 5);
+        }
     }
 
     @Override
@@ -268,32 +343,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             case KeyEvent.VK_D:
                 actionTaken = gameController.requestPlayerMove(Direction.EAST);
                 break;
-            case KeyEvent.VK_E: // Action key
+            case KeyEvent.VK_E: // General action key
                 actionTaken = tryGeneralAction();
-                break;
-            case KeyEvent.VK_R: // Alternative water key (jika ada)
-                // Bisa juga ditambahkan untuk aksi spesifik jika E sudah terlalu umum
-                // Jika diaktifkan, pastikan requestWaterTileAtPlayerPosition mengembalikan boolean
-                // actionTaken = gameController.requestWaterTileAtPlayerPosition(); 
-                break;
-            case KeyEvent.VK_1:
-                gameController.selectPreviousItem();
-                actionTaken = true; // Selecting an item is an action that needs repaint
-                break;
-            case KeyEvent.VK_2:
-                gameController.selectNextItem();
-                actionTaken = true; // Selecting an item is an action that needs repaint
-                break;
-            case KeyEvent.VK_C: // Cheat key
-                handleCheatInput();
-                actionTaken = true; // Cheat input is an action that might change display (weather)
-                break;
-            case KeyEvent.VK_P: // 'P' for Open Store
-                openStoreDialog(); // Assumed to be void, dialog handles its own flow
-                actionTaken = true; // Opening a dialog is an interaction
-                break;
-            case KeyEvent.VK_B: // 'B' for Shipping Bin interaction
-                actionTaken = tryOpenShippingBinDialog(); // This method already returns boolean
                 break;
             case KeyEvent.VK_F: // 'F' for Eat action
                 if (gameController != null) {
@@ -301,16 +352,39 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     if (actionTaken) {
                         System.out.println("GamePanel: Eat action initiated by F key.");
                     } else {
-                        // Optional: feedback jika makan gagal (misal, item tidak bisa dimakan, energi penuh)
-                        System.out.println("GamePanel: Eat action failed or not applicable.");
+                        // Optional: feedback jika makan gagal
+                        // System.out.println("GamePanel: Eat action failed or not applicable.");
                     }
+                }
+                break;
+            case KeyEvent.VK_1:
+                gameController.selectPreviousItem();
+                actionTaken = true; 
+                break;
+            case KeyEvent.VK_2:
+                gameController.selectNextItem();
+                actionTaken = true; 
+                break;
+            case KeyEvent.VK_B: // 'B' for Shipping Bin interaction
+                actionTaken = tryOpenShippingBinDialog(); 
+                break;
+            case KeyEvent.VK_C: // 'C' for Cheat Console
+                 if (gameController != null) {
+                    handleCheatInput();
+                actionTaken = true;
+                }
+                break;
+            case KeyEvent.VK_T: // 'T' for Store/Trade
+                if (gameController != null && farmModel != null) {
+                    openStoreDialog(); 
+                    actionTaken = true;
                 }
                 break;
             // Tambahkan case lain jika perlu
         }
 
         if (actionTaken) {
-            repaint(); // Repaint the panel if an action was taken that might change the state
+            repaint(); // Repaint the panel if an action was taken
         }
     }
 
@@ -356,71 +430,96 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             return gameController.requestHarvestAtPlayerPosition();
         }
     }
-
+    
     private void openStoreDialog() {
-        if (gameController == null || farmModel == null || farmModel.getPriceList() == null) {
-            JOptionPane.showMessageDialog(this, "Store is currently unavailable.", "Store Error", JOptionPane.ERROR_MESSAGE);
+        if (gameController == null || farmModel == null) {
+            JOptionPane.showMessageDialog(this, "Sistem toko belum siap.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        List<Item> storeItems = gameController.getStoreItemsForDisplay();
-        if (storeItems == null || storeItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No items available in the store.", "Store Empty", JOptionPane.INFORMATION_MESSAGE);
+        List<Item> itemsForSale = gameController.getStoreItemsForDisplay();
+        PriceList priceList = farmModel.getPriceList(); 
+
+        if (priceList == null) {
+            JOptionPane.showMessageDialog(this, "Daftar harga tidak tersedia.", "Error Toko", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        PriceList priceList = farmModel.getPriceList();
-
-        StringBuilder storeItemList = new StringBuilder("Welcome to the Store! What would you like to buy?\nAvailable Items (Name - Price):\n");
-        for (int i = 0; i < storeItems.size(); i++) {
-            Item item = storeItems.get(i);
-            // Only display items that are buyable (seeds, tools, etc.)
-            // For now, we assume all items from getStoreItemsForDisplay are buyable.
-            // A more robust check might involve `instanceof Seed` or checking a flag on Item.
-            int price = priceList.getBuyPrice(item);
-            storeItemList.append(String.format("%d. %s - %d G\n", i + 1, item.getName(), price));
-        }
-        storeItemList.append("\nEnter the number of the item to buy (or cancel):");
-
-        String itemNumberStr = JOptionPane.showInputDialog(this, storeItemList.toString(), "Spakbor Hills Store", JOptionPane.PLAIN_MESSAGE);
-
-        if (itemNumberStr == null || itemNumberStr.trim().isEmpty()) {
-            return; // User cancelled or entered nothing
+        if (itemsForSale == null || itemsForSale.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Toko sedang kosong atau tidak ada barang yang dijual saat ini.", "Toko Kosong", JOptionPane.INFORMATION_MESSAGE);
+            return;
         }
 
-        try {
-            int itemNumber = Integer.parseInt(itemNumberStr);
-            if (itemNumber < 1 || itemNumber > storeItems.size()) {
-                JOptionPane.showMessageDialog(this, "Invalid item number.", "Input Error", JOptionPane.ERROR_MESSAGE);
+        List<String> displayItemsList = new ArrayList<>();
+        for (Item item : itemsForSale) {
+            int buyPrice = priceList.getBuyPrice(item.getName());
+            if (buyPrice >= 0 || item.getName().equals("Koran Edisi Baru")) {
+                 String displayText = item.getName() + " - " + buyPrice + "G";
+                 displayItemsList.add(displayText);
+            }
+        }
+        
+        if (displayItemsList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Tidak ada barang yang bisa dibeli saat ini (cek harga).", "Toko Kosong", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
+        String[] displayItemsArray = displayItemsList.toArray(new String[0]);
 
-            Item selectedItem = storeItems.get(itemNumber - 1);
+        String chosenItemString = (String) JOptionPane.showInputDialog(
+                this,
+                "Selamat datang di Toko Spakbor Hills! Apa yang ingin kamu beli?",
+                "Toko Spakbor Hills - Beli",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                displayItemsArray,
+                displayItemsArray[0]
+        );
 
-            String quantityStr = JOptionPane.showInputDialog(this, "Enter quantity for " + selectedItem.getName() + ":", "Quantity", JOptionPane.PLAIN_MESSAGE);
-            if (quantityStr == null || quantityStr.trim().isEmpty()) {
-                return; // User cancelled
+        if (chosenItemString != null && !chosenItemString.isEmpty()) {
+            String originalItemName = chosenItemString.substring(0, chosenItemString.lastIndexOf(" - ")).trim();
+            
+            Item selectedItemObject = null;
+            for(Item item : itemsForSale){
+                if(item.getName().equals(originalItemName)){
+                    if (priceList.getBuyPrice(item.getName()) >= 0 || item.getName().equals("Koran Edisi Baru")) {
+                        selectedItemObject = item;
+                        break;
+                    }
+                }
             }
 
-            int quantity = Integer.parseInt(quantityStr);
+            if (selectedItemObject == null) {
+                 JOptionPane.showMessageDialog(this, "Item yang dipilih tidak valid atau tidak dapat dibeli.", "Error Pilihan", JOptionPane.ERROR_MESSAGE);
+                 return;
+            }
+
+            String quantityString = JOptionPane.showInputDialog(
+                    this,
+                    "Berapa banyak '" + originalItemName + "' yang ingin kamu beli?",
+                    "Jumlah Pembelian",
+                    JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (quantityString != null && !quantityString.trim().isEmpty()) {
+                try {
+                    int quantity = Integer.parseInt(quantityString.trim());
             if (quantity <= 0) {
-                JOptionPane.showMessageDialog(this, "Quantity must be positive.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Jumlah harus lebih dari nol.", "Input Tidak Valid", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            boolean success = gameController.requestBuyItem(selectedItem.getName(), quantity);
+                    boolean success = gameController.requestBuyItem(originalItemName, quantity);
 
             if (success) {
-                JOptionPane.showMessageDialog(this, "Purchased " + quantity + " of " + selectedItem.getName() + "!", "Purchase Successful", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Kamu berhasil membeli " + quantity + " " + originalItemName + "!", "Pembelian Berhasil", JOptionPane.INFORMATION_MESSAGE);
             } else {
-                // GameController should provide reasons for failure via console logs or could return a more detailed status
-                JOptionPane.showMessageDialog(this, "Could not complete purchase. (Not enough gold, item unavailable, or other error)", "Purchase Failed", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Pembelian gagal. Pastikan kamu memiliki cukup Gold atau item tersedia.", "Pembelian Gagal", JOptionPane.ERROR_MESSAGE);
             }
-
+                    repaint(); 
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid input. Please enter numbers.", "Input Error", JOptionPane.ERROR_MESSAGE);
-        } finally {
-            repaint(); // Always repaint to reflect changes (e.g. gold)
+                    JOptionPane.showMessageDialog(this, "Jumlah yang dimasukkan tidak valid. Harap masukkan angka.", "Input Salah", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         }
     }
 
@@ -615,5 +714,123 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     @Override
     public void keyReleased(KeyEvent e) {
         // Not used
+    }
+
+    /**
+     * Menampilkan dialog informasi akhir hari (misalnya, karena pingsan atau tidur normal).
+     * @param eventMessage Pesan utama kejadian (misal, "Kamu pingsan!" atau "Kamu tidur nyenyak.").
+     * @param income Pendapatan dari penjualan di hari sebelumnya.
+     * @param newDayInfo Informasi tentang hari baru (Tanggal, Musim, Cuaca).
+     */
+    public void showEndOfDayMessage(String eventMessage, int income, String newDayInfo) {
+        StringBuilder message = new StringBuilder();
+        message.append(eventMessage).append("\n\n");
+        if (income > 0) {
+            message.append("Kamu mendapatkan ").append(income).append("G dari penjualan kemarin.\n");
+        } else {
+            message.append("Tidak ada pendapatan dari penjualan kemarin.\n");
+        }
+        message.append("\n").append(newDayInfo);
+
+        JOptionPane.showMessageDialog(this, 
+                                      message.toString(), 
+                                      "Akhir Hari", 
+                                      JOptionPane.INFORMATION_MESSAGE);
+        repaint(); // Pastikan UI di-update setelah dialog ditutup
+    }
+
+    /**
+     * Menampilkan dialog untuk memilih tujuan map saat pemain berada di entry point.
+     */
+    public void showWorldMapSelectionDialog() {
+        if (farmModel == null || gameController == null || farmModel.getPlayer() == null || farmModel.getPlayer().getCurrentMap() == null) {
+            System.err.println("GamePanel: Critical model component null, cannot show world map dialog.");
+            return;
+        }
+
+        Player player = farmModel.getPlayer();
+        MapArea currentMap = player.getCurrentMap();
+        String currentMapName = currentMap.getName(); // Used for a simple exclusion attempt
+
+        java.util.List<String> destinationNames = new java.util.ArrayList<>();
+        for (com.spakborhills.model.Enum.LocationType locType : com.spakborhills.model.Enum.LocationType.values()) {
+            // Exclude FARM itself (as you are trying to leave it or another map)
+            // Exclude POND always (as it's part of FARM and not a separate visitable world location)
+            // Exclude the current location the player is on, if its name matches a LocationType enum string.
+            
+            boolean isCurrentMapType = locType.toString().equalsIgnoreCase(currentMapName);
+            // Special handling if currentMap is FarmMap instance, for more robust exclusion of FARM
+            if (currentMap instanceof FarmMap && locType == com.spakborhills.model.Enum.LocationType.FARM) {
+                 isCurrentMapType = true;
+            }
+            // Special handling if currentMap is Store instance, for more robust exclusion of STORE
+            // This requires Store to either have a getLocationType() or its name to be predictable.
+            // Assuming Store.getName() is "Toko Spakbor Hills" and LocationType.STORE.toString() is "STORE"
+            // A direct name check might be needed if Store.java doesn't identify its LocationType.
+            // For now, the generic locType.toString().equalsIgnoreCase(currentMapName) might catch some cases.
+            if (currentMap instanceof Store && locType == com.spakborhills.model.Enum.LocationType.STORE) {
+                isCurrentMapType = true;
+            }
+
+            if (locType != com.spakborhills.model.Enum.LocationType.POND && !isCurrentMapType) {
+                destinationNames.add(locType.toString());
+            }
+        }
+
+        if (destinationNames.isEmpty()) {
+            // This might happen if on a map like STORE and all other options are somehow filtered out,
+            // or if on FARM and only POND was filtered leaving no other valid world locations.
+            // A fallback could be to always offer FARM if not currently on FARM.
+            // For now, if empty, show a message. This indicates a potential logic issue or lack of destinations.
+            if (!(currentMap instanceof FarmMap) && !destinationNames.contains(com.spakborhills.model.Enum.LocationType.FARM.toString())) {
+                 // If not on Farm, and Farm is not in the list, always add Farm as an option to return.
+                 boolean farmAlreadyExcludedAsCurrent = com.spakborhills.model.Enum.LocationType.FARM.toString().equalsIgnoreCase(currentMapName);
+                 if (!farmAlreadyExcludedAsCurrent) {
+                    destinationNames.add(com.spakborhills.model.Enum.LocationType.FARM.toString());
+                 }
+            }
+            if (destinationNames.isEmpty()) { // Re-check after potentially adding FARM
+                 JOptionPane.showMessageDialog(this, "No other locations available to visit from here.", "Pindah Lokasi", JOptionPane.INFORMATION_MESSAGE);
+                 return;
+            }
+        }
+
+        String[] options = destinationNames.toArray(new String[0]);
+        String chosenDestination = (String) JOptionPane.showInputDialog(
+                this,
+                "Kamu berada di tepi kebun. Mau pergi ke mana?",
+                "Pilih Tujuan",
+                JOptionPane.PLAIN_MESSAGE,
+                null, // No custom icon
+                options, // Array of choices
+                options[0] // Default choice
+        );
+
+        if (chosenDestination != null && !chosenDestination.isEmpty()) {
+            try {
+                com.spakborhills.model.Enum.LocationType destinationEnum = 
+                    com.spakborhills.model.Enum.LocationType.valueOf(chosenDestination.toUpperCase());
+                
+                // Call the controller to handle the visit
+                boolean visitSuccess = gameController.requestVisit(destinationEnum);
+                
+                if (visitSuccess) {
+                    // Repaint is handled by GameController after successful visit and model update
+                    // No need to advance time here, GameController handles it.
+                    System.out.println("GamePanel: Visit to " + destinationEnum + " requested.");
+                } else {
+                    // GameController.requestVisit already shows a JOptionPane on failure.
+                    // System.out.println("GamePanel: Visit to " + destinationEnum + " failed or map not available.");
+                    // Optionally, re-show the dialog or provide other feedback if needed here,
+                    // but for now, the JOptionPane in GameController should suffice.
+                }
+            } catch (IllegalArgumentException e) {
+                System.err.println("GamePanel: Invalid destination string chosen: " + chosenDestination + " Error: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, 
+                    "Invalid location selected: " + chosenDestination, 
+                    "Selection Error", 
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 } 

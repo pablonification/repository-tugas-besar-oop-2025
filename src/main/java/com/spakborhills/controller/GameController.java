@@ -22,17 +22,29 @@ import com.spakborhills.model.Item.Equipment;
 import java.util.Collections;
 import java.util.Comparator;
 // GamePanel might be needed later for more complex interactions or direct view updates
-// import com.spakborhills.view.GamePanel;
+import com.spakborhills.view.GamePanel;
 // GameTime might be needed if Farm.nextDay() isn't comprehensive enough for all time updates
 // import com.spakborhills.model.GameTime; 
+import com.spakborhills.model.Enum.LocationType;
+import com.spakborhills.model.Map.MapArea;
 
 public class GameController {
 
     private Farm farmModel;
-    // private GamePanel gamePanel; // If needed later
+    private GamePanel gamePanel; // Referensi ke GamePanel untuk menampilkan pesan
 
     public GameController(Farm farmModel) {
         this.farmModel = farmModel;
+        this.gamePanel = null; // Inisialisasi null, akan di-set nanti
+    }
+
+    /**
+     * Mengatur referensi GamePanel untuk Controller.
+     * Ini harus dipanggil setelah GamePanel diinstansiasi.
+     * @param panel Referensi ke GamePanel.
+     */
+    public void setGamePanel(GamePanel panel) {
+        this.gamePanel = panel;
     }
 
     /**
@@ -53,16 +65,15 @@ public class GameController {
         }
         boolean moved = player.move(direction);
         if (moved) {
-            // Assuming move() might cost energy and could lead to pass out
-            // Or, if move has no energy cost, this check is only relevant for actions like till.
-            // For now, let's keep it simple and check after any successful state change.
-            // If player.move() itself can reduce energy to MIN_ENERGY and the game rules dictate
-            // passing out even from movement, this check here is appropriate.
-            // If move() doesn't cost energy, this specific call to checkPassOut() after move might be redundant
-            // unless other side effects of move could trigger it.
-            // Based on spec, 'Moving' action does not have energy cost listed directly, but player.changeEnergy is a general mechanic.
-            // Let's assume for now that only explicit energy-costing actions are the primary trigger for pass out for simplicity.
-            // So, we will call checkPassOut from the action handlers like requestTillLandAtPlayerPosition.
+            // Setelah bergerak, cek apakah pemain ada di entry point map saat ini
+            if (player.isOnEntryPoint()) {
+                System.out.println("Player is on an entry point of " + player.getCurrentMap().getName() + ". Triggering world map dialog...");
+                if (gamePanel != null) {
+                    gamePanel.showWorldMapSelectionDialog();
+                } else {
+                    System.err.println("GameController: gamePanel is null, cannot show world map dialog.");
+                }
+            }
         }
         return moved;
     }
@@ -326,16 +337,16 @@ public class GameController {
                                             // Untuk saat ini, kita asumsikan player.getSelectedItem() akan mengembalikan null jika item terakhir habis
                                             // dan player.selectNext/Prev akan skip item yang countnya 0.
                                             // Jika tidak, kita perlu memanggil selectNext/Previous atau semacamnya di sini.
-                // Untuk memastikan konsistensi, jika item yang dimakan adalah selectedItem dan habis,
-                // kita perlu memastikan selectedItem di Player di-update. Cara terbaik adalah dengan
-                // memanggil kembali logika pemilihan item.
-                // Namun, karena Player.eat() sendiri tidak mengubah selectedItem, kita hanya perlu memastikan
-                // GamePanel akan me-refresh tampilan selectedItem yang mungkin sudah jadi 0 qty.
-                // Jika selectedItem adalah objek yang sama, dan Player.getSelectedItem() merujuk ke sana,
-                // maka pengecekan player.getInventory().getItemCount(selectedItem) == 0 sudah cukup.
-                // Jika Player.eat() secara internal membuat selectedItem jadi null jika habis, maka tidak perlu apa2.
-                // Berdasarkan Player.java, dia TIDAK set selectedItem jadi null. Ini adalah tanggung jawab controller atau UI.
-                // Untuk sekarang, kita biarkan. Jika ini jadi masalah, kita bisa panggil selectNextItem() jika item habis.
+                                            // Untuk memastikan konsistensi, jika item yang dimakan adalah selectedItem dan habis,
+                                            // kita perlu memastikan selectedItem di Player di-update. Cara terbaik adalah dengan
+                                            // memanggil kembali logika pemilihan item.
+                                            // Namun, karena Player.eat() sendiri tidak mengubah selectedItem, kita hanya perlu memastikan
+                                            // GamePanel akan me-refresh tampilan selectedItem yang mungkin sudah jadi 0 qty.
+                                            // Jika selectedItem adalah objek yang sama, dan Player.getSelectedItem() merujuk ke sana,
+                                            // maka pengecekan player.getInventory().getItemCount(selectedItem) == 0 sudah cukup.
+                                            // Jika Player.eat() secara internal membuat selectedItem jadi null jika habis, maka tidak perlu apa2.
+                                            // Berdasarkan Player.java, dia TIDAK set selectedItem jadi null. Ini adalah tanggung jawab controller atau UI.
+                                            // Untuk sekarang, kita biarkan. Jika ini jadi masalah, kita bisa panggil selectNextItem() jika item habis.
                  // Perlu dipastikan selectedItem di Player di-refresh. Cara paling aman:
                 if (player.getSelectedItem() != null && player.getInventory().getItemCount(player.getSelectedItem()) == 0) {
                      System.out.println("GameController: Selected item " + player.getSelectedItem().getName() + " habis, mencoba memilih item lain.");
@@ -356,26 +367,42 @@ public class GameController {
 
     /**
      * Checks if the player should pass out due to low energy.
-     * If so, initiates the pass out sequence (sleep, next day).
+     * If so, processes the pass out logic (handled by Player and Farm model),
+     * and informs the GamePanel to display an end-of-day message with income.
      */
     private void checkPassOut() {
-        if (farmModel == null) return;
-        Player player = farmModel.getPlayer();
-        if (player == null) return;
-
-        if (player.getEnergy() <= Player.MIN_ENERGY) {
-            System.out.println("Player has passed out from exhaustion!");
-            // Player.sleep() handles energy restoration with penalty if applicable.
-            // The energy value passed to sleep is the one *before* sleep, used for penalty calculation.
-            // Since we are already at MIN_ENERGY, this value is correct for the penalty check.
-            player.sleep(player.getEnergy(), false); // false for not using a bonus bed
-            
-            farmModel.nextDay(); // Advance to the next day, update weather, crops etc.
-            
-            System.out.println("A new day has begun. Player energy: " + player.getEnergy());
-            // The repaint will be handled by the GamePanel's keyPressed method because
-            // requestTillLandAtPlayerPosition (which calls this) will return true.
+        if (farmModel == null || farmModel.getPlayer() == null) {
+            System.err.println("GameController.checkPassOut: Critical component (farmModel or player) is null.");
+            return;
         }
+        Player player = farmModel.getPlayer();
+        if (player.getEnergy() <= Player.MIN_ENERGY) {
+            int incomeFromSales = player.passOut(farmModel); 
+
+            String eventMessage = player.getName() + " pingsan karena kelelahan!";
+            String newDayInfo = generateNewDayInfoString();
+            
+            if (gamePanel != null) {
+                gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
+            } else {
+                System.out.println(eventMessage + " " + newDayInfo + " Pendapatan: " + incomeFromSales + "G (GamePanel belum siap untuk dialog)");
+            }
+        }
+    }
+
+    /**
+     * Generates a string summarizing the new day's date and weather.
+     * @return A string like "Sekarang adalah Hari ke-X, Musim Y, Cuaca Z."
+     */
+    private String generateNewDayInfoString() {
+        if (farmModel == null || farmModel.getCurrentTime() == null) {
+            return "Informasi hari baru tidak tersedia.";
+        }
+        GameTime currentTime = farmModel.getCurrentTime();
+        return String.format("Sekarang adalah Hari ke-%d, Musim %s, Cuaca %s.",
+                             currentTime.getCurrentDay(),
+                             currentTime.getCurrentSeason().toString(),
+                             currentTime.getCurrentWeather().toString());
     }
 
     // Placeholder for other game actions that the controller will handle
@@ -605,5 +632,76 @@ public class GameController {
         }
         Collections.sort(tools, Comparator.comparing(Item::getName));
         return tools;
+    }
+
+    /**
+     * Handles the player's request to visit a new location.
+     * 
+     * @param destination The LocationType of the destination map.
+     * @return true if the visit was successful and map changed, false otherwise.
+     */
+    public boolean requestVisit(LocationType destination) {
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getCurrentTime() == null) {
+            System.err.println("GameController: Critical model component null, cannot process visit request.");
+            return false;
+        }
+
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime();
+        MapArea targetMap = farmModel.getMapArea(destination);
+
+        if (targetMap == null) {
+            System.err.println("GameController: Target map for destination " + destination + " is null.");
+            if (gamePanel != null) {
+                // Show a message to the player if the map isn't available
+                javax.swing.JOptionPane.showMessageDialog(gamePanel, 
+                    "The location '" + destination.toString() + "' is not accessible yet.", 
+                    "Cannot Visit", 
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            }
+            return false;
+        }
+
+        // Determine entry point. For now, center of the map.
+        // A more robust solution would involve predefined entry points for each map/transition.
+        int entryX = 0;
+        int entryY = 0;
+        if (targetMap.getSize() != null) {
+            entryX = targetMap.getSize().width / 2;
+            entryY = targetMap.getSize().height / 2;
+        }
+        
+        // Ensure entry points are within bounds, especially for very small maps
+        if (targetMap.getSize() != null) {
+            if (entryX >= targetMap.getSize().width) entryX = Math.max(0, targetMap.getSize().width - 1);
+            if (entryY >= targetMap.getSize().height) entryY = Math.max(0, targetMap.getSize().height - 1);
+        }
+
+
+        boolean visited = player.visit(targetMap, entryX, entryY);
+
+        if (visited) {
+            System.out.println("Player visited " + destination + ". New map: " + targetMap.getName());
+            player.changeEnergy(-10); // Cost of visiting
+            gameTime.advance(15);   // Time cost of visiting
+
+            // It's important that farmModel's player reference is the same one whose currentMap has changed.
+            // And GamePanel must be looking at player.getCurrentMap() to see the change.
+
+            if (gamePanel != null) {
+                gamePanel.repaint(); // Trigger repaint to show new map
+            }
+            checkPassOut(); // Check if player passed out due to energy loss
+            return true;
+        } else {
+            System.err.println("GameController: player.visit() returned false for " + destination);
+             if (gamePanel != null) {
+                javax.swing.JOptionPane.showMessageDialog(gamePanel, 
+                    "Failed to move to '" + destination.toString() + "'.", 
+                    "Visit Failed", 
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+            }
+            return false;
+        }
     }
 } 

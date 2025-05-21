@@ -173,47 +173,57 @@ public class Farm {
         .findFirst();
     }
 
-    public void nextDay() {
+    /**
+     * Memproses semua logika akhir hari, termasuk penjualan dari ShippingBin,
+     * pembaruan GameTime, pertumbuhan tanaman, dan pembaruan statistik.
+     * @return int jumlah gold yang didapatkan dari penjualan ShippingBin.
+     */
+    public int nextDay() {
       System.out.println("\n-- Malam tiba, memproses akhir hari --");
 
-      // Proses penjualan ShippingBin
-      // Asumsi processSales mengembalikan total pendapatan dan mengupdate statistik internal
-      int income = shippingBin.processSales(this.statistics, this.priceList, this.gameTime.getCurrentDay(), this.gameTime.getCurrentSeason());
-      player.addGold(income);
-      shippingBin.clearBin(); // Reset ShippingBin untuk hari berikutnya
-      if(income > 0) {
-        System.out.println("Kamu mendapatkan " + income + " gold dari penjualan kemarin.");
+      int income = 0;
+      if (shippingBin != null && statistics != null && priceList != null && gameTime != null && player != null) {
+          income = shippingBin.processSales(this.statistics, this.priceList, this.gameTime.getCurrentDay(), this.gameTime.getCurrentSeason());
+          player.addGold(income);
+          shippingBin.clearBin(); // Reset ShippingBin untuk hari berikutnya
       } else {
-        System.out.println("Tidak ada penjualan dari Shipping Bin kemarin.");
+          System.err.println("Farm.nextDay: Salah satu komponen (shippingBin, statistics, priceList, gameTime, player) adalah null. Penjualan dilewati.");
       }
 
       // Majukan waktu game ke next day
-      gameTime.nextDay();
-      System.out.println("--- Memulai Hari Baru ---");
-      System.out.println("Hari ke-" + gameTime.getCurrentDay() + ", Musim " + gameTime.getCurrentSeason() + ", Cuaca: " + gameTime.getCurrentWeather());
+      if (gameTime != null) {
+        gameTime.nextDay();
+        System.out.println("--- Memulai Hari Baru ---");
+        System.out.println("Hari ke-" + gameTime.getCurrentDay() + ", Musim " + gameTime.getCurrentSeason() + ", Cuaca: " + gameTime.getCurrentWeather());
+      } else {
+          System.err.println("Farm.nextDay: gameTime is null. Tidak bisa melanjutkan hari.");
+          return income; // Kembalikan income sejauh ini jika gameTime null
+      }
 
       // Update pertumbuhan tanaman
-      if(farmMap != null) {
+      if(farmMap != null && gameTime != null) { // gameTime check lagi untuk keamanan
         farmMap.updateDailyTiles(gameTime.getCurrentWeather(), gameTime.getCurrentSeason());
         System.out.println("Tanaman di kebun berhasil tumbuh...");
       }
 
-      // 4. Reset Status Harian Lainnya (jika ada)
-        // Contoh: reset batas bicara/hadiah NPC per hari (logika ini mungkin ada di Controller/NPC)
-
-      // 5. Update statistik game
-      if (statistics != null) {
+      // Update statistik game
+      if (statistics != null && gameTime != null) {
         statistics.incrementDay(gameTime.getCurrentSeason());
       }
 
-      // 6. (Bonus) Update Pasar jika fitur Free Market diimplementasikan
-        // market.updatePrices();
-
-
-        System.out.println("--- Hari baru telah dimulai ---");
+      System.out.println("--- Hari baru telah dimulai ---");
+      return income;
     }
 
-      
+    /**
+     * Memaksa pemain tidur (misalnya karena pingsan), memproses hari berikutnya,
+     * dan memulihkan energi pemain dengan penalti.
+     * Logika pemulihan energi dan pesan pingsan kini ditangani di Player.passOut().
+     * @return int jumlah gold yang didapatkan dari penjualan ShippingBin pada hari berikutnya.
+     */
+    public int forceSleepAndProcessNextDay() {
+        return nextDay(); // Memproses hari berikutnya dan mengembalikan pendapatan
+    }
 
 /**
      * Memeriksa apakah salah satu kondisi milestone End Game (Halaman 34) sudah tercapai.

@@ -86,6 +86,7 @@ public class PriceList {
 
         // --- Special Items ---
         addPrice("Proposal Ring", 0, 0); // Tidak dijual/dibeli secara normal
+        addPrice("Koran Edisi Baru", 0, 0); // Harga beli 0, tidak untuk dijual kembali
 
         // --- Fish (Halaman 18) ---
         // Harga jual ikan dihitung dinamis oleh Fish.getSellPrice().
