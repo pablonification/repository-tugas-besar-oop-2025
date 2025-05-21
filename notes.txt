@@ -11,25 +11,29 @@ Aksi Pertanian Dasar:
 [SELESAI] Tilling (Mencangkul): Tombol 'E' jika Hoe dipilih.
 [SELESAI] Watering (Menyiram): Tombol 'E' jika Watering Can dipilih (atau 'R').
 [SELESAI] Planting (Menanam): Tombol 'E' jika Seed dipilih.
-Memastikan tile sudah TILLED (tidak perlu isWatered sebelum tanam).
-Mengurangi bibit dari inventory.
+[SELESAI] *Memastikan tile sudah TILLED (tidak perlu isWatered sebelum tanam).
+[SELESAI] *Mengurangi bibit dari inventory.
 [SELESAI] Harvesting (Memanen): Tombol 'E' sebagai fallback atau jika tanaman siap panen.
-Menambahkan hasil panen ke inventory.
+[SELESAI] *Menambahkan hasil panen ke inventory.
 [SELESAI] Recover Land (Memulihkan Lahan): Tombol 'E' jika Pickaxe dipilih.
-[SEDANG DIKERJAKAN] Pertumbuhan Tanaman:
-Logika Tile.updateDaily() untuk pertumbuhan berdasarkan penyiraman/hujan dan musim.
-Aturan "siram setiap 2 hari sekali saat cuaca panas" (saat ini hanya menghentikan pertumbuhan jika tidak dipenuhi).
-Visualisasi Tile & Tanaman (di GamePanel.drawFarmMap):
+[SELESAI] Pertumbuhan Tanaman:
+[SELESAI] *Logika Tile.updateDaily() untuk pertumbuhan berdasarkan penyiraman/hujan dan musim.
+[SELESAI] *Aturan "siram setiap 2 hari sekali saat cuaca panas" (IMPLEMENTED in Tile.updateDaily).
+[SELESAI] *Visualisasi Tile & Tanaman (di GamePanel.drawFarmMap):
 [SELESAI] Warna dasar untuk tile type (grass, tillable, tilled, planted, watered).
-[UNTUK DILAKUKAN] Visualisasi Pertumbuhan Tanaman:
-Mengubah tampilan tile PLANTED berdasarkan growthDays relatif terhadap daysToHarvest (misal, perubahan warna, ikon sederhana, atau teks inisial).
-Indikasi jelas jika tanaman siap panen (isHarvestable()).
+[SELESAI] Visualisasi Pertumbuhan Tanaman:
+[SELESAI] Mengubah tampilan tile PLANTED berdasarkan growthDays relatif terhadap daysToHarvest (perubahan warna dari hijau muda ke hijau tua, lalu kuning saat siap panen).
+[SELESAI] Indikasi jelas jika tanaman siap panen (isHarvestable()) dengan warna kuning.
 Aksi Makan (Eating):
-[UNTUK DILAKUKAN] Input Pemain: Tombol 'F' (atau 'E' jika selectedItem adalah EdibleItem).
-[UNTUK DILAKUKAN] GameController.requestEatSelectedItem():
-Memanggil player.eat() jika selectedItem valid.
-Menyesuaikan energi pemain dan waktu permainan.
-[UNTUK DILAKUKAN] Feedback Visual/Audio: Konfirmasi makan berhasil/gagal.
+[SELESAI] Input Pemain: Tombol 'F' digunakan.
+[SELESAI] GameController.requestEatSelectedItem():
+Memanggil player.eat() jika selectedItem adalah EdibleItem dan valid.
+Menyesuaikan energi pemain (berdasarkan EdibleItem.getEnergyRestore()).
+Memajukan waktu permainan (5 menit).
+Item dikonsumsi dari inventory.
+Menangani kasus energi penuh (makan dibatalkan jika item memberi energi positif).
+Menangani kasus item habis setelah dimakan (selectedItem di-update oleh controller).
+[SELESAI] Feedback Visual/Audio: Konfirmasi via perubahan energi di info panel dan log konsol.
 Fase 2: Ekonomi & Interaksi Dunia Luar
 Toko (Store):
 [SEBAGIAN SUDAH] GUI Toko: Dialog untuk menampilkan item yang dijual (Crop, Seed, Food, Equipment tertentu).
@@ -108,10 +112,12 @@ Memulihkan energi penuh (atau setengah jika ada penalti energi rendah sebelum ti
 Fase 4: Waktu, Cuaca, dan Sistem Lainnya
 Sistem Waktu & Pergantian Hari/Musim:
 [SEBAGIAN SUDAH] GameTime menghitung waktu, hari, musim. Farm.nextDay() memproses pergantian.
+[CHEAT DITAMBAHKAN] Cheat untuk mengubah Musim (spring, summer, fall, winter) via input dialog (tombol C).
 [UNTUK DILAKUKAN] Efek visual/audio untuk pergantian waktu (misal, warna langit meredup di malam hari di GamePanel).
 [UNTUK DILAKUKAN] Sinkronisasi Waktu Nyata vs Game: (Spesifikasi: "1 detik di dunia nyata = 5 menit di dunia permainan"). Ini perlu game loop utama yang meng-tick GameTime.advance() secara berkala. Saat ini, waktu hanya maju signifikan saat nextDay atau aksi tertentu.
 Cuaca:
 [SEBAGIAN SUDAH] GameTime punya currentWeather. Tile.updateDaily() menggunakan info hujan.
+[CHEAT DITAMBAHKAN] Cheat untuk mengubah Cuaca (sunny, rainy) via input dialog (tombol C).
 [UNTUK DILAKUKAN] Efek Visual Cuaca: Partikel hujan di GamePanel.
 [UNTUK DILAKUKAN] Watching TV: Aksi untuk mengetahui cuaca besok (perlu GUI interaksi dengan TV jika ada).
 End Game Statistics:

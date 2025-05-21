@@ -113,6 +113,23 @@ public class GameTime {
         }
     }
 
+    /**
+     * Mengatur musim saat ini secara manual (untuk cheat).
+     * Juga mereset rainyDaysThisSeason karena musim berubah.
+     * @param newSeason Musim baru.
+     */
+    public void setSeason(Season newSeason) {
+        if (newSeason != null && newSeason != Season.ANY) {
+            this.currentSeason = newSeason;
+            this.rainyDaysThisSeason = 0; // Reset counter hujan saat musim diubah manual
+            // Pertimbangkan apakah dayOfMonth juga perlu direset ke 1 atau dibiarkan
+            // Untuk cheat, mungkin lebih baik membiarkannya agar tidak terlalu disruptif
+            // atau tambahkan parameter lain jika perlu kontrol lebih.
+            System.out.println("CHEAT: Musim diubah menjadi: " + this.currentSeason);
+        } else {
+            System.err.println("CHEAT: Gagal mengubah musim ke nilai yang tidak valid: " + newSeason);
+        }
+    }
 
     /**
      * Memajukan waktu game sebanyak menit tertentu.

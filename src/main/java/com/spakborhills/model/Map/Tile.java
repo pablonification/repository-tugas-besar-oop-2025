@@ -182,15 +182,24 @@ public class Tile {
                 }
                 this.daysSinceLastWatered = 0; // Reset counter because it got water
             } else {
-                // Was not watered by player before nextDay() AND it did not rain today
+                // Was not watered by player before nextDay() AND it did not rain today (implicitly weather == Weather.SUNNY)
                 this.daysSinceLastWatered++;
-                System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") tidak disiram hari ini. daysSinceLastWatered: " + this.daysSinceLastWatered);
-                if (this.daysSinceLastWatered > MAX_DAYS_WITHOUT_WATER_BEFORE_DEATH) {
-                    System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena tidak disiram terlalu lama.");
+                System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") tidak disiram hari ini. DaysSinceLastWatered: " + this.daysSinceLastWatered + ", Cuaca: " + weather);
+
+                // Check for death due to hot weather rule first
+                if (weather == Weather.SUNNY && this.daysSinceLastWatered >= WATERING_INTERVAL_HOT_WEATHER) {
+                    System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena tidak disiram selama " + this.daysSinceLastWatered + " hari saat cuaca panas.");
                     this.setType(TileType.TILLED); // Kembali jadi tanah olahan kering
-                    // plantedSeed, growthDays, dll akan direset oleh setType(TILLED)
-                    this.isWatered = false; // Pastikan juga reset ini
-                    return; // Tidak perlu proses lebih lanjut untuk tile ini
+                    this.isWatered = false; 
+                    return; 
+                }
+                
+                // If not dead from hot weather rule, check general death rule
+                if (this.daysSinceLastWatered > MAX_DAYS_WITHOUT_WATER_BEFORE_DEATH) {
+                    System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena tidak disiram terlalu lama (" + this.daysSinceLastWatered + " hari).");
+                    this.setType(TileType.TILLED); // Kembali jadi tanah olahan kering
+                    this.isWatered = false;
+                    return; 
                 }
             }
         } else {

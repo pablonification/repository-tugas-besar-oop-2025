@@ -17,6 +17,8 @@ import com.spakborhills.model.Item.MiscItem; // Sellable
 import com.spakborhills.model.Util.PriceList; // For getting item prices in store
 import com.spakborhills.model.Object.ShippingBinObject; // For checking instance
 import com.spakborhills.model.Util.Inventory;
+import com.spakborhills.model.Enum.Weather; // Tambahkan impor untuk Weather
+import com.spakborhills.model.Enum.Season; // Tambahkan impor untuk Season
 
 import javax.swing.*;
 import java.awt.*;
@@ -32,6 +34,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final int INFO_PANEL_HEIGHT = 80; // Increased height for more info
     private Farm farmModel;
     private GameController gameController;
+    private static final Font DIALOG_FONT = new Font("Arial", Font.PLAIN, 18); // Added font for dialogs
 
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
@@ -42,6 +45,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         setBackground(Color.GRAY);
         addKeyListener(this);
         setFocusable(true); // Important to receive key events
+
+        // Set default font for JOptionPane dialogs
+        UIManager.put("OptionPane.messageFont", DIALOG_FONT);
+        UIManager.put("OptionPane.buttonFont", DIALOG_FONT);
+        UIManager.put("TextField.font", DIALOG_FONT);
     }
 
     @Override
@@ -73,7 +81,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         g.fillRect(0, 0, getWidth(), INFO_PANEL_HEIGHT); // Background for info panel
 
         g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.PLAIN, 12)); // Set font for clarity
+        g.setFont(new Font("Arial", Font.BOLD, 20)); // Increased font size and made it bold
 
         // Baris 1: Nama, Energi, Gold
         String playerStats = String.format("Name: %s | Energy: %d | Gold: %d G",
@@ -86,12 +94,12 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                                     farmModel.getCurrentTime().getCurrentDay(),
                                     farmModel.getCurrentTime().getCurrentSeason(),
                                     farmModel.getCurrentTime().getCurrentWeather());
-        g.drawString(timeInfo, 10, 35);
+        g.drawString(timeInfo, 10, 40); // Adjusted Y position for larger font
 
         // Baris 3: Selected Item
         Item selectedItem = player.getSelectedItem();
         String selectedItemName = (selectedItem != null) ? selectedItem.getName() : "None";
-        g.drawString("Selected: " + selectedItemName, 10, 50);
+        g.drawString("Selected: " + selectedItemName, 10, 60); // Adjusted Y position for larger font
 
         // Baris 4: Inventory Hotbar (menggantikan Toolbelt)
         if (gameController != null) {
@@ -136,7 +144,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     }
                 }
             }
-            g.drawString(hotbarString.toString(), 10, 65);
+            g.drawString(hotbarString.toString(), 10, 80);
         }
     }
 
@@ -164,19 +172,32 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                             Seed currentSeed = tile.getPlantedSeed();
                             if (currentSeed != null) {
                                 if (tile.isHarvestable()) {
-                                    tileColor = Color.YELLOW; // Ready to harvest
+                                    tileColor = Color.YELLOW; // Ready to harvest - Distinct color
                                 } else {
-                                    // Calculate growth progress
-                                    double growthProgress = (double) tile.getGrowthDays() / currentSeed.getDaysToHarvest();
-                                    if (growthProgress < 0.33) {
-                                        tileColor = new Color(0, 120, 0); // Young plant
-                                    } else if (growthProgress < 0.66) {
-                                        tileColor = new Color(50, 150, 0); // Medium growth
-                                    } else {
-                                        tileColor = new Color(100, 180, 0); // Mature, not yet harvestable
+                                    // Calculate growth progress for distinct colors
+                                    // Ensure daysToHarvest is not zero to avoid division by zero if seed data is incorrect
+                                    double growthProgress = 0;
+                                    if (currentSeed.getDaysToHarvest() > 0) {
+                                         growthProgress = (double) tile.getGrowthDays() / currentSeed.getDaysToHarvest();
                                     }
+
+                                    if (growthProgress < 0.33) {
+                                        tileColor = new Color(152, 251, 152); // PaleGreen - Tahap Awal
+                                    } else if (growthProgress < 0.66) {
+                                        tileColor = new Color(60, 179, 113); // MediumSeaGreen - Tahap Tengah
+                                    } else if (growthProgress < 1.0) { // Less than 1.0, as 1.0 should be YELLOW (harvestable)
+                                        tileColor = new Color(34, 139, 34);  // ForestGreen - Tahap Akhir (matang, belum siap panen)
+                                    } else { // Should ideally be caught by isHarvestable, but as a fallback for >= 1.0
+                                        tileColor = Color.YELLOW; // Fallback to harvestable color
+                                    }
+
                                     if (tile.isWatered()) {
-                                        // Darken the color slightly if watered
+                                        // Darken the color slightly if watered to show it's wet
+                                        // but ensure it's still distinguishable from the next growth stage
+                                        // One simple way: make it a bit darker, but not too much.
+                                        // Or, add a small blueish tint if complex color mixing is desired.
+                                        // For simplicity, let's use darker(). It might blend for very dark greens.
+                                        // A more robust way would be to define specific watered colors for each stage.
                                         tileColor = tileColor.darker();
                                     }
                                 }
@@ -247,63 +268,95 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             case KeyEvent.VK_D:
                 actionTaken = gameController.requestPlayerMove(Direction.EAST);
                 break;
-            case KeyEvent.VK_E: // Action key for selected item or general interaction
-                Item currentItem = farmModel.getPlayer().getSelectedItem(); 
-                boolean actionProcessed = false; 
-
-                if (currentItem instanceof Equipment) {
-                    String toolType = ((Equipment) currentItem).getToolType();
-                    if (toolType.equalsIgnoreCase("Hoe")) {
-                        actionProcessed = gameController.requestTillLandAtPlayerPosition();
-                    } else if (toolType.equalsIgnoreCase("WateringCan")) {
-                        actionProcessed = gameController.requestWaterTileAtPlayerPosition();
-                    } else if (toolType.equalsIgnoreCase("Pickaxe")) { 
-                        actionProcessed = gameController.requestRecoverLandAtPlayerPosition();
-                    } 
-                } else if (currentItem instanceof Seed) { // Handling for Seed planting
-                    actionProcessed = gameController.requestPlantSeedAtPlayerPosition();
-                }
-
-                if (actionProcessed) {
-                    actionTaken = true;
-                } else {
-                    // Fallback: if no specific item action was done (or failed), try harvesting
-                    boolean harvested = gameController.requestHarvestAtPlayerPosition();
-                    if (harvested) {
-                        actionTaken = true;
-                        // System.out.println("[GamePanel.VK_E] Harvest action successful as fallback.");
+            case KeyEvent.VK_E: // Action key
+                actionTaken = tryGeneralAction();
+                break;
+            case KeyEvent.VK_R: // Alternative water key (jika ada)
+                // Bisa juga ditambahkan untuk aksi spesifik jika E sudah terlalu umum
+                // Jika diaktifkan, pastikan requestWaterTileAtPlayerPosition mengembalikan boolean
+                // actionTaken = gameController.requestWaterTileAtPlayerPosition(); 
+                break;
+            case KeyEvent.VK_1:
+                gameController.selectPreviousItem();
+                actionTaken = true; // Selecting an item is an action that needs repaint
+                break;
+            case KeyEvent.VK_2:
+                gameController.selectNextItem();
+                actionTaken = true; // Selecting an item is an action that needs repaint
+                break;
+            case KeyEvent.VK_C: // Cheat key
+                handleCheatInput();
+                actionTaken = true; // Cheat input is an action that might change display (weather)
+                break;
+            case KeyEvent.VK_P: // 'P' for Open Store
+                openStoreDialog(); // Assumed to be void, dialog handles its own flow
+                actionTaken = true; // Opening a dialog is an interaction
+                break;
+            case KeyEvent.VK_B: // 'B' for Shipping Bin interaction
+                actionTaken = tryOpenShippingBinDialog(); // This method already returns boolean
+                break;
+            case KeyEvent.VK_F: // 'F' for Eat action
+                if (gameController != null) {
+                    actionTaken = gameController.requestEatSelectedItem();
+                    if (actionTaken) {
+                        System.out.println("GamePanel: Eat action initiated by F key.");
                     } else {
-                        // If currentItem was null or not an Equipment/Seed that had a successful action, 
-                        // and harvest also failed, then print this.
-                        System.out.println("[GamePanel.VK_E] No specific action for '" + (currentItem != null ? currentItem.getName() : "None") + "' or action failed; harvest also failed.");
+                        // Optional: feedback jika makan gagal (misal, item tidak bisa dimakan, energi penuh)
+                        System.out.println("GamePanel: Eat action failed or not applicable.");
                     }
                 }
                 break;
-            case KeyEvent.VK_R: // Explicit 'R' for Watering - KEPT FOR NOW, but 'E' with WateringCan is preferred
-                actionTaken = gameController.requestWaterTileAtPlayerPosition();
-                break;
-            case KeyEvent.VK_1: // Select Previous Item (was Tool)
-                gameController.selectPreviousItem(); // MODIFIED
-                actionTaken = true; // Repaint to show new selected item
-                break;
-            case KeyEvent.VK_2: // Select Next Item (was Tool)
-                gameController.selectNextItem(); // MODIFIED
-                actionTaken = true; // Repaint to show new selected item
-                break;
-            case KeyEvent.VK_P: // 'P' for Open Store
-                openStoreDialog();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_B: // 'B' for Shipping Bin interaction
-                actionTaken = tryOpenShippingBinDialog(); // tryOpenShippingBinDialog will return true if an action occurred
-                break;
+            // Tambahkan case lain jika perlu
         }
 
         if (actionTaken) {
             repaint(); // Repaint the panel if an action was taken that might change the state
         }
     }
-    
+
+    private boolean tryGeneralAction() {
+        Player player = farmModel.getPlayer();
+        if (player == null) return false;
+        Item currentItem = player.getSelectedItem();
+        boolean actionProcessed = false;
+
+        if (currentItem == null) {
+            // If no item is selected, try harvesting as a default action.
+            return gameController.requestHarvestAtPlayerPosition();
+        }
+
+        if (currentItem instanceof Equipment) {
+            String itemName = currentItem.getName();
+            if (itemName.equals("Hoe")) {
+                actionProcessed = gameController.requestTillLandAtPlayerPosition();
+            } else if (itemName.equals("Watering Can")) {
+                actionProcessed = gameController.requestWaterTileAtPlayerPosition();
+            } else if (itemName.equals("Pickaxe")) {
+                actionProcessed = gameController.requestRecoverLandAtPlayerPosition();
+            } else if (itemName.equals("Fishing Rod")) {
+                // TODO: Implement fishing logic trigger here or in a dedicated fishing spot interaction
+                System.out.println("Fishing Rod selected. Implement fishing action or interaction with water tile.");
+                // actionProcessed = gameController.requestFish(); // Example if such method exists
+            }
+        } else if (currentItem instanceof Seed) {
+            actionProcessed = gameController.requestPlantSeedAtPlayerPosition();
+        } else if (currentItem instanceof Food) { // Assuming Food is an EdibleItem
+            // TODO: Implement eating logic. Maybe a different key for eating like 'F'.
+            // For now, 'E' won't trigger eating if it's food.
+            // actionProcessed = gameController.requestEatSelectedItem();
+            System.out.println("Food item selected: " + currentItem.getName() + ". Press a dedicated key (e.g., F) to eat.");
+        }
+        // Add other item type checks if necessary (e.g., for EdibleItem that is not Food)
+
+        if (actionProcessed) {
+            return true;
+        } else {
+            // Fallback: if no specific item action was processed OR currentItem was not actionable with 'E',
+            // try harvesting. This makes 'E' also a harvest key if standing on a harvestable plant.
+            return gameController.requestHarvestAtPlayerPosition();
+        }
+    }
+
     private void openStoreDialog() {
         if (gameController == null || farmModel == null || farmModel.getPriceList() == null) {
             JOptionPane.showMessageDialog(this, "Store is currently unavailable.", "Store Error", JOptionPane.ERROR_MESSAGE);
@@ -508,6 +561,54 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Invalid number entered. Please enter a valid number.", "Input Error", JOptionPane.ERROR_MESSAGE);
             return false;
+        }
+    }
+
+    private void handleCheatInput() {
+        String cheatCode = JOptionPane.showInputDialog(this, "Enter cheat code (e.g., weather sunny/rainy, season spring/summer/fall/winter):", "Cheat Console", JOptionPane.PLAIN_MESSAGE);
+        if (cheatCode == null || cheatCode.trim().isEmpty()) {
+            return;
+        }
+
+        String[] parts = cheatCode.trim().toLowerCase().split("\\s+");
+        if (parts.length > 0) {
+            String command = parts[0];
+            if (command.equals("weather") && parts.length > 1) {
+                String weatherType = parts[1];
+                if (weatherType.equals("sunny")) {
+                    farmModel.getCurrentTime().setWeather(Weather.SUNNY);
+                    JOptionPane.showMessageDialog(this, "Cheat activated: Weather set to SUNNY", "Cheat", JOptionPane.INFORMATION_MESSAGE);
+                } else if (weatherType.equals("rainy")) {
+                    farmModel.getCurrentTime().setWeather(Weather.RAINY);
+                    JOptionPane.showMessageDialog(this, "Cheat activated: Weather set to RAINY", "Cheat", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Invalid weather type. Use 'sunny' or 'rainy'.", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else if (command.equals("season") && parts.length > 1) {
+                String seasonType = parts[1];
+                Season newSeason = null;
+                switch (seasonType) {
+                    case "spring":
+                        newSeason = Season.SPRING;
+                        break;
+                    case "summer":
+                        newSeason = Season.SUMMER;
+                        break;
+                    case "fall":
+                        newSeason = Season.FALL;
+                        break;
+                    case "winter":
+                        newSeason = Season.WINTER;
+                        break;
+                    default:
+                        JOptionPane.showMessageDialog(this, "Invalid season type. Use 'spring', 'summer', 'fall', or 'winter'.", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                }
+                farmModel.getCurrentTime().setSeason(newSeason);
+                JOptionPane.showMessageDialog(this, "Cheat activated: Season set to " + newSeason, "Cheat", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Unknown cheat command or insufficient arguments: " + cheatCode, "Cheat Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 

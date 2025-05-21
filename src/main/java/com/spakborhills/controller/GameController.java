@@ -6,6 +6,7 @@ import com.spakborhills.model.Store;
 import com.spakborhills.model.Util.PriceList;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Item.Seed;
+import com.spakborhills.model.Item.EdibleItem;
 import com.spakborhills.model.Enum.Direction;
 import com.spakborhills.model.Enum.Season;
 import com.spakborhills.model.Enum.TileType;
@@ -270,6 +271,87 @@ public class GameController {
             checkPassOut();
         }
         return recovered;
+    }
+
+    /**
+     * Memproses permintaan pemain untuk memakan item yang sedang dipilih.
+     * Mengurangi item dari inventory, memulihkan energi, dan memajukan waktu.
+     * @return true jika aksi makan berhasil, false jika tidak (misal, item tidak bisa dimakan, energi penuh).
+     */
+    public boolean requestEatSelectedItem() {
+        if (farmModel == null) {
+            System.err.println("GameController: Farm model is null, cannot process eat action.");
+            return false;
+        }
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime();
+
+        if (player == null || gameTime == null) {
+            System.err.println("GameController: Player or GameTime is null, cannot process eat action.");
+            return false;
+        }
+
+        Item selectedItem = player.getSelectedItem();
+        if (selectedItem == null) {
+            System.out.println("GameController: Tidak ada item yang dipilih untuk dimakan.");
+            return false;
+        }
+
+        // Cek energi sebelum makan, untuk kasus pass-out jika makan item beracun (energi negatif)
+        // atau jika pemain sudah pingsan.
+        if (player.getEnergy() <= Player.MIN_ENERGY && (!(selectedItem instanceof EdibleItem) || ((EdibleItem)selectedItem).getEnergyRestore() <=0 ) ) {
+            System.out.println("Player is too tired to eat (or item provides no energy).");
+            // Memungkinkan makan item penambah energi bahkan jika sudah pingsan, jika itu satu-satunya cara untuk pulih sedikit.
+            // Namun, jika item tidak menambah energi atau energi negatif, dan sudah pingsan, maka tidak bisa.
+            return false;
+        }
+
+        boolean eaten = player.eat(selectedItem);
+
+        if (eaten) {
+            int timeCostEat = 5; // Biaya waktu 5 menit untuk makan
+            gameTime.advance(timeCostEat);
+            System.out.println("Player finished eating. Time advanced by " + timeCostEat + " minutes. Current time: " + gameTime.getTimeString());
+            
+            // Setelah makan, selectedItem mungkin menjadi null jika stacknya habis.
+            // Perlu di-handle agar selectedItem di Player konsisten.
+            if (player.getInventory().getItemCount(selectedItem) == 0) {
+                // Item habis, coba pilih item berikutnya secara otomatis
+                // Ini bisa jadi kompleks, untuk sekarang kita set null saja, 
+                // dan biarkan pemain memilih ulang atau GamePanel menampilkan "None"
+                System.out.println("GameController: Item " + selectedItem.getName() + " habis setelah dimakan.");
+                // player.setSelectedItem(null); // Jangan set di sini, biarkan sistem pemilihan item yang ada bekerja.
+                                            // Pemain akan otomatis memilih item berikutnya jika ada saat inventory di-cycle.
+                                            // Atau, jika ada mekanisme 'auto-select next available item', itu bisa dipanggil di sini.
+                                            // Untuk saat ini, kita asumsikan player.getSelectedItem() akan mengembalikan null jika item terakhir habis
+                                            // dan player.selectNext/Prev akan skip item yang countnya 0.
+                                            // Jika tidak, kita perlu memanggil selectNext/Previous atau semacamnya di sini.
+                // Untuk memastikan konsistensi, jika item yang dimakan adalah selectedItem dan habis,
+                // kita perlu memastikan selectedItem di Player di-update. Cara terbaik adalah dengan
+                // memanggil kembali logika pemilihan item.
+                // Namun, karena Player.eat() sendiri tidak mengubah selectedItem, kita hanya perlu memastikan
+                // GamePanel akan me-refresh tampilan selectedItem yang mungkin sudah jadi 0 qty.
+                // Jika selectedItem adalah objek yang sama, dan Player.getSelectedItem() merujuk ke sana,
+                // maka pengecekan player.getInventory().getItemCount(selectedItem) == 0 sudah cukup.
+                // Jika Player.eat() secara internal membuat selectedItem jadi null jika habis, maka tidak perlu apa2.
+                // Berdasarkan Player.java, dia TIDAK set selectedItem jadi null. Ini adalah tanggung jawab controller atau UI.
+                // Untuk sekarang, kita biarkan. Jika ini jadi masalah, kita bisa panggil selectNextItem() jika item habis.
+                 // Perlu dipastikan selectedItem di Player di-refresh. Cara paling aman:
+                if (player.getSelectedItem() != null && player.getInventory().getItemCount(player.getSelectedItem()) == 0) {
+                     System.out.println("GameController: Selected item " + player.getSelectedItem().getName() + " habis, mencoba memilih item lain.");
+                     // Coba select next, jika gagal (misal inventory jadi kosong), selected item akan jadi null.
+                     selectNextItem(); // Ini akan memutar dan memilih item valid berikutnya atau null
+                     if (player.getSelectedItem() == null) { // Jika setelah selectNextItem masih null (inventory kosong)
+                         System.out.println("GameController: Inventory kosong setelah makan, selected item menjadi null.");
+                     } else {
+                         System.out.println("GameController: Selected item baru setelah makan: " + player.getSelectedItem().getName());
+                     }
+                }
+            }
+            checkPassOut(); // Cek kondisi pingsan setelah energi berubah dan waktu bertambah
+            return true;
+        }
+        return false;
     }
 
     /**

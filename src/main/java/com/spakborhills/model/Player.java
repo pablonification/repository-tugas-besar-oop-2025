@@ -507,47 +507,97 @@ public class Player {
      * @return true jika panen berhasil, false jika gagal.
      */
     public boolean harvest(Tile targetTile, Map<String, Item> itemRegistry) {
-        if (targetTile == null || !targetTile.isHarvestable()) {
-            System.out.println("Tidak ada yang bisa dipanen di sini.");
+        // TODO: Implementasi lebih detail terkait item spesifik dari tanaman
+        if (targetTile == null || !targetTile.isHarvestable() || targetTile.getPlantedSeed() == null) {
+            System.out.println("Player.harvest: Tidak ada yang bisa dipanen atau tile tidak valid.");
             return false;
         }
-        List<Item> harvestedItems = targetTile.processHarvest(itemRegistry);
-        if (harvestedItems != null && !harvestedItems.isEmpty()) {
-            for (Item crop : harvestedItems) {
-                inventory.addItem(crop, 1);
+        // Diasumsikan Tile.harvest() akan mengembalikan daftar Item hasil panen atau null/kosong jika gagal
+        List<Item> harvestedProduce = targetTile.processHarvest(itemRegistry); // processHarvest HARUS mereset tile
+
+        if (harvestedProduce != null && !harvestedProduce.isEmpty()) {
+            boolean allAdded = true;
+            for(Item item : harvestedProduce){
+                if (item != null) { // Pastikan item tidak null sebelum menambahkannya
+                    this.inventory.addItem(item, 1); // Untuk sekarang, asumsikan setiap hasil panen adalah 1 unit
+                    System.out.println("Player memanen: " + item.getName());
+                } else {
+                    allAdded = false; // Tandai jika ada item null dalam hasil panen
+                }
             }
-            System.out.println("Kamu memanen " + harvestedItems.get(0).getName() + "!");
-            System.out.println(">>>>>>>>Debugging di inventory\n" + this.getInventory());
+            if (!allAdded) {
+                System.err.println("Peringatan: Beberapa item hasil panen null dan tidak ditambahkan.");
+            }
+            // Tidak ada biaya energi eksplisit untuk panen di spesifikasi,
+            // namun controller akan tetap memanggil changeEnergy(-5) sebagai contoh.
+            // Jika ingin panen gratis energi, hapus changeEnergy di controller atau buat nol.
             return true;
         } else {
-            System.out.println("Gagal memanen.");
+            System.out.println("Player.harvest: Gagal memanen atau tidak ada hasil dari tile.");
             return false;
         }
     }
 
     /**
-     * Mencoba memakan sebuah Item (yang harusnya EdibleItem).
-     * Mengasumsikan Controller menyediakan objek Item yang benar.
-     * Biaya waktu (5 menit) ditangani oleh Controller.
-     *
-     * @param itemToEat Item yang akan dikonsumsi.
-     * @return true jika berhasil dimakan, false jika gagal.
+     * Pemain mencoba memakan item yang dipilih.
+     * Hanya item yang mengimplementasikan EdibleItem yang bisa dimakan.
+     * Memulihkan energi dan mengurangi item dari inventory.
+     * @param itemToEat Item yang akan dimakan.
+     * @return true jika item berhasil dimakan, false jika tidak.
      */
     public boolean eat(Item itemToEat) {
-        if (itemToEat == null) return false;
-        if (!(itemToEat instanceof EdibleItem)) {
-            System.out.println(itemToEat.getName() + " tidak bisa dimakan.");
+        if (itemToEat == null) {
+            System.out.println("Player.eat: Tidak ada item yang dipilih untuk dimakan.");
             return false;
         }
-        if (!inventory.hasItem(itemToEat, 1)) {
-            System.out.println("Kamu tidak punya " + itemToEat.getName() + ".");
+
+        if (itemToEat instanceof EdibleItem) {
+            // Cek dulu apakah pemain punya item tersebut sebelum mencoba mengurangi
+            if (!inventory.hasItem(itemToEat, 1)) {
+                System.out.println("Player.eat: Pemain tidak memiliki " + itemToEat.getName() + " untuk dimakan.");
+                return false; // Seharusnya tidak terjadi jika itemToEat adalah selectedItem yang valid dari inventory
+            }
+
+            EdibleItem edible = (EdibleItem) itemToEat;
+            int energyRestored = edible.getEnergyRestore();
+
+            if (this.energy >= MAX_ENERGY && energyRestored > 0) {
+                System.out.println("Player.eat: Energi sudah penuh, tidak bisa makan " + itemToEat.getName() + " untuk memulihkan energi.");
+                // Pertimbangkan apakah tetap mengonsumsi item jika energi sudah penuh.
+                // Untuk saat ini, jika energi penuh dan item memberi energi positif, makan dibatalkan untuk hemat item.
+                // Jika item memberi energi negatif (poison?), mungkin tetap dikonsumsi.
+                // Untuk simplicity, kita batalkan jika energi penuh & restore positif.
+                return false;
+            }
+            
+            // Hapus item dari inventory DULU, baru tambah energi.
+            // Ini mencegah situasi di mana energi bertambah tapi item gagal dihapus (meskipun kecil kemungkinannya di sini).
+            boolean removed = inventory.removeItem(itemToEat, 1);
+            if (removed) {
+                changeEnergy(energyRestored);
+                System.out.println(this.name + " memakan " + itemToEat.getName() + ". Energi pulih: " + energyRestored + ". Energi sekarang: " + this.energy);
+                // Jika item adalah Equipment setelah dimakan (misal potion dengan efek sementara),
+                // selectedItem mungkin perlu di-clear atau diganti.
+                // Untuk EdibleItem biasa (Crop, Food), selectedItem akan menjadi null jika stack habis,
+                // dan Player/Controller harus menangani pemilihan item berikutnya.
+                // Jika itemToEat adalah selectedItem dan jumlahnya jadi 0, selectedItem harus di-update.
+                // Logic ini sebaiknya ada di Controller atau setelah pemanggilan eat()
+                if (inventory.getItemCount(itemToEat) == 0 && itemToEat.equals(this.selectedItem)) {
+                    // Jika item yang dimakan adalah selectedItem dan habis, selectedItem jadi null
+                    // Controller akan perlu logika untuk memilih item berikutnya atau handle selectedItem null.
+                    // this.setSelectedItem(null); // Player tidak seharusnya mengatur selected itemnya sendiri secara langsung berdasarkan aksi ini.
+                                              // Controller yang harusnya mengelola selectedItem.
+                }
+                return true;
+            } else {
+                // Ini seharusnya tidak terjadi jika hasItem(itemToEat, 1) true.
+                System.err.println("Player.eat: Gagal menghapus " + itemToEat.getName() + " dari inventory meskipun awalnya terdeteksi.");
+                return false;
+            }
+        } else {
+            System.out.println("Player.eat: " + itemToEat.getName() + " tidak bisa dimakan.");
             return false;
         }
-        boolean success = itemToEat.use(this, null);
-        if (success) {
-            inventory.removeItem(itemToEat, 1);
-        }
-        return success;
     }
 
     /**
