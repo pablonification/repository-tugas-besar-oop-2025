@@ -27,6 +27,11 @@ import com.spakborhills.view.GamePanel;
 // import com.spakborhills.model.GameTime; 
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Map.MapArea;
+import java.util.Random;
+import javax.swing.JOptionPane;
+import com.spakborhills.model.Enum.Weather;
+import com.spakborhills.model.Item.Fish;
+import com.spakborhills.model.Enum.FishRarity;
 
 public class GameController {
 
@@ -88,12 +93,18 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        FarmMap farmMap = farmModel.getFarmMap();
+        // FarmMap farmMap = farmModel.getFarmMap(); // farmMap variable can be obtained from player.getCurrentMap() if it's FarmMap
 
-        if (player == null || farmMap == null) {
-            System.err.println("GameController: Player or FarmMap is null, cannot till land.");
+        if (player == null) {
+            System.err.println("GameController: Player is null, cannot till land.");
             return false;
         }
+
+        if (!(player.getCurrentMap() instanceof FarmMap)) {
+            System.out.println("Hoe (Tilling) can only be used on the Farm.");
+            return false;
+        }
+        FarmMap farmMap = (FarmMap) player.getCurrentMap(); // Now we know it's a FarmMap
 
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to till land.");
@@ -125,13 +136,19 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        FarmMap farmMap = farmModel.getFarmMap();
+        // FarmMap farmMap = farmModel.getFarmMap();
         GameTime gameTime = farmModel.getCurrentTime();
 
-        if (player == null || farmMap == null || gameTime == null) {
-            System.err.println("GameController: Player, FarmMap, or GameTime is null, cannot plant.");
+        if (player == null || gameTime == null) {
+            System.err.println("GameController: Player or GameTime is null, cannot plant.");
             return false;
         }
+
+        if (!(player.getCurrentMap() instanceof FarmMap)) {
+            System.out.println("Planting seeds can only be done on the Farm.");
+            return false;
+        }
+        FarmMap farmMap = (FarmMap) player.getCurrentMap();
 
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to plant.");
@@ -169,13 +186,19 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        FarmMap farmMap = farmModel.getFarmMap();
+        // FarmMap farmMap = farmModel.getFarmMap();
         GameTime gameTime = farmModel.getCurrentTime(); // Dipertahankan jika Player.water() membutuhkannya di masa depan, atau untuk konsistensi
 
-        if (player == null || farmMap == null || gameTime == null) {
+        if (player == null || gameTime == null) {
             System.err.println("GameController: Player, FarmMap, or GameTime is null, cannot water tile.");
             return false;
         }
+
+        if (!(player.getCurrentMap() instanceof FarmMap)) {
+            System.out.println("Watering Can can only be used on the Farm.");
+            return false;
+        }
+        FarmMap farmMap = (FarmMap) player.getCurrentMap();
 
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to water tile.");
@@ -213,13 +236,19 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        FarmMap farmMap = farmModel.getFarmMap();
+        // FarmMap farmMap = farmModel.getFarmMap();
         Map<String, Item> itemRegistry = farmModel.getItemRegistry(); // For Player.harvest()
 
-        if (player == null || farmMap == null || itemRegistry == null) {
-            System.err.println("GameController: Player, FarmMap, or ItemRegistry is null, cannot harvest.");
+        if (player == null || itemRegistry == null) {
+            System.err.println("GameController: Player or ItemRegistry is null, cannot harvest.");
             return false;
         }
+
+        if (!(player.getCurrentMap() instanceof FarmMap)) {
+            System.out.println("Harvesting can only be done on the Farm.");
+            return false;
+        }
+        FarmMap farmMap = (FarmMap) player.getCurrentMap();
 
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to harvest.");
@@ -257,12 +286,18 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        FarmMap farmMap = farmModel.getFarmMap();
+        // FarmMap farmMap = farmModel.getFarmMap();
 
-        if (player == null || farmMap == null) {
+        if (player == null) {
             System.err.println("GameController: Player or FarmMap is null, cannot recover land.");
             return false;
         }
+
+        if (!(player.getCurrentMap() instanceof FarmMap)) {
+            System.out.println("Pickaxe (Recover Land) can only be used on the Farm.");
+            return false;
+        }
+        FarmMap farmMap = (FarmMap) player.getCurrentMap();
 
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to recover land.");
@@ -703,5 +738,360 @@ public class GameController {
             }
             return false;
         }
+    }
+
+    /**
+     * Handles a fishing request from the player.
+     * Checks if the player has a fishing rod selected, is near water, and has enough energy.
+     * Implements the fishing minigame with RNG as specified.
+     * 
+     * @return true if fishing action was processed, false otherwise
+     */
+    public boolean requestFish() {
+        if (farmModel == null) {
+            System.err.println("GameController: Farm model is null, cannot process fishing action.");
+            return false;
+        }
+        
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime();
+        Map<String, Item> itemRegistry = farmModel.getItemRegistry();
+        
+        if (player == null || gameTime == null || itemRegistry == null) {
+            System.err.println("GameController: Critical components null, cannot process fishing action.");
+            return false;
+        }
+        
+        // Check if player has enough energy
+        if (player.getEnergy() <= Player.MIN_ENERGY) {
+            System.out.println("Player is too tired to fish.");
+            return false;
+        }
+        
+        // Check if player has fishing rod selected
+        Item selectedItem = player.getSelectedItem();
+        if (selectedItem == null || !selectedItem.getName().equals("Fishing Rod")) {
+            System.out.println("You need to select the Fishing Rod to fish.");
+            return false;
+        }
+        
+        // Get current map and determine fishing location type
+        MapArea currentMap = player.getCurrentMap();
+        LocationType fishingLocation = null;
+        
+        if (currentMap instanceof FarmMap) {
+            // On farm map, must be near (not on) pond
+            boolean nearPond = isPlayerNearWater(player, (FarmMap)currentMap);
+            if (nearPond) {
+                fishingLocation = LocationType.POND;
+            } else {
+                System.out.println("You need to be near water to fish.");
+                return false;
+            }
+        } else {
+            // On world map, determine location from current map
+            String mapName = currentMap.getName();
+            if (mapName.contains("Forest River")) {
+                fishingLocation = LocationType.FOREST_RIVER;
+            } else if (mapName.contains("Mountain Lake")) {
+                fishingLocation = LocationType.MOUNTAIN_LAKE;
+            } else if (mapName.contains("Ocean")) {
+                fishingLocation = LocationType.OCEAN;
+            } else {
+                System.out.println("You can't fish here.");
+                return false;
+            }
+            
+            // Check if player is near water on this map
+            Tile playerTile = currentMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
+            if (playerTile == null || !isNearWaterTile(player, currentMap)) {
+                System.out.println("You need to be near water to fish.");
+                return false;
+            }
+        }
+        
+        // At this point, we know:
+        // 1. Player has fishing rod selected
+        // 2. Player has enough energy
+        // 3. Player is near water in a valid fishing location
+        // 4. We have determined the fishing location type
+        
+        // Time and energy cost
+        player.changeEnergy(-5); // Energy cost for attempting to fish
+        gameTime.advance(15);    // Time cost for fishing attempt (15 minutes)
+        
+        // Show fishing minigame dialog
+        if (gamePanel != null) {
+            return startFishingMinigame(fishingLocation);
+        } else {
+            System.err.println("GameController: gamePanel is null, cannot show fishing minigame dialog.");
+            return false;
+        }
+    }
+    
+    /**
+     * Checks if player is near water on a map.
+     * For FarmMap, this checks if the player is adjacent to a pond.
+     */
+    private boolean isPlayerNearWater(Player player, FarmMap farmMap) {
+        int playerX = player.getCurrentTileX();
+        int playerY = player.getCurrentTileY();
+        
+        // Check adjacent tiles (up, down, left, right)
+        int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+        
+        for (int[] dir : directions) {
+            int checkX = playerX + dir[0];
+            int checkY = playerY + dir[1];
+            
+            if (farmMap.isWithinBounds(checkX, checkY)) {
+                Tile adjacentTile = farmMap.getTile(checkX, checkY);
+                if (adjacentTile != null && adjacentTile.getType() == TileType.WATER) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Checks if player is near water on a general map.
+     */
+    private boolean isNearWaterTile(Player player, MapArea map) {
+        int playerX = player.getCurrentTileX();
+        int playerY = player.getCurrentTileY();
+        
+        // First check if player is directly on water
+        Tile playerTile = map.getTile(playerX, playerY);
+        if (playerTile != null && playerTile.getType() == TileType.WATER) {
+            return true;
+        }
+        
+        // Then check adjacent tiles
+        int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+        
+        for (int[] dir : directions) {
+            int checkX = playerX + dir[0];
+            int checkY = playerY + dir[1];
+            
+            if (map.isWithinBounds(checkX, checkY)) {
+                Tile adjacentTile = map.getTile(checkX, checkY);
+                if (adjacentTile != null && adjacentTile.getType() == TileType.WATER) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Implements the fishing minigame with RNG.
+     * Shows a dialog for player to guess a number, with difficulty based on fish type.
+     */
+    private boolean startFishingMinigame(LocationType fishingLocation) {
+        // Determine season, time, and weather
+        Season currentSeason = farmModel.getCurrentTime().getCurrentSeason();
+        Weather currentWeather = farmModel.getCurrentTime().getCurrentWeather();
+        int currentHour = farmModel.getCurrentTime().getHour();
+        
+        // Use the fishing location, season, time, and weather to determine available fish
+        boolean canCatchLegendary = canCatchLegendaryFish(fishingLocation, currentSeason, currentHour, currentWeather);
+        boolean canCatchRegular = canCatchRegularFish(fishingLocation, currentSeason, currentHour, currentWeather);
+        
+        // Default to common fish if no specific fish can be caught
+        String fishType = "Common";
+        int maxGuess = 10;    // Range 1-10
+        int maxAttempts = 10; // 10 attempts
+        
+        // Determine fish type and difficulty with some randomness
+        Random rng = new Random();
+        if (canCatchLegendary && rng.nextDouble() < 0.05) { // 5% chance for legendary if conditions are right
+            fishType = "Legendary";
+            maxGuess = 500;    // Range 1-500
+            maxAttempts = 7;   // Only 7 attempts
+        } else if (canCatchRegular && rng.nextDouble() < 0.3) { // 30% chance for regular if conditions are right
+            fishType = "Regular";
+            maxGuess = 100;    // Range 1-100
+            maxAttempts = 10;  // 10 attempts
+        }
+        
+        // Generate random number to guess
+        int targetNumber = rng.nextInt(maxGuess) + 1; // 1 to maxGuess
+
+        // SPOILER for Legendary Fish
+        if ("Legendary".equals(fishType)) {
+            System.out.println("[SPOILER] Legendary Fish attempt at: " + fishingLocation + ". Target Number: " + targetNumber);
+        }
+        
+        // Show dialog for fishing minigame
+        if (gamePanel == null) {
+            System.err.println("GameController: gamePanel is null, cannot show fishing dialog.");
+            return false;
+        }
+        
+        // Prepare message
+        String fishingMessage = "You're fishing for a " + fishType + " fish!\n" +
+                               "Guess the number between 1 and " + maxGuess + ".\n" +
+                               "You have " + maxAttempts + " attempts.";
+        
+        boolean caughtFish = false;
+        int attemptsLeft = maxAttempts;
+        
+        while (attemptsLeft > 0) {
+            String guessStr = JOptionPane.showInputDialog(gamePanel, 
+                fishingMessage + "\nAttempts left: " + attemptsLeft + "\nEnter your guess (or cancel to stop fishing) (DEBUG, answer):" + targetNumber);
+            
+            if (guessStr == null) {
+                // User canceled the dialog
+                System.out.println("Fishing canceled.");
+                return true; // Still count as action taken
+            }
+            
+            try {
+                int guess = Integer.parseInt(guessStr);
+                
+                if (guess == targetNumber) {
+                    // Correct guess - fish caught!
+                    caughtFish = true;
+                    break;
+                } else if (guess < targetNumber) {
+                    JOptionPane.showMessageDialog(gamePanel, "Higher than " + guess + "!");
+                } else {
+                    JOptionPane.showMessageDialog(gamePanel, "Lower than " + guess + "!");
+                }
+                
+                attemptsLeft--;
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(gamePanel, "Please enter a valid number.");
+            }
+        }
+        
+        // Process result
+        if (caughtFish) {
+            // Generate a random fish based on the type and add to inventory
+            Item fishCaught = generateRandomFish(fishType, fishingLocation, currentSeason, currentWeather);
+            if (fishCaught != null) {
+                farmModel.getPlayer().getInventory().addItem(fishCaught, 1);
+                JOptionPane.showMessageDialog(gamePanel, "You caught a " + fishCaught.getName() + "!");
+            } else {
+                JOptionPane.showMessageDialog(gamePanel, "You caught a fish, but it got away!");
+            }
+        } else {
+            JOptionPane.showMessageDialog(gamePanel, "The fish got away! Better luck next time.");
+        }
+        
+        // Check for pass out
+        checkPassOut();
+        
+        return true; // Action was processed
+    }
+    
+    /**
+     * Checks if legendary fish can be caught based on location, season, time, and weather.
+     */
+    private boolean canCatchLegendaryFish(LocationType location, Season season, int hour, Weather weather) {
+        // Implement conditions for legendary fish from specification
+        switch (location) {
+            case POND:
+                return season == Season.FALL && hour >= 8 && hour <= 20;
+            case OCEAN:
+                return season == Season.SUMMER && hour >= 8 && hour <= 20;
+            case FOREST_RIVER:
+                return season == Season.WINTER && hour >= 8 && hour <= 20;
+            case MOUNTAIN_LAKE:
+                return season == Season.SPRING && hour >= 8 && hour <= 20 && weather == Weather.RAINY;
+            default:
+                return false;
+        }
+    }
+    
+    /**
+     * Checks if regular fish can be caught based on location, season, time, and weather.
+     */
+    private boolean canCatchRegularFish(LocationType location, Season season, int hour, Weather weather) {
+        // Iterate through all fish in the registry
+        if (farmModel == null || farmModel.getItemRegistry() == null || farmModel.getCurrentTime() == null) {
+            return false; 
+        }
+        GameTime currentTime = farmModel.getCurrentTime(); // Need full GameTime object
+
+        for (Item item : farmModel.getItemRegistry().values()) {
+            if (item instanceof Fish) {
+                Fish fish = (Fish) item;
+                // Check if it's a regular fish and can be caught under current conditions
+                if (fish.getRarity() == FishRarity.REGULAR && fish.canBeCaught(season, currentTime, weather, location)) {
+                    return true; // At least one regular fish can be caught
+                }
+            }
+        }
+        return false; // No regular fish can be caught
+    }
+    
+    /**
+     * Generates a random fish based on the type and conditions.
+     */
+    private Item generateRandomFish(String fishType, LocationType location, Season season, Weather weather) {
+        if (farmModel == null || farmModel.getItemRegistry() == null || farmModel.getCurrentTime() == null) {
+            return null;
+        }
+        GameTime currentTime = farmModel.getCurrentTime(); // For Fish.canBeCaught
+
+        // Get all fish from registry
+        Map<String, Item> itemRegistry = farmModel.getItemRegistry();
+        List<Fish> catchableFish = new ArrayList<>();
+
+        // 1. Filter all fish that can be caught under current conditions
+        for (Item item : itemRegistry.values()) {
+            if (item instanceof Fish) {
+                Fish fish = (Fish) item;
+                if (fish.canBeCaught(season, currentTime, weather, location)) {
+                    catchableFish.add(fish);
+                }
+            }
+        }
+
+        if (catchableFish.isEmpty()) {
+            return null; // No fish can be caught at all under these conditions
+        }
+
+        // 2. Filter by the determined fishType (rarity)
+        List<Fish> fishOfTargetRarity = new ArrayList<>();
+        FishRarity targetRarity = null;
+        if ("Legendary".equalsIgnoreCase(fishType)) {
+            targetRarity = FishRarity.LEGENDARY;
+        } else if ("Regular".equalsIgnoreCase(fishType)) {
+            targetRarity = FishRarity.REGULAR;
+        } else if ("Common".equalsIgnoreCase(fishType)) {
+            targetRarity = FishRarity.COMMON;
+        }
+
+        if (targetRarity != null) {
+            for (Fish fish : catchableFish) {
+                if (fish.getRarity() == targetRarity) {
+                    fishOfTargetRarity.add(fish);
+                }
+            }
+        }
+
+        // If no fish of the target rarity are available from the catchable set,
+        // try to fall back gracefully or return null.
+        // For now, if specific rarity isn't found, we pick any catchable fish of a different type.
+        // A more sophisticated fallback could be: Legendary -> Regular -> Common.
+        // Or, strict: if Legendary roll but none available, then no fish.
+        // Current: If fishOfTargetRarity is empty, use any catchableFish.
+        
+        List<Fish> listToPickFrom = fishOfTargetRarity.isEmpty() ? catchableFish : fishOfTargetRarity;
+
+        if (listToPickFrom.isEmpty()) {
+             // This case should ideally not be reached if catchableFish was not empty,
+             // unless targetRarity was specified but no fish of that rarity were catchable.
+            return null;
+        }
+        
+        // Pick a random fish from the final list
+        Random rng = new Random();
+        return listToPickFrom.get(rng.nextInt(listToPickFrom.size()));
     }
 } 

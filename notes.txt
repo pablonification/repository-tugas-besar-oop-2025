@@ -70,15 +70,15 @@ Visiting (Pindah Map):
 [SEBAGIAN SUDAH] Representasi World Map: Bisa berupa peta visual sederhana atau hanya daftar lokasi. (Daftar lokasi berfungsi, peta generik dirender, tampilan unik per area belum ada).
 Fase 3: Aksi Lanjutan & Interaksi NPC
 Fishing (Memancing):
-[UNTUK DILAKUKAN] Kondisi Memancing: Pemain di dekat tile air (Pond, Forest River, Mountain Lake, Ocean) dan Fishing Rod dipilih.
-[UNTUK DILAKUKAN] Input Pemain: Tombol 'E' (atau tombol khusus).
-[UNTUK DILAKUKAN] GameController.requestFish():
+[IMPLEMENTED] Kondisi Memancing: Pemain di dekat tile air (Pond, Forest River, Mountain Lake, Ocean) dan Fishing Rod dipilih.
+[IMPLEMENTED] Input Pemain: Tombol 'E' (atau tombol khusus).
+[IMPLEMENTED] GameController.requestFish():
 Memulai logika memancing di Player.fish().
 Mengurangi energi.
-[UNTUK DILAKUKAN] Minigame Memancing (Sederhana):
-Implementasi RNG untuk menentukan ikan dan tebakan angka (CLI atau GUI sederhana).
+[IMPLEMENTED] Minigame Memancing:
+Implementasi RNG untuk menentukan ikan dan tebakan angka via GUI dialog.
 Menambahkan ikan ke inventory jika berhasil.
-[UNTUK DILAKUKAN] Feedback Visual/Audio.
+[IMPLEMENTED] Feedback Visual/Audio via dialog boxes dan debug info.
 NPC & Interaksi:
 [UNTUK DILAKUKAN] Penempatan NPC di Peta Dunia/Rumah NPC. (Saat ini diasumsikan selalu di rumah).
 [UNTUK DILAKUKAN] Chatting:

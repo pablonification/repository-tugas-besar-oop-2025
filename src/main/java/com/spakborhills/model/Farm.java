@@ -184,17 +184,17 @@ public class Farm {
       int income = 0;
       if (shippingBin != null && statistics != null && priceList != null && gameTime != null && player != null) {
           income = shippingBin.processSales(this.statistics, this.priceList, this.gameTime.getCurrentDay(), this.gameTime.getCurrentSeason());
-          player.addGold(income);
-          shippingBin.clearBin(); // Reset ShippingBin untuk hari berikutnya
+      player.addGold(income);
+      shippingBin.clearBin(); // Reset ShippingBin untuk hari berikutnya
       } else {
           System.err.println("Farm.nextDay: Salah satu komponen (shippingBin, statistics, priceList, gameTime, player) adalah null. Penjualan dilewati.");
       }
 
       // Majukan waktu game ke next day
       if (gameTime != null) {
-        gameTime.nextDay();
-        System.out.println("--- Memulai Hari Baru ---");
-        System.out.println("Hari ke-" + gameTime.getCurrentDay() + ", Musim " + gameTime.getCurrentSeason() + ", Cuaca: " + gameTime.getCurrentWeather());
+      gameTime.nextDay();
+      System.out.println("--- Memulai Hari Baru ---");
+      System.out.println("Hari ke-" + gameTime.getCurrentDay() + ", Musim " + gameTime.getCurrentSeason() + ", Cuaca: " + gameTime.getCurrentWeather());
       } else {
           System.err.println("Farm.nextDay: gameTime is null. Tidak bisa melanjutkan hari.");
           return income; // Kembalikan income sejauh ini jika gameTime null
@@ -211,7 +211,7 @@ public class Farm {
         statistics.incrementDay(gameTime.getCurrentSeason());
       }
 
-      System.out.println("--- Hari baru telah dimulai ---");
+        System.out.println("--- Hari baru telah dimulai ---");
       return income;
     }
 

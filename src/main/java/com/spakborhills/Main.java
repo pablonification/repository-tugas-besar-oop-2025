@@ -263,6 +263,10 @@ public class Main {
             List<Fish.TimeRange> dayTime = List.of(createTimeRange(6, 18));
             List<Fish.TimeRange> eveningTime = List.of(createTimeRange(20, 2));
             List<Fish.TimeRange> halibutTimes = Arrays.asList(createTimeRange(6, 11), createTimeRange(19, 2));
+            List<Fish.TimeRange> catfishTime = List.of(createTimeRange(6, 22)); // For Catfish 06:00 - 22:00
+            List<Fish.TimeRange> flounderOctopusTime = List.of(createTimeRange(6, 22)); // For Flounder & Octopus
+            List<Fish.TimeRange> pufferfishTime = List.of(createTimeRange(0, 16)); // For Pufferfish
+            List<Fish.TimeRange> superCucumberTime = List.of(createTimeRange(18, 2)); // For Super Cucumber
             
             Fish largemouthBass = new Fish("Largemouth Bass", FishRarity.REGULAR, Set.of(Season.ANY), dayTime, Set.of(Weather.ANY), Set.of(LocationType.MOUNTAIN_LAKE));
             Fish rainbowTrout = new Fish("Rainbow Trout", FishRarity.REGULAR, Set.of(Season.SUMMER), dayTime, Set.of(Weather.SUNNY), Set.of(LocationType.FOREST_RIVER, LocationType.MOUNTAIN_LAKE));
@@ -270,6 +274,13 @@ public class Main {
             Fish midnightCarp = new Fish("Midnight Carp", FishRarity.REGULAR, Set.of(Season.WINTER, Season.FALL), eveningTime, Set.of(Weather.ANY), Set.of(LocationType.MOUNTAIN_LAKE, LocationType.POND));
             Fish halibut = new Fish("Halibut", FishRarity.REGULAR, Set.of(Season.ANY), halibutTimes, Set.of(Weather.ANY), Set.of(LocationType.OCEAN));
             Fish salmon = new Fish("Salmon", FishRarity.REGULAR, Set.of(Season.FALL), dayTime, Set.of(Weather.ANY), Set.of(LocationType.FOREST_RIVER));
+            Fish catfish = new Fish("Catfish", FishRarity.REGULAR, Set.of(Season.SPRING, Season.SUMMER, Season.FALL), catfishTime, Set.of(Weather.RAINY), Set.of(LocationType.FOREST_RIVER, LocationType.POND));
+            // Added missing fish
+            Fish flounder = new Fish("Flounder", FishRarity.REGULAR, Set.of(Season.SPRING, Season.SUMMER), flounderOctopusTime, Set.of(Weather.ANY), Set.of(LocationType.OCEAN));
+            Fish octopus = new Fish("Octopus", FishRarity.REGULAR, Set.of(Season.SUMMER), flounderOctopusTime, Set.of(Weather.ANY), Set.of(LocationType.OCEAN));
+            Fish pufferfish = new Fish("Pufferfish", FishRarity.REGULAR, Set.of(Season.SUMMER), pufferfishTime, Set.of(Weather.SUNNY), Set.of(LocationType.OCEAN));
+            Fish sardine = new Fish("Sardine", FishRarity.REGULAR, Set.of(Season.ANY), dayTime, Set.of(Weather.ANY), Set.of(LocationType.OCEAN)); // Uses dayTime (06:00-18:00)
+            Fish superCucumber = new Fish("Super Cucumber", FishRarity.REGULAR, Set.of(Season.SUMMER, Season.FALL, Season.WINTER), superCucumberTime, Set.of(Weather.ANY), Set.of(LocationType.OCEAN));
             
             // Legendary Fish
             List<Fish.TimeRange> legendaryTime = List.of(createTimeRange(8, 20));
@@ -343,10 +354,16 @@ public class Main {
             registry.put(midnightCarp.getName(), midnightCarp);
             registry.put(halibut.getName(), halibut);
             registry.put(salmon.getName(), salmon);
+            registry.put(catfish.getName(), catfish);
             registry.put(angler.getName(), angler);
             registry.put(crimsonfish.getName(), crimsonfish);
             registry.put(glacierfish.getName(), glacierfish);
             registry.put(legend.getName(), legend);
+            registry.put(flounder.getName(), flounder);
+            registry.put(octopus.getName(), octopus);
+            registry.put(pufferfish.getName(), pufferfish);
+            registry.put(sardine.getName(), sardine);
+            registry.put(superCucumber.getName(), superCucumber);
             
             return registry;
         } catch (Exception e) {

@@ -233,6 +233,7 @@ public class FarmMap implements MapArea{
 
         // 1. Validasi apakah area penempatan cukup dan tidak tumpang tindih
         if (!isAreaAvailable(x, y, obj.getWidth(), obj.getHeight())) {
+            // System.out.println("Debug: Area (" + x + "," + y + ") to (" + (x+obj.getWidth()-1) + "," + (y+obj.getHeight()-1) + ") tidak tersedia untuk " + obj.getName());
             return false;
         }
 
@@ -245,11 +246,24 @@ public class FarmMap implements MapArea{
             for (int j = 0; j < obj.getWidth(); j++) {
                 Tile currentTile = getTile(x + j, y + i);
                 if (currentTile != null) {
-                    currentTile.associateObject(obj); // Tile akan mengubah tipenya menjadi DEPLOYED_OBJECT
+                    currentTile.associateObject(obj); // Memberitahu tile ada objek di atasnya
+                    // Jika objeknya adalah Pond, set tile type menjadi WATER
+                    if (obj instanceof Pond) {
+                        currentTile.setType(TileType.WATER);
+                    } else {
+                        // Untuk objek lain, tile type menjadi DEPLOYED_OBJECT (default dari associateObject jika tidak di-override)
+                        // Jika associateObject() sudah menangani type setting ke DEPLOYED_OBJECT, baris ini mungkin tidak perlu
+                        // Namun untuk kejelasan, kita set eksplisit jika BUKAN Pond.
+                        // Asumsi: associateObject() mungkin hanya link object, dan type di-set terpisah atau oleh tile itu sendiri.
+                        // Jika associateObject sudah set ke DEPLOYED_OBJECT, maka else ini bisa di-skip.
+                        // Untuk aman, kita biarkan: Tile.associateObject akan set DEPLOYED_OBJECT, lalu kita override untuk Pond.
+                        // Revisi: Tile.associateObject() memang mengubah type menjadi DEPLOYED_OBJECT.
+                        // Jadi, kita cukup override untuk Pond.
+                    }
                 }
             }
         }
-        System.out.println(obj.getName() + " berhasil ditempatkan di (" + x + "," + y + ").");
+        System.out.println(obj.getName() + " ditempatkan di FarmMap pada (" + x + "," + y + "). Tile di bawahnya disesuaikan.");
         return true;
     }
 

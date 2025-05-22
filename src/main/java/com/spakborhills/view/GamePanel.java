@@ -21,6 +21,9 @@ import com.spakborhills.model.Enum.Weather; // Tambahkan impor untuk Weather
 import com.spakborhills.model.Enum.Season; // Tambahkan impor untuk Season
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Store; // Corrected import for Store
+import com.spakborhills.model.Util.GameTime; // Added for fishdebug
+import com.spakborhills.model.Enum.LocationType; // Added for fishdebug
+import com.spakborhills.model.Enum.FishRarity; // Added for fishdebug
 
 import javax.swing.*;
 import java.awt.*;
@@ -403,14 +406,16 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             String itemName = currentItem.getName();
             if (itemName.equals("Hoe")) {
                 actionProcessed = gameController.requestTillLandAtPlayerPosition();
+                // dia cuman bisa dipake di farm
+                
             } else if (itemName.equals("Watering Can")) {
                 actionProcessed = gameController.requestWaterTileAtPlayerPosition();
             } else if (itemName.equals("Pickaxe")) {
                 actionProcessed = gameController.requestRecoverLandAtPlayerPosition();
             } else if (itemName.equals("Fishing Rod")) {
                 // TODO: Implement fishing logic trigger here or in a dedicated fishing spot interaction
-                System.out.println("Fishing Rod selected. Implement fishing action or interaction with water tile.");
-                // actionProcessed = gameController.requestFish(); // Example if such method exists
+                // System.out.println("Fishing Rod selected. Implement fishing action or interaction with water tile.");
+                actionProcessed = gameController.requestFish(); // Call the actual fishing method
             }
         } else if (currentItem instanceof Seed) {
             actionProcessed = gameController.requestPlantSeedAtPlayerPosition();
@@ -664,51 +669,173 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     }
 
     private void handleCheatInput() {
-        String cheatCode = JOptionPane.showInputDialog(this, "Enter cheat code (e.g., weather sunny/rainy, season spring/summer/fall/winter):", "Cheat Console", JOptionPane.PLAIN_MESSAGE);
-        if (cheatCode == null || cheatCode.trim().isEmpty()) {
+        String cheat = JOptionPane.showInputDialog(this, "Enter cheat code (type 'help' for list of cheats):");
+        if (cheat == null || cheat.trim().isEmpty()) {
             return;
         }
 
-        String[] parts = cheatCode.trim().toLowerCase().split("\\s+");
-        if (parts.length > 0) {
-            String command = parts[0];
-            if (command.equals("weather") && parts.length > 1) {
+        String[] parts = cheat.trim().toLowerCase().split("\\s+");
+        String command = parts[0];
+
+        if (command.equals("help")) {
+            showCheatsHelp();
+            return;
+        }
+
+        if (command.equals("weather")) {
+            if (parts.length > 1) {
                 String weatherType = parts[1];
+                Weather newWeather = null;
                 if (weatherType.equals("sunny")) {
-                    farmModel.getCurrentTime().setWeather(Weather.SUNNY);
-                    JOptionPane.showMessageDialog(this, "Cheat activated: Weather set to SUNNY", "Cheat", JOptionPane.INFORMATION_MESSAGE);
+                    newWeather = Weather.SUNNY;
                 } else if (weatherType.equals("rainy")) {
-                    farmModel.getCurrentTime().setWeather(Weather.RAINY);
-                    JOptionPane.showMessageDialog(this, "Cheat activated: Weather set to RAINY", "Cheat", JOptionPane.INFORMATION_MESSAGE);
+                    newWeather = Weather.RAINY;
+                }
+
+                if (newWeather != null) {
+                    farmModel.getCurrentTime().setWeather(newWeather);
+                    JOptionPane.showMessageDialog(this, "Weather changed to " + newWeather.toString(), "Cheat Activated", JOptionPane.INFORMATION_MESSAGE);
+                    repaint(); // Update display
                 } else {
                     JOptionPane.showMessageDialog(this, "Invalid weather type. Use 'sunny' or 'rainy'.", "Cheat Error", JOptionPane.ERROR_MESSAGE);
                 }
-            } else if (command.equals("season") && parts.length > 1) {
-                String seasonType = parts[1];
-                Season newSeason = null;
-                switch (seasonType) {
-                    case "spring":
-                        newSeason = Season.SPRING;
-                        break;
-                    case "summer":
-                        newSeason = Season.SUMMER;
-                        break;
-                    case "fall":
-                        newSeason = Season.FALL;
-                        break;
-                    case "winter":
-                        newSeason = Season.WINTER;
-                        break;
-                    default:
-                        JOptionPane.showMessageDialog(this, "Invalid season type. Use 'spring', 'summer', 'fall', or 'winter'.", "Cheat Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                }
-                farmModel.getCurrentTime().setSeason(newSeason);
-                JOptionPane.showMessageDialog(this, "Cheat activated: Season set to " + newSeason, "Cheat", JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(this, "Unknown cheat command or insufficient arguments: " + cheatCode, "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Usage: weather [sunny|rainy]", "Cheat Error", JOptionPane.ERROR_MESSAGE);
             }
+        } else if (command.equals("season")) {
+            if (parts.length > 1) {
+                String seasonType = parts[1].toUpperCase(); // Match enum names
+                Season newSeason = null;
+                try {
+                    newSeason = Season.valueOf(seasonType);
+                } catch (IllegalArgumentException e) {
+                    // Invalid season name
+                }
+
+                if (newSeason != null && newSeason != Season.ANY) { // ANY is not a settable season
+                    farmModel.getCurrentTime().setSeason(newSeason);
+                    JOptionPane.showMessageDialog(this, "Season changed to " + newSeason.toString(), "Cheat Activated", JOptionPane.INFORMATION_MESSAGE);
+                    repaint(); // Update display
+                } else {
+                    JOptionPane.showMessageDialog(this, "Invalid season. Use SPRING, SUMMER, FALL, or WINTER.", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Usage: season [SPRING|SUMMER|FALL|WINTER]", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else if (command.equals("fishdebug")) {
+            StringBuilder debugMessage = new StringBuilder("<html><body>"); // Use HTML for better formatting
+            GameTime currentTime = farmModel.getCurrentTime();
+            Season currentSeason = currentTime.getCurrentSeason();
+            Weather currentWeather = currentTime.getCurrentWeather();
+            String timeString = currentTime.getTimeString();
+
+            debugMessage.append(String.format("<b>--- Fish Debug ---</b><br>"));
+            debugMessage.append(String.format("Current Conditions:<br>"));
+            debugMessage.append(String.format("Season: %s, Day: %d, Time: %s, Weather: %s<br><br>",
+                    currentSeason, currentTime.getCurrentDay(), timeString, currentWeather));
+            debugMessage.append("<b>Non-Common Fish Currently Catchable:</b><br>");
+
+            Map<String, Item> itemRegistry = farmModel.getItemRegistry();
+            boolean foundAny = false;
+
+            LocationType[] fishingSpots = {LocationType.POND, LocationType.MOUNTAIN_LAKE, LocationType.FOREST_RIVER, LocationType.OCEAN};
+
+            for (LocationType location : fishingSpots) {
+                List<String> catchableAtLocation = new ArrayList<>();
+                for (Item item : itemRegistry.values()) {
+                    if (item instanceof Fish) {
+                        Fish fish = (Fish) item;
+                        if (fish.getRarity() != FishRarity.COMMON) { // Only non-common
+                            if (fish.canBeCaught(currentSeason, currentTime, currentWeather, location)) {
+                                catchableAtLocation.add(fish.getName());
+                            }
+                        }
+                    }
+                }
+                if (!catchableAtLocation.isEmpty()) {
+                    foundAny = true;
+                    debugMessage.append(String.format("- At <b>%s</b>: %s<br>", location.toString(), String.join(", ", catchableAtLocation)));
+                }
+            }
+
+            if (!foundAny) {
+                debugMessage.append("No non-common fish are catchable at any listed location under current conditions.<br>");
+            }
+            debugMessage.append("</body></html>");
+
+            // Use JEditorPane for HTML rendering in JOptionPane
+            JEditorPane editorPane = new JEditorPane("text/html", debugMessage.toString());
+            editorPane.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(editorPane);
+            scrollPane.setPreferredSize(new Dimension(600, 400)); // Adjust size as needed
+            JOptionPane.showMessageDialog(this, scrollPane, "Fish Debug Information", JOptionPane.INFORMATION_MESSAGE);
+
+        } else {
+            JOptionPane.showMessageDialog(this, "Unknown cheat code: " + cheat, "Cheat Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /**
+     * Shows a dialog with all available cheats and keyboard shortcuts
+     */
+    private void showCheatsHelp() {
+        StringBuilder helpText = new StringBuilder();
+        helpText.append("<html><body style='width: 400px'>");
+        
+        // Title
+        helpText.append("<h2>🎮 Spakbor Hills Cheats & Controls</h2>");
+        
+        // Cheat Commands Section
+        helpText.append("<h3>📝 Cheat Commands (Press 'C'):</h3>");
+        helpText.append("<p><b>Weather Control:</b><br>");
+        helpText.append("• weather sunny - Changes weather to sunny<br>");
+        helpText.append("• weather rainy - Changes weather to rainy</p>");
+        
+        helpText.append("<p><b>Season Control:</b><br>");
+        helpText.append("• season SPRING - Changes to Spring<br>");
+        helpText.append("• season SUMMER - Changes to Summer<br>");
+        helpText.append("• season FALL - Changes to Fall<br>");
+        helpText.append("• season WINTER - Changes to Winter</p>");
+        
+        helpText.append("<p><b>Debug Commands:</b><br>");
+        helpText.append("• fishdebug - Shows fish availability info<br>");
+        helpText.append("• help - Shows this help menu</p>");
+        
+        // Keyboard Controls Section
+        helpText.append("<h3>⌨️ Keyboard Controls:</h3>");
+        helpText.append("<p><b>Movement:</b><br>");
+        helpText.append("• W/↑ - Move up<br>");
+        helpText.append("• S/↓ - Move down<br>");
+        helpText.append("• A/← - Move left<br>");
+        helpText.append("• D/→ - Move right</p>");
+        
+        helpText.append("<p><b>Actions:</b><br>");
+        helpText.append("• E - Use tool/Harvest<br>");
+        helpText.append("• F - Eat selected item<br>");
+        helpText.append("• T - Open Store/Trade<br>");
+        helpText.append("• B - Open Shipping Bin (when near)<br>");
+        helpText.append("• 1 - Select previous item<br>");
+        helpText.append("• 2 - Select next item<br>");
+        helpText.append("• C - Open Cheat Console</p>");
+
+        helpText.append("</body></html>");
+
+        // Create a JEditorPane for HTML rendering
+        JEditorPane editorPane = new JEditorPane("text/html", helpText.toString());
+        editorPane.setEditable(false);
+        editorPane.setBackground(new Color(250, 250, 250));
+
+        // Create a scrollable panel
+        JScrollPane scrollPane = new JScrollPane(editorPane);
+        scrollPane.setPreferredSize(new Dimension(450, 500));
+
+        // Show the dialog
+        JOptionPane.showMessageDialog(
+            this,
+            scrollPane,
+            "Spakbor Hills Cheats & Controls",
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     @Override
