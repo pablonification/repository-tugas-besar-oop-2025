@@ -67,7 +67,7 @@ Visiting (Pindah Map):
 [SELESAI] Memanggil player.visit().
 [SELESAI] Mengubah currentMap di Player dan FarmModel.
 [SELESAI] Memuat dan merender peta baru di GamePanel. (GamePanel kini render player.getCurrentMap() dengan camera).
-[SEBAGIAN SUDAH] Representasi World Map: Bisa berupa peta visual sederhana atau hanya daftar lokasi. (Daftar lokasi berfungsi, peta generik dirender, tampilan unik per area belum ada).
+[SELESAI] Representasi World Map: Bisa berupa peta visual sederhana atau hanya daftar lokasi. (Daftar lokasi berfungsi, peta generik dirender, tampilan unik per area belum ada).
 Fase 3: Aksi Lanjutan & Interaksi NPC
 Fishing (Memancing):
 [IMPLEMENTED] Kondisi Memancing: Pemain di dekat tile air (Pond, Forest River, Mountain Lake, Ocean) dan Fishing Rod dipilih.
@@ -80,17 +80,18 @@ Implementasi RNG untuk menentukan ikan dan tebakan angka via GUI dialog.
 Menambahkan ikan ke inventory jika berhasil.
 [IMPLEMENTED] Feedback Visual/Audio via dialog boxes dan debug info.
 NPC & Interaksi:
-[UNTUK DILAKUKAN] Penempatan NPC di Peta Dunia/Rumah NPC. (Saat ini diasumsikan selalu di rumah).
-[UNTUK DILAKUKAN] Chatting:
-Input pemain jika berada di dekat NPC (setelah Visiting).
-GameController.requestChat(npc) -> player.chat(npc).
-Menampilkan dialog NPC (bisa JOptionPane atau area teks di GUI).
-Update heartPoints.
-[UNTUK DILAKUKAN] Gifting:
-Input pemain untuk memilih item dari inventory untuk diberikan ke NPC.
-GameController.requestGift(npc, item) -> player.gift(npc, item).
-Update heartPoints berdasarkan preferensi.
-Feedback dari NPC.
+[SEBAGIAN SUDAH] Penempatan NPC di Peta Dunia/Rumah NPC (Data model dan map NPC home dibuat, NPC tahu home location & koordinat default, NPC digambar di petanya).
+[IMPLEMENTED] Chatting:
+[IMPLEMENTED] Input pemain (Tombol 'X') jika berada di dekat NPC.
+[IMPLEMENTED] GameController.handleChatRequest() -> player.chat(npc, gameTime, npcMap).
+[IMPLEMENTED] Menampilkan dialog NPC via JOptionPane di GamePanel (NPC.getDialogue() menyediakan teks, GamePanel.showNPCDialogue menampilkannya).
+[IMPLEMENTED] Update heartPoints (di Player.chat).
+Gifting:
+[IMPLEMENTED] Input pemain untuk memilih item dari inventory untuk diberikan ke NPC.
+[IMPLEMENTED] GameController.requestGift(npc, item) -> player.gift(npc, item).
+[IMPLEMENTED] Update heartPoints berdasarkan preferensi.
+[IMPLEMENTED] Feedback dari NPC.
+[IMPLEMENTED] Dialog peringatan energi tidak cukup untuk gifting.
 [UNTUK DILAKUKAN] Proposing & Marrying:
 Memerlukan ProposalRing.
 Kondisi heartPoints maksimal, status NPC.
@@ -144,6 +145,8 @@ B: ShippingBin (Jual)
 P:
 1, 2: Swap Tools
 C: Cheat weather dan season
+X: Chat dengan NPC terdekat
+G: Gifting ke NPC
 
 Question:
 Store bukannya di WorldMap ya?

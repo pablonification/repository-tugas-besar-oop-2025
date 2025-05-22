@@ -32,6 +32,8 @@ import javax.swing.JOptionPane;
 import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Item.Fish;
 import com.spakborhills.model.Enum.FishRarity;
+import com.spakborhills.model.NPC.NPC;
+import java.util.Optional;
 
 public class GameController {
 
@@ -1094,4 +1096,192 @@ public class GameController {
         Random rng = new Random();
         return listToPickFrom.get(rng.nextInt(listToPickFrom.size()));
     }
+
+    /**
+     * Handles the player's request to chat with a nearby NPC.
+     * It identifies an NPC the player might be facing or is very close to.
+     */
+    public void handleChatRequest() {
+        if (farmModel == null || gamePanel == null) {
+            System.err.println("GameController: Farm model or GamePanel is null. Cannot handle chat request.");
+            if (gamePanel != null) gamePanel.displayMessage("Error: Model atau Panel tidak siap untuk chat.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime();
+
+        if (player == null || gameTime == null) {
+            System.err.println("GameController: Player or GameTime is null. Cannot handle chat request.");
+            gamePanel.displayMessage("Error: Player atau GameTime tidak siap.");
+            return;
+        }
+
+        // 1. Find a nearby NPC
+        NPC targetNPC = findNearbyNPCForChat(player);
+
+        if (targetNPC == null) {
+            // gamePanel.displayMessage("Tidak ada NPC di dekatmu untuk diajak bicara.");
+            // Pesan ini sudah ditampilkan oleh findNearbyNPCForChat jika tidak ada NPC
+            return;
+        }
+
+        // 2. Attempt to perform the chat logic (energy, time, heart points)
+        // The Player.chat() method now handles its own checks (energy, proximity, map)
+        // We need to pass the map where the NPC is currently located.
+        // Assuming NPC is always on the FarmMap for now, or their specific home map.
+        // For simplicity, we assume the findNearbyNPCForChat already ensures they are on the same map.
+        MapArea npcCurrentMap = player.getCurrentMap(); // Simplified: assume NPC is on player's current map if found nearby
+
+        boolean chatSuccess = player.chat(targetNPC, gameTime, npcCurrentMap);
+
+        if (chatSuccess) {
+            // 3. If successful, get the dialogue from the NPC
+            String dialogue = targetNPC.getDialogue(player);
+
+            // 4. Display the dialogue using GamePanel
+            gamePanel.showNPCDialogue(targetNPC.getName(), dialogue);
+            // gamePanel.updatePlayerInfoPanel(); // Update info panel after successful chat (energy, time changes)
+            // gamePanel.updateGameRender(); // Request a repaint
+        } else {
+            // Player.chat() or findNearbyNPCForChat() should have displayed an appropriate message.
+            // If not, gamePanel.displayMessage("Tidak bisa berbicara dengan " + targetNPC.getName() + " saat ini.");
+            // gamePanel.updatePlayerInfoPanel(); 
+            // gamePanel.updateGameRender(); 
+        }
+        // Selalu update panel info dan render setelah mencoba aksi
+        gamePanel.updatePlayerInfoPanel();
+        gamePanel.updateGameRender();
+    }
+
+    /**
+     * Finds an NPC within chat range of the player.
+     * Displays a message via GamePanel if no NPC is found.
+     *
+     * @param player The player performing the action.
+     * @return The found NPC, or null if no NPC is in range.
+     */
+    private NPC findNearbyNPCForChat(Player player) {
+        if (farmModel == null || farmModel.getNPCs() == null || gamePanel == null || player == null) { // Added player null check
+            System.err.println("GameController.findNearbyNPCForChat: Critical component is null.");
+            if (gamePanel != null) gamePanel.displayMessage("Error internal: Tidak bisa mencari NPC.");
+            return null;
+        }
+
+        MapArea playerMap = player.getCurrentMap();
+        if (playerMap == null) {
+            System.err.println("GameController.findNearbyNPCForChat: Player's current map is null.");
+            if (gamePanel != null) gamePanel.displayMessage("Error: Player tidak berada di map yang valid.");
+            return null;
+        }
+        
+        int playerX = player.getCurrentTileX();
+        int playerY = player.getCurrentTileY();
+
+        Optional<NPC> nearbyNPCOptional = farmModel.getNPCs().stream()
+            .filter(npc -> {
+                // Check 1: Is the NPC supposed to be on the player's current map?
+                // This assumes NPCs are generally found at their homeLocation.
+                // More complex roaming would require NPCs to store their current actual map.
+                MapArea npcMapContext = farmModel.getMapArea(npc.getHomeLocation());
+                if (npcMapContext != playerMap) {
+                    // Special case: If player is on FarmMap, NPCs might visit.
+                    // This needs a more robust "NPC is currently on X map" flag or list.
+                    // For now, if homeLocation doesn't match player's map, we assume they are not there for chat,
+                    // UNLESS the player is on a generic map and the NPC is somewhere specific (e.g. Emily in Store)
+                    // OR if we add logic for NPCs visiting the FarmMap.
+                    // A simple initial rule: if the player is on a specific NPC_HOME map, only that NPC is findable.
+                    // If player is on FARM_MAP, any NPC *could* be there if their coordinates are updated for FarmMap.
+                    // This current filter is strict: NPC must reside on the map player is currently on.
+                    return false; 
+                }
+
+                // Check 2: Proximity on that map
+                int npcX = npc.getCurrentTileX(); // These are coordinates within their npcMapContext
+                int npcY = npc.getCurrentTileY();
+                
+                int distance = Math.abs(playerX - npcX) + Math.abs(playerY - npcY);
+                return distance <= Player.CHAT_MAX_DISTANCE;
+            })
+            .min(Comparator.comparingInt(npc -> { // Find the closest one
+                // Distance calculation needs to be relative to the common map (playerMap)
+                // NPC coordinates (npc.getCurrentTileX/Y) are assumed to be valid for playerMap if npcMapContext == playerMap
+                int npcX = npc.getCurrentTileX();
+                int npcY = npc.getCurrentTileY();
+                return Math.abs(playerX - npcX) + Math.abs(playerY - npcY);
+            }
+            ));
+
+        if (nearbyNPCOptional.isPresent()) {
+            NPC foundNpc = nearbyNPCOptional.get();
+            System.out.println("DEBUG: Found nearby NPC: " + foundNpc.getName() + " at (" + foundNpc.getCurrentTileX() + "," + foundNpc.getCurrentTileY() + ") on map " + playerMap.getName());
+            return foundNpc;
+        } else {
+            System.out.println("DEBUG: No NPC found nearby on map " + playerMap.getName() + " at player pos (" + playerX + "," + playerY + ")");
+            gamePanel.displayMessage("Tidak ada NPC di dekatmu untuk diajak bicara.");
+            return null;
+        }
+    }
+
+    // START OF handleGiftRequest METHOD
+    public void handleGiftRequest() {
+        if (farmModel == null || gamePanel == null) {
+            System.err.println("GameController.handleGiftRequest: Critical component is null.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime();
+
+        if (player == null || gameTime == null) {
+            System.err.println("GameController.handleGiftRequest: Player or GameTime is null.");
+            if (gamePanel != null) gamePanel.displayMessage("Error internal: Tidak bisa melakukan aksi gifting.");
+            return;
+        }
+
+        // Check energy first before proceeding
+        final int GIFT_ENERGY_COST = 5;
+        if (player.getEnergy() < GIFT_ENERGY_COST) {
+            gamePanel.displayMessage("Energi tidak cukup untuk memberi hadiah (butuh " + GIFT_ENERGY_COST + ", punya " + player.getEnergy() + ").");
+            return;
+        }
+
+        NPC targetNPC = findNearbyNPCForChat(player); // Reuse for finding gift target
+
+        if (targetNPC == null) {
+            gamePanel.displayMessage("Tidak ada NPC di dekatmu untuk diberi hadiah.");
+            return;
+        }
+
+        Item itemToGift = player.getSelectedItem();
+        if (itemToGift == null) {
+            gamePanel.displayMessage("Pilih item dari inventory untuk diberikan.");
+            return;
+        }
+        
+        MapArea npcMapContext = farmModel.getMapArea(targetNPC.getHomeLocation());
+        if (npcMapContext == null) {
+            System.err.println("GameController.handleGiftRequest: Could not determine NPC's map context for gifting.");
+            gamePanel.displayMessage("Error: Tidak bisa menemukan lokasi NPC.");
+            return;
+        }
+
+        boolean gifted = player.gift(targetNPC, itemToGift, gameTime, npcMapContext);
+
+        if (gifted) {
+            String reaction = targetNPC.reactToGift(itemToGift, player);
+            gamePanel.showNPCDialogue(targetNPC.getName(), reaction); 
+            System.out.println("Gift successful. NPC: " + targetNPC.getName() + ", Item: " + itemToGift.getName());
+        } else {
+            System.out.println("Gifting failed. See Player.gift() logs for details.");
+        }
+        
+        if (gamePanel != null) {
+            gamePanel.updatePlayerInfoPanel();
+            gamePanel.updateGameRender();
+        }
+        checkPassOut();
+    }
+    // END OF handleGiftRequest METHOD
+
+    // Cheat method for setting weather
+    // ... existing code ...
 } 

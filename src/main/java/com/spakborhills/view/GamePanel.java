@@ -24,6 +24,7 @@ import com.spakborhills.model.Store; // Corrected import for Store
 import com.spakborhills.model.Util.GameTime; // Added for fishdebug
 import com.spakborhills.model.Enum.LocationType; // Added for fishdebug
 import com.spakborhills.model.Enum.FishRarity; // Added for fishdebug
+import com.spakborhills.model.NPC.NPC; // Make sure NPC is imported
 
 import javax.swing.*;
 import java.awt.*;
@@ -36,10 +37,11 @@ import java.util.Map; // For iterating inventory
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
 
     private static final int TILE_SIZE = 32;
-    private static final int INFO_PANEL_HEIGHT = 80; // Increased height for more info
+    private static final int INFO_PANEL_HEIGHT = 100; // Increased height for more info + hotbar
     private Farm farmModel;
     private GameController gameController;
     private static final Font DIALOG_FONT = new Font("Arial", Font.PLAIN, 20); // Updated font size to 20
+    private static final Font NPC_DIALOG_FONT = new Font("Arial", Font.PLAIN, 16); // Font for NPC dialogues
 
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
@@ -55,6 +57,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         UIManager.put("OptionPane.messageFont", DIALOG_FONT);
         UIManager.put("OptionPane.buttonFont", DIALOG_FONT);
         UIManager.put("TextField.font", DIALOG_FONT);
+        // UIManager.put("Label.font", DIALOG_FONT); // If needed for labels within JOptionPane
     }
 
     @Override
@@ -70,15 +73,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
 
         drawPlayerInfo(g);
-
-        // The map drawing area is below the info panel
-        // All coordinates for map drawing should be offset by INFO_PANEL_HEIGHT for Y
-        // The camera logic within drawCurrentMap will handle the map's internal scrolling (camX, camY)
-        // and screen positioning (screenX, screenY) relative to the panel dimensions.
-        drawCurrentMap(g); 
-        
-        // Player is drawn relative to the map, so its drawing logic also needs to consider camX, camY, and INFO_PANEL_HEIGHT
-        drawPlayer(g); 
+        drawCurrentMap(g);
+        drawNPCs(g);
+        drawPlayer(g);
     }
 
     private void drawPlayerInfo(Graphics g) {
@@ -264,6 +261,71 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
     }
 
+    private void drawNPCs(Graphics g) {
+        Player player = farmModel.getPlayer();
+        MapArea currentMap = player.getCurrentMap();
+        List<NPC> allNPCs = farmModel.getNPCs();
+
+        if (currentMap == null || allNPCs == null || allNPCs.isEmpty()) {
+            return;
+        }
+
+        // Camera calculations (copied from drawCurrentMap/drawPlayer for context, can be refactored)
+        Dimension mapSize = currentMap.getSize();
+        int mapWidthInTiles = mapSize.width;
+        int mapHeightInTiles = mapSize.height;
+        int mapWidthInPixels = mapWidthInTiles * TILE_SIZE;
+        int mapHeightInPixels = mapHeightInTiles * TILE_SIZE;
+
+        int viewportWidth = getWidth();
+        int viewportHeight = getHeight() - INFO_PANEL_HEIGHT;
+
+        int playerCenterXInMap = player.getCurrentTileX() * TILE_SIZE + TILE_SIZE / 2;
+        int playerCenterYInMap = player.getCurrentTileY() * TILE_SIZE + TILE_SIZE / 2;
+        
+        int camX = playerCenterXInMap - viewportWidth / 2;
+        int camY = playerCenterYInMap - viewportHeight / 2;
+
+        camX = Math.max(0, Math.min(camX, mapWidthInPixels - viewportWidth));
+        camY = Math.max(0, Math.min(camY, mapHeightInPixels - viewportHeight));
+        
+        if (mapWidthInPixels < viewportWidth) {
+            camX = (mapWidthInPixels - viewportWidth) / 2;
+        }
+        if (mapHeightInPixels < viewportHeight) {
+             camY = (mapHeightInPixels - viewportHeight) / 2;
+        }
+
+        // Iterate through all NPCs and draw them if they are on the current map
+        for (NPC npc : allNPCs) {
+            MapArea npcHomeMapInstance = farmModel.getMapArea(npc.getHomeLocation());
+
+            // Check if the NPC belongs to the currently displayed map
+            if (currentMap == npcHomeMapInstance) {
+                int npcScreenX = npc.getCurrentTileX() * TILE_SIZE - camX;
+                int npcScreenY = npc.getCurrentTileY() * TILE_SIZE - camY + INFO_PANEL_HEIGHT;
+
+                // Culling: Only draw if NPC is within the visible viewport
+                if (npcScreenX + TILE_SIZE <= 0 || npcScreenX >= getWidth() ||
+                    npcScreenY + TILE_SIZE <= INFO_PANEL_HEIGHT || npcScreenY >= getHeight()) {
+                    continue;
+                }
+
+                // Simple representation: a colored rectangle and their initial
+                g.setColor(Color.ORANGE); // Example color for NPCs
+                g.fillRect(npcScreenX, npcScreenY, TILE_SIZE, TILE_SIZE);
+                
+                g.setColor(Color.BLACK);
+                g.setFont(new Font("Arial", Font.BOLD, 12));
+                // Draw NPC's initial or name (adjust text position for visibility)
+                String npcLabel = npc.getName().substring(0, Math.min(npc.getName().length(), 1)); // First letter
+                FontMetrics fm = g.getFontMetrics();
+                int textWidth = fm.stringWidth(npcLabel);
+                g.drawString(npcLabel, npcScreenX + (TILE_SIZE - textWidth) / 2, npcScreenY + TILE_SIZE / 2 + fm.getAscent()/2);
+            }
+        }
+    }
+
     private void drawPlayer(Graphics g) {
         if (farmModel == null || farmModel.getPlayer() == null || farmModel.getPlayer().getCurrentMap() == null) return;
 
@@ -326,68 +388,62 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     public void keyPressed(KeyEvent e) {
         if (gameController == null) return;
 
-        boolean actionTaken = false;
         int keyCode = e.getKeyCode();
+        boolean actionTaken = false;
 
         switch (keyCode) {
-            case KeyEvent.VK_UP:
-            case KeyEvent.VK_W:
+            case KeyEvent.VK_W: case KeyEvent.VK_UP:
                 actionTaken = gameController.requestPlayerMove(Direction.NORTH);
                 break;
-            case KeyEvent.VK_DOWN:
-            case KeyEvent.VK_S:
+            case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
                 actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
                 break;
-            case KeyEvent.VK_LEFT:
-            case KeyEvent.VK_A:
+            case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
                 actionTaken = gameController.requestPlayerMove(Direction.WEST);
                 break;
-            case KeyEvent.VK_RIGHT:
-            case KeyEvent.VK_D:
+            case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
                 actionTaken = gameController.requestPlayerMove(Direction.EAST);
                 break;
-            case KeyEvent.VK_E: // General action key
+            case KeyEvent.VK_E: // General Action Key
                 actionTaken = tryGeneralAction();
                 break;
-            case KeyEvent.VK_F: // 'F' for Eat action
-                if (gameController != null) {
-                    actionTaken = gameController.requestEatSelectedItem();
-                    if (actionTaken) {
-                        System.out.println("GamePanel: Eat action initiated by F key.");
-                    } else {
-                        // Optional: feedback jika makan gagal
-                        // System.out.println("GamePanel: Eat action failed or not applicable.");
-                    }
-                }
+            case KeyEvent.VK_F: // Eat
+                actionTaken = gameController.requestEatSelectedItem();
+                break;
+            case KeyEvent.VK_T: // Store
+                openStoreDialog(); // This is a view-specific action opening a dialog
+                actionTaken = true; // Assume dialog opening is an action
+                break;
+            case KeyEvent.VK_B: // Shipping Bin
+                 actionTaken = tryOpenShippingBinDialog();
+                break;
+            case KeyEvent.VK_C: // Cheat
+                handleCheatInput();
+                actionTaken = true; // Assume cheat input dialog is an action
                 break;
             case KeyEvent.VK_1:
                 gameController.selectPreviousItem();
-                actionTaken = true; 
+                actionTaken = true;
                 break;
             case KeyEvent.VK_2:
                 gameController.selectNextItem();
-                actionTaken = true; 
-                break;
-            case KeyEvent.VK_B: // 'B' for Shipping Bin interaction
-                actionTaken = tryOpenShippingBinDialog(); 
-                break;
-            case KeyEvent.VK_C: // 'C' for Cheat Console
-                 if (gameController != null) {
-                    handleCheatInput();
                 actionTaken = true;
+                break;
+            case KeyEvent.VK_X: // Chat
+                if (gameController != null) {
+                    gameController.handleChatRequest();
                 }
                 break;
-            case KeyEvent.VK_T: // 'T' for Store/Trade
-                if (gameController != null && farmModel != null) {
-                    openStoreDialog(); 
-                    actionTaken = true;
+            case KeyEvent.VK_G: // Gift
+                if (gameController != null) {
+                    gameController.handleGiftRequest();
                 }
                 break;
-            // Tambahkan case lain jika perlu
+            // Add other key bindings here
         }
 
         if (actionTaken) {
-            repaint(); // Repaint the panel if an action was taken
+            repaint(); // Repaint the panel if an action was taken that might change the view
         }
     }
 
@@ -959,5 +1015,46 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    /**
+     * Displays a message to the player using a JOptionPane dialog.
+     * @param message The message to display.
+     */
+    public void displayMessage(String message) {
+        // Ensure dialogs use the focus of this panel
+        JOptionPane.showMessageDialog(this, message, "Game Message", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    public void updatePlayerInfoPanel() {
+        // This method could potentially just call repaint on the info panel area
+        // or the whole panel if info is drawn in paintComponent.
+        // Forcing a full repaint to ensure info is up-to-date.
+        repaint(0, 0, getWidth(), INFO_PANEL_HEIGHT); // Repaint only the info panel area
+    }
+    
+    public void updateGameRender() {
+        repaint();
+    }
+
+    /**
+     * Displays a dialogue message from an NPC.
+     * @param npcName The name of the NPC speaking.
+     * @param dialogue The dialogue text.
+     */
+    public void showNPCDialogue(String npcName, String dialogue) {
+        // Store original fonts
+        Object originalMessageFont = UIManager.get("OptionPane.messageFont");
+        Object originalButtonFont = UIManager.get("OptionPane.buttonFont");
+
+        // Set custom font for this dialog
+        UIManager.put("OptionPane.messageFont", NPC_DIALOG_FONT);
+        UIManager.put("OptionPane.buttonFont", NPC_DIALOG_FONT);
+
+        JOptionPane.showMessageDialog(this, dialogue, npcName + " says:", JOptionPane.PLAIN_MESSAGE);
+
+        // Restore original fonts
+        UIManager.put("OptionPane.messageFont", originalMessageFont);
+        UIManager.put("OptionPane.buttonFont", originalButtonFont);
     }
 } 

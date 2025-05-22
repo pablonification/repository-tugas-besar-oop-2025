@@ -9,7 +9,7 @@ import com.spakborhills.model.Player;
 
 public class Perry extends NPC {
     public Perry() {
-        super("Perry", LocationType.NPC_HOME, false);
+        super("Perry", LocationType.PERRY_HOME, false);
         this.lovedItems.addAll(Arrays.asList("Cranberry", "Blueberry"));
         this.likedItems.add("Wine");
     }
@@ -30,10 +30,31 @@ public class Perry extends NPC {
 
 
     @Override
-    public void interact(Player player) {
-        System.out.println("Ini interact Perry");
-        System.out.println(this.getName() + ": Oh... h-halo, " + player.getName() + ". Maaf, aku sedang mencoba fokus menulis...");
+    public String getDialogue(Player player) {
+        if (player != null) {
+            return "Oh... h-halo, " + player.getName() + ". Maaf, aku sedang mencoba fokus menulis...";
+        }
+        return "Oh... h-halo, aku sedang mencoba fokus menulis...";
     }
     
-    
+    @Override
+    public String reactToGift(Item item, Player player) {
+        if (item == null || item.getName() == null) {
+            return "...Apa ini?";
+        }
+        int preference = checkGiftPreference(item); // Perry has custom logic (hates all fish)
+        String playerName = (player != null) ? player.getName() : "...";
+
+        if (preference == 25) { // Loved
+            return "Wow, " + item.getName() + "! Ini... ini sangat bagus! Terima kasih, " + playerName + "!";
+        }
+        if (preference == 20) { // Liked
+            return "Oh, " + item.getName() + ". Lumayan. Terima kasih, " + playerName + ".";
+        }
+        if (preference == -25) { // Hated (e.g., Fish for Perry)
+            return "Ugh, " + item.getName() + "... Aku tidak suka ini, " + playerName + ". Tolong jauhkan.";
+        }
+        // Neutral
+        return "Untukku? " + item.getName() + "... Terima kasih.";
+    }
 }

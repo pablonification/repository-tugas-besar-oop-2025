@@ -17,5 +17,10 @@ public enum TileType {
     OBSTACLE,
     WATER,
     ENTRY_POINT,
-    DEPLOYED_OBJECT 
+    DEPLOYED_OBJECT,
+    WOOD_FLOOR,    // For Mayor Tadi's Home (example)
+    STONE_FLOOR,   // For Caroline's Home (example)
+    CARPET_FLOOR,  // For Perry's Home (example)
+    LUXURY_FLOOR,  // For Dasco's Home (example)
+    DIRT_FLOOR     // For Abigail's Home (example)
 }

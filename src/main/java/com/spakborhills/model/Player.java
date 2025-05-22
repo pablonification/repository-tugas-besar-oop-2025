@@ -99,6 +99,10 @@ public class Player {
     public static final int MIN_ENERGY = -20;
     public static final int LOW_ENERGY_THRESHOLD = 10;
     private static final int DEFAULT_STARTING_GOLD = 500; 
+    public static final int CHAT_MAX_DISTANCE = 1;
+    private static final int CHAT_ENERGY_COST = 10;
+    private static final int CHAT_TIME_ADVANCE_MINUTES = 10;
+    private static final int CHAT_HEART_POINTS_GAIN = 10;
 
     // --- Atribut ---
     private final String name;
@@ -143,6 +147,14 @@ public class Player {
         // Inisialisasi inventory dengan item default (Halaman 23)
         if (itemRegistry != null) {
             Item parsnipSeeds = itemRegistry.get("Parsnip Seeds");
+            // Khusus debug gift aja
+            // Legend fish untuk MayorTadi
+            Item legendFish = itemRegistry.get("Legend");
+
+            // Potato untuk Caroline
+            Item potato = itemRegistry.get("Potato");
+            Item stone = itemRegistry.get("Stone");
+            Item wheat = itemRegistry.get("Wheat");
             Item hoe = itemRegistry.get("Hoe");
             Item wateringCan = itemRegistry.get("Watering Can");
             Item pickaxe = itemRegistry.get("Pickaxe");
@@ -155,6 +167,10 @@ public class Player {
                     this.selectedItem = hoe;
                 }
             } else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
+            if (legendFish != null) this.inventory.addItem(legendFish, 2); else System.err.println("PERINGATAN: Legend Fish tidak ditemukan di registry.");
+            if (potato != null) this.inventory.addItem(potato, 10); else System.err.println("PERINGATAN: Potato tidak ditemukan di registry.");
+            if (stone != null) this.inventory.addItem(stone, 10); else System.err.println("PERINGATAN: Stone tidak ditemukan di registry.");
+            if (wheat != null) this.inventory.addItem(wheat, 10); else System.err.println("PERINGATAN: Wheat tidak ditemukan di registry.");
             if (wateringCan != null) {
                 this.inventory.addItem(wateringCan, 1);
                 if (this.selectedItem == null || !(this.selectedItem instanceof Equipment && ((Equipment)this.selectedItem).getToolType().equals("WateringCan"))) { // Prioritaskan WateringCan jika ada
@@ -802,44 +818,154 @@ public class Player {
     }
 
     /**
-     * Berbicara dengan seorang NPC.
-     * Mengasumsikan Controller menyediakan target NPC.
-     * Biaya energi (-10) ditangani oleh Controller.
-     * Biaya waktu (10 menit atau berdasarkan dialog) ditangani oleh Controller.
+     * Attempts to chat with the specified NPC.
+     * Checks energy, distance, and updates game state if successful.
+     * This method assumes the GameController has identified a potential NPC target
+     * and provides the MapArea instance where the NPC is currently located.
      *
-     * @param npcTarget NPC yang diajak bicara.
-     * @return true (aksi berbicara selalu mungkin jika NPC bisa ditarget).
+     * @param npcTarget The NPC to attempt to chat with.
+     * @param gameTime  The current GameTime object to advance time.
+     * @param npcActualMap The MapArea instance where the npcTarget is currently located.
+     * @return true if chat was successful, false otherwise.
      */
-    public boolean chat(NPC npcTarget) {
-        if (npcTarget == null) return false;
-        npcTarget.interact(this); // NPC menampilkan dialog
-        npcTarget.addHeartPoints(10); // Player menambahkan poin
+    public boolean chat(NPC npcTarget, GameTime gameTime, MapArea npcActualMap) {
+        if (npcTarget == null) {
+            System.out.println("Tidak ada NPC yang ditargetkan untuk diajak bicara.");
+            return false;
+        }
+         if (npcActualMap == null) {
+            System.out.println("Informasi map NPC tidak tersedia untuk chat.");
+            return false;
+        }
+        if (this.currentMap == null) {
+            System.out.println(this.name + " tidak berada di map yang valid untuk chat.");
+            return false;
+        }
+
+        // Check 1: Player energy
+        if (this.energy < CHAT_ENERGY_COST) {
+            System.out.println(this.name + " tidak punya cukup energi untuk berbicara (butuh " + CHAT_ENERGY_COST + ", punya " + this.energy + ").");
+            return false;
+        }
+
+        // Check 2: Player must be on the same map as the NPC
+        if (this.currentMap != npcActualMap) {
+            System.out.println(this.name + " tidak berada di map yang sama dengan " + npcTarget.getName() + ".");
+            System.out.println("Player di: " + this.currentMap.getName() + 
+                               ", " + npcTarget.getName() + " berada di: " + npcActualMap.getName());
+            return false;
+        }
+        
+        // Check 3: Proximity on that map
+        // Assumes npcTarget.getCurrentTileX() and getCurrentTileY() are their coords on npcActualMap
+        int distance = Math.abs(this.currentTileX - npcTarget.getCurrentTileX()) + 
+                       Math.abs(this.currentTileY - npcTarget.getCurrentTileY());
+
+        if (distance > CHAT_MAX_DISTANCE) {
+            System.out.println(this.name + " terlalu jauh dari " + npcTarget.getName() + " untuk berbicara. Jarak: " + distance + ", Maks: " + CHAT_MAX_DISTANCE);
+            return false;
+        }
+
+        // All checks passed
+        this.changeEnergy(-CHAT_ENERGY_COST);
+        if (gameTime != null) {
+            gameTime.advance(CHAT_TIME_ADVANCE_MINUTES);
+        } else {
+            System.err.println("Player.chat: GameTime is null, waktu tidak dimajukan.");
+        }
+        
+        npcTarget.addHeartPoints(CHAT_HEART_POINTS_GAIN);
+        
+        // The actual dialogue display will be handled by the View (GamePanel)
+        // using the dialogue string fetched by GameController from npcTarget.getDialogue(this).
+        // System.out.println(this.name + " berhasil berbicara dengan " + npcTarget.getName() + ". (Energi: " + this.energy + ", Hati " + npcTarget.getName() + ": " + npcTarget.getHeartPoints() + ")");
+        //  if (gameTime != null) {
+        //      System.out.println("Waktu saat ini: " + gameTime.getTimeString());
+        // }
         return true;
     }
 
     /**
-     * Memberikan hadiah item kepada seorang NPC.
-     * Mengasumsikan Controller menyediakan target NPC dan Item.
-     * Biaya energi (-5) ditangani oleh Controller.
-     * Biaya waktu (10 menit) ditangani oleh Controller.
-     *
-     * @param npcTarget NPC yang diberi hadiah.
-     * @param itemToGift Item yang diberikan.
-     * @return true jika pemberian hadiah berhasil (item ada), false jika gagal.
+     * Gifts an item to the specified NPC.
+     * Checks energy, proximity, and item validity. Updates game state if successful.
+     * @param npcTarget The NPC to gift to.
+     * @param itemToGift The Item to gift.
+     * @param gameTime The current GameTime.
+     * @param npcActualMap The MapArea instance where the npcTarget is located.
+     * @return true if gifting was successful, false otherwise.
      */
-    public boolean gift(NPC npcTarget, Item itemToGift) {
-        if (npcTarget == null || itemToGift == null) {
-            System.out.println("NPC target or item to gift cannot be null.");
+    public boolean gift(NPC npcTarget, Item itemToGift, GameTime gameTime, MapArea npcActualMap) { // Added npcActualMap
+        if (npcTarget == null) {
+            System.out.println("Tidak ada NPC yang ditargetkan untuk diberi hadiah.");
             return false;
         }
-        if (!inventory.hasItem(itemToGift, 1)) {
-            System.out.println("Kamu tidak punya " + itemToGift.getName() + " untuk diberikan.");
+        if (itemToGift == null) {
+            System.out.println("Tidak ada item yang dipilih untuk diberikan.");
             return false;
         }
-        int pointsChange = npcTarget.checkGiftPreference(itemToGift);
-        npcTarget.addHeartPoints(pointsChange);
-        System.out.println("Kamu memberikan " + itemToGift.getName() + " kepada " + npcTarget.getName() + ".");
-        inventory.removeItem(itemToGift, 1);
+        if (npcActualMap == null) {
+            System.out.println("Informasi map NPC tidak tersedia untuk memberi hadiah.");
+            return false;
+        }
+        if (this.currentMap == null) {
+            System.out.println(this.name + " tidak berada di map yang valid.");
+            return false;
+        }
+
+        // Constants for gifting (can be moved to top of class)
+        final int GIFT_ENERGY_COST = 5;
+        final int GIFT_TIME_ADVANCE_MINUTES = 10;
+        final int GIFT_MAX_DISTANCE = 1; // Same as chat
+
+        // Check 1: Player energy
+        if (this.energy < GIFT_ENERGY_COST) {
+            System.out.println(this.name + " tidak punya cukup energi untuk memberi hadiah (butuh " + GIFT_ENERGY_COST + ", punya " + this.energy + ").");
+            return false;
+        }
+
+        // Check 2: Player must be on the same map as the NPC
+        if (this.currentMap != npcActualMap) {
+            System.out.println(this.name + " tidak berada di map yang sama dengan " + npcTarget.getName() + " untuk memberi hadiah.");
+            return false;
+        }
+
+        // Check 3: Proximity
+        int distance = Math.abs(this.currentTileX - npcTarget.getCurrentTileX()) +
+                       Math.abs(this.currentTileY - npcTarget.getCurrentTileY());
+
+        if (distance > GIFT_MAX_DISTANCE) {
+            System.out.println(this.name + " terlalu jauh dari " + npcTarget.getName() + " untuk memberi hadiah.");
+            return false;
+        }
+
+        // Check 4: Player has the item
+        if (!this.inventory.hasItem(itemToGift, 1)) {
+            System.out.println(this.name + " tidak memiliki " + itemToGift.getName() + " untuk diberikan.");
+            return false;
+        }
+
+        // All checks passed
+        this.changeEnergy(-GIFT_ENERGY_COST);
+        if (gameTime != null) {
+            gameTime.advance(GIFT_TIME_ADVANCE_MINUTES);
+        } else {
+            System.err.println("Player.gift: GameTime is null, waktu tidak dimajukan.");
+        }
+
+        this.inventory.removeItem(itemToGift, 1);
+        int heartChange = npcTarget.checkGiftPreference(itemToGift);
+        npcTarget.addHeartPoints(heartChange);
+
+        System.out.println(this.name + " memberikan " + itemToGift.getName() + " kepada " + npcTarget.getName() + ".");
+        System.out.println(npcTarget.getName() + " bereaksi... (Hati berubah: " + heartChange + ", Total Hati: " + npcTarget.getHeartPoints() + ")");
+        // NPC-specific reaction dialogue could be triggered here or in GameController.
+        // npcTarget.reactToGift(itemToGift, this); 
+        
+        if (this.selectedItem != null && this.selectedItem.equals(itemToGift) && this.inventory.getItemCount(itemToGift) == 0) {
+            setSelectedItem(null); // Clear selected item if it was the last one gifted
+        }
+
+
         return true;
     }
 

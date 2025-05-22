@@ -27,8 +27,31 @@ public class Emily extends NPC {
     }
 
     @Override
-    public void interact(Player player) {
-        System.out.println(this.getName() + ": Oh, hai " + player.getName() + "! Selamat datang di restoran. Apa ada yang bisa kubantu? Atau mungkin... kamu punya bibit baru untuk kebunku?");
-        System.out.println("Ini interact Emily");
+    public String getDialogue(Player player) {
+        if (player != null) {
+            return "Oh, hai " + player.getName() + "! Selamat datang di restoran. Apa ada yang bisa kubantu? Atau mungkin... kamu punya bibit baru untuk kebunku?";
+        }
+        return "Oh, hai! Selamat datang di restoran. Apa ada yang bisa kubantu? Atau mungkin... kamu punya bibit baru untuk kebunku?";
+    }
+
+    @Override
+    public String reactToGift(Item item, Player player) {
+        if (item == null || item.getName() == null) {
+            return "Untukku? Apa ini?";
+        }
+        int preference = checkGiftPreference(item); // Emily has custom checkGiftPreference logic
+        String playerName = (player != null) ? player.getName() : "Pelanggan";
+
+        if (preference == 25) { // Loved (Seeds for Emily)
+            return "Oh, " + item.getName() + "! Bibit baru! Terima kasih banyak, " + playerName + ", ini akan sangat membantu kebunku!";
+        }
+        if (preference == 20) { // Liked
+            return "Sebuah " + item.getName() + ", ya? Manis sekali, terima kasih, " + playerName + "!";
+        }
+        // Emily's checkGiftPreference currently returns 0 for neutral/hated, 
+        // so we'll add a generic neutral response if not loved/liked.
+        // If hatedItems were explicitly checked for -25, we could add a hated response.
+        // For now, if not 25 or 20, it's considered neutral by this reaction logic.
+        return "Terima kasih untuk " + item.getName() + "-nya, " + playerName + ".";
     }
 }

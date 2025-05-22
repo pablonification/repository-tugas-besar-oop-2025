@@ -262,7 +262,11 @@ public class Farm {
           case FOREST_RIVER:
           case MOUNTAIN_LAKE:
           case OCEAN:
-          case NPC_HOME:
+          case MAYOR_TADI_HOME:
+          case CAROLINE_HOME:
+          case PERRY_HOME:
+          case DASCO_HOME:
+          case ABIGAIL_HOME:
               return this.worldMap.getSpecificArea(type);
           case POND:
               System.out.println("Pond berada di dalam FarmMap.");
