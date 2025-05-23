@@ -103,10 +103,20 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             return;
         }
 
+        // Draw player info panel first (unclipped)
         drawPlayerInfo(g);
+
+        // Store original clip and set new clip for map area
+        Shape originalClip = g.getClip();
+        g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
+
+        // These are drawn within the new clipped area
         drawCurrentMap(g);
         drawNPCs(g);
         drawPlayer(g);
+
+        // Restore original clip
+        g.setClip(originalClip);
     }
 
     private void drawPlayerInfo(Graphics g) {
