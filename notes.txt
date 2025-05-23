@@ -145,6 +145,59 @@ Furnitures (Termasuk interior rumah yang lebih besar dan detail seperti Stove, B
 
 
 
+Fase 6: Penyempurnaan GUI & Audio (Harvest Moon Style)
+
+GUI Enhancements:
+[UNTUK DILAKUKAN] Penghilangan Seluruh Window/Dialog Eksternal:
+    - Semua interaksi (toko, shipping bin, dialog NPC, konfirmasi, input, dsb) akan digantikan dengan panel/jendela in-game yang terintegrasi di dalam tampilan utama game (tidak ada lagi JOptionPane atau window terpisah).
+    - Navigasi dan interaksi dilakukan sepenuhnya dengan keyboard/controller/mouse di dalam game window, mirip main menu.
+    - Tampilan panel-panel ini akan konsisten dengan style main menu (warna, font, animasi, dsb).
+[UNTUK DILAKUKAN] Main Menu In-Game (Lanjutan):
+    - Latar belakang visual (misal, gambar pemandangan desa/kebun seperti contoh Harvest Moon).
+    - Kursor/highlight pilihan menu yang lebih menarik (misal, ikon tangan atau animasi).
+    - Integrasikan input Nama Pemain & Nama Kebun ke dalam alur "New Game" dari menu ini, bukan via JOptionPane di awal.
+
+[UNTUK DILAKUKAN] Kustomisasi Dialog In-Game:
+    - Ganti semua JOptionPane (Toko, Shipping Bin, Chat NPC, Konfirmasi Ya/Tidak, Pesan Info) dengan panel/jendela kustom yang terintegrasi dalam tampilan game.
+    - Tampilkan potret karakter saat dialog dengan NPC.
+    - Gunakan ikon item di tampilan inventory, toko, dan daftar resep.
+
+[UNTUK DILAKUKAN] Penyempurnaan HUD/Info Panel Pemain:
+    - Representasi grafis untuk bar energi.
+    - Ikon untuk item yang sedang dipilih/dipegang.
+    - Tampilan yang lebih menarik (font, layout) untuk waktu, tanggal, musim, cuaca, dan gold.
+
+[UNTUK DILAKUKAN] Peningkatan Visual Dunia Game:
+    - Grafis berbasis sprite untuk pemain, NPC, hewan (jika ada), dan item di tanah.
+    - Animasi untuk tile tertentu (misal, air mengalir, api di perapian).
+    - Tile-set yang lebih detail dan beragam untuk setiap area peta (Kebun, Hutan, Desa, Pantai, dll.).
+    - Efek visual saat menggunakan alat (animasi mencangkul, menyiram, memancing, dll.).
+    - Efek visual cuaca yang lebih imersif (partikel hujan lebih baik, salju, daun berguguran, kabut).
+
+Audio Enhancements:
+[UNTUK DILAKUKAN] Background Music (BGM):
+    - Musik berbeda untuk setiap musim (Spring, Summer, Fall, Winter) di kebun.
+    - Musik berbeda untuk lokasi-lokasi utama (Desa, Hutan, Pantai, Toko, Rumah NPC).
+    - Musik khusus untuk event penting atau festival.
+    - Musik untuk Main Menu.
+
+[UNTUK DILAKUKAN] Sound Effects (SFX):
+    - Aksi Pemain: Langkah kaki (berbeda untuk jenis tile), suara penggunaan alat (ayunan, benturan, siram), makan, memancing (lempar, tarik).
+    - Interaksi UI: Navigasi menu, pilih opsi, buka/tutup dialog.
+    - Suara Ambient: Kicau burung di pagi hari, suara sungai/ombak, jangkrik di malam hari, angin.
+    - Interaksi NPC: Suara singkat saat memulai dialog atau memberikan respons.
+    - Suara Hewan (jika ada ternak/hewan liar).
+    - Efek suara untuk event penting (mendapatkan item langka, naik level pertemanan, dll.).
+
+Polish Umum:
+[UNTUK DILAKUKAN] Transisi Layar:
+    - Efek fade-in/fade-out untuk perpindahan peta.
+    - Transisi khusus saat tidur atau memulai hari baru.
+
+[UNTUK DILAKUKAN] Tipografi:
+    - Pemilihan font yang tematik dan konsisten di seluruh UI game.
+
+
 Hotkey:
 T: Toko/Store
 E: Action seperti Cangkul, nanam, siram, harvest
