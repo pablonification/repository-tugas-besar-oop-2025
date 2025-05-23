@@ -1812,5 +1812,5 @@ public class GameController {
         // infoBuilder.append("Favorite Item: ").append("TODO").append("\n"); 
 
         gamePanel.showPlayerInfoDialog(infoBuilder.toString());
-    }
+    }    
 }

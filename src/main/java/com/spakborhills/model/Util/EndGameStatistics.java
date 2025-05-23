@@ -224,9 +224,9 @@ public class EndGameStatistics {
         for (Season s : Season.values()) {
             if (s != Season.ANY && daysPlayedInSeason.getOrDefault(s, 0) > 0) {
                 sb.append(String.format("  • %s: %dg (Avg: %.2fg)\n",
-                                    s,
-                                    seasonalIncome.getOrDefault(s, 0),
-                                    getAverageSeasonalIncome(s)));
+                                        s,
+                                        seasonalIncome.getOrDefault(s, 0),
+                                        getAverageSeasonalIncome(s)));
             }
         }
 

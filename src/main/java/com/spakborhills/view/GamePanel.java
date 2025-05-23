@@ -38,8 +38,10 @@ import java.util.Map; // For iterating inventory
 
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
 
-    private static final int TILE_SIZE = 32;
-    private static final int INFO_PANEL_HEIGHT = 100; // Increased height for more info + hotbar
+    private static final int TILE_SIZE = 96;
+    private static final int VIEWPORT_WIDTH_IN_TILES = 20;
+    private static final int VIEWPORT_HEIGHT_IN_TILES = 10;
+    private static final int INFO_PANEL_HEIGHT = 100;
     private Farm farmModel;
     private GameController gameController;
     private static final Font DIALOG_FONT = new Font("Arial", Font.PLAIN, 20); // Updated font size to 20
@@ -52,8 +54,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         this.farmModel = farmModel;
         this.gameController = gameController;
 
-        setPreferredSize(new Dimension(farmModel.getFarmMap().getSize().width * TILE_SIZE, 
-                                       farmModel.getFarmMap().getSize().height * TILE_SIZE + INFO_PANEL_HEIGHT));
+        setPreferredSize(new Dimension(VIEWPORT_WIDTH_IN_TILES * TILE_SIZE, 
+                                       VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT));
         setBackground(Color.GRAY);
         addKeyListener(this);
         setFocusable(true); // Important to receive key events
@@ -464,7 +466,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 break;
             case KeyEvent.VK_G: // Gift to NPC
                 System.out.println("G key pressed - Attempting Gift");
-                gameController.handleGiftRequest();
+                    gameController.handleGiftRequest();
                 actionTaken = true;
                 break;
             case KeyEvent.VK_L: // Sleep (Lodge/Lie down)
