@@ -156,4 +156,4 @@ G: Gifting ke NPC
 Question:
 Store bukannya di WorldMap ya?
 
-Logic propose dan nikah masih kurang tepat
+HOUSE HARUS PASSABLE, DIA BISA DILALUI DAN MASAK TUH BUKAN DI SEKITAR TAPI EMG DIDALEM HOUSENYA
