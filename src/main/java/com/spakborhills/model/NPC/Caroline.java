@@ -8,7 +8,7 @@ import com.spakborhills.model.Item.Item;
 
 public class Caroline extends NPC {
     public Caroline() {
-        super("Caroline", LocationType.CAROLINE_HOME, false);
+        super("Caroline", LocationType.CAROLINE_HOME, true);
         this.lovedItems.addAll(Arrays.asList("Firewood", "Coal"));
         this.likedItems.addAll(Arrays.asList("Potato", "Wheat"));
         this.hatedItems.add("Hot Pepper");

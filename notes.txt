@@ -43,8 +43,8 @@ Input jumlah dari pemain (JOptionPane).
 Memvalidasi gold pemain (dilakukan oleh Store.sellToPlayer).
 Menambahkan item ke inventory pemain & mengurangi gold (dilakukan oleh Store.sellToPlayer).
 Feedback via JOptionPane.
-[UNTUK DILAKUKAN] Penyempurnaan GUI Toko: Tampilan yang lebih baik (misal, JDialog kustom, kategori item, tombol +/- untuk jumlah).
-[UNTUK DILAKUKAN] Interaksi dengan NPC Emily untuk membuka toko (jika diperlukan sebagai alternatif tombol 'T').
+[IMPLEMENTED] Penyempurnaan GUI Toko: Tampilan yang lebih baik (misal, JDialog kustom, kategori item, tombol +/- untuk jumlah).
+[IMPLEMENTED] Interaksi dengan NPC Emily untuk membuka toko (jika diperlukan sebagai alternatif tombol 'T').
 Shipping Bin:
 [IMPLEMENTED] GUI Shipping Bin: Dialog untuk memilih item dari inventory pemain yang bisa dijual (Crop, Fish, Food, MiscItem) via tombol 'B'.
 [IMPLEMENTED] Penjualan Item:
@@ -92,12 +92,12 @@ Gifting:
 [IMPLEMENTED] Update heartPoints berdasarkan preferensi.
 [IMPLEMENTED] Feedback dari NPC.
 [IMPLEMENTED] Dialog peringatan energi tidak cukup untuk gifting.
-[UNTUK DILAKUKAN] Proposing & Marrying:
-Memerlukan ProposalRing.
-Kondisi heartPoints maksimal, status NPC.
-Input pemain -> Controller -> Model.
-Feedback dan perubahan status.
-Efek Marry (time skip, dll.).
+[IMPLEMENTED] Proposing & Marrying:
+[IMPLEMENTED] Memerlukan ProposalRing.
+[IMPLEMENTED] Kondisi heartPoints maksimal, status NPC.
+[IMPLEMENTED] Input pemain -> Controller -> Model.
+[IMPLEMENTED] Feedback dan perubahan status.
+[IMPLEMENTED] Efek Marry (time skip, dll.).
 Cooking (Memasak):
 [UNTUK DILAKUKAN] Kondisi Memasak: Pemain di House (atau dekat Stove jika ada bonus furnitur).
 [UNTUK DILAKUKAN] GUI Memasak:
@@ -142,7 +142,7 @@ T: Toko/Store
 E: Action seperti Cangkul, nanam, siram, harvest
 F: Makan
 B: ShippingBin (Jual)
-P:
+P: Proposal dan Marry
 1, 2: Swap Tools
 C: Cheat weather dan season
 X: Chat dengan NPC terdekat
@@ -150,3 +150,5 @@ G: Gifting ke NPC
 
 Question:
 Store bukannya di WorldMap ya?
+
+Logic propose dan nikah masih kurang tepat

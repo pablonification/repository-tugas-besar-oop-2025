@@ -28,16 +28,12 @@ public class ProposalRing extends Item {
             System.out.println("ERROR: Proposal Ring hanya bisa digunakan untuk melamar NPC!");
             return false;
         }
-        NPC npcTarget = (NPC) target;
-        System.out.println(player.getName() + " mengeluarkan Proposal Ring dan mencoba melamar " + npcTarget.getName() + "...");
+        // NPC npcTarget = (NPC) target;
 
-        //    Controller/Player kemudian akan melanjutkan dengan logika Proposing:
-        //    - Memeriksa apakah npcTarget.isBachelor()
-        //    - Memeriksa apakah npcTarget.getHeartPoints() == npcTarget.getMaxHeartPoints() (yaitu 150)
-        //    - Jika valid, panggil npcTarget.setRelationshipStatus(RelationshipStatus.FIANCE),
-        //      kurangi energi player (-10), tambah waktu (+1 jam), beri pesan sukses.
-        //    - Jika tidak valid, kurangi energi player (-20), tambah waktu (+1 jam), beri pesan gagal.
-        //    - Penting: Jangan hapus ring dari inventory karena reusable (Halaman 27).
+        // Delegate the actual proposal logic to the Player class
+        // The Player.propose() method will handle all checks, status updates, and energy costs.
+        // This 'use' method now simply acts as a trigger.
+        // return player.propose(npcTarget, this);
         return true;
     }
 }

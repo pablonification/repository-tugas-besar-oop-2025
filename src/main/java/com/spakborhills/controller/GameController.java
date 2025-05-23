@@ -1,39 +1,42 @@
 package com.spakborhills.controller;
 
+import java.util.ArrayList; // For creating list of items
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List; // For returning list of items
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+
+import javax.swing.JOptionPane;
+
 import com.spakborhills.model.Farm;
 import com.spakborhills.model.Player;
 import com.spakborhills.model.Store;
-import com.spakborhills.model.Util.PriceList;
-import com.spakborhills.model.Item.Item;
-import com.spakborhills.model.Item.Seed;
-import com.spakborhills.model.Item.EdibleItem;
 import com.spakborhills.model.Enum.Direction;
-import com.spakborhills.model.Enum.Season;
-import com.spakborhills.model.Enum.TileType;
-import com.spakborhills.model.Map.FarmMap;
-import com.spakborhills.model.Map.Tile;
-import com.spakborhills.model.Util.GameTime;
-import com.spakborhills.model.Util.ShippingBin;
-import java.util.Map;
-import java.util.List; // For returning list of items
-import java.util.ArrayList; // For creating list of items
-import java.util.stream.Collectors; // Diperlukan untuk stream
-import com.spakborhills.model.Item.Equipment;
-import java.util.Collections;
-import java.util.Comparator;
-// GamePanel might be needed later for more complex interactions or direct view updates
-import com.spakborhills.view.GamePanel;
+import com.spakborhills.model.Enum.FishRarity;
 // GameTime might be needed if Farm.nextDay() isn't comprehensive enough for all time updates
 // import com.spakborhills.model.GameTime; 
 import com.spakborhills.model.Enum.LocationType;
-import com.spakborhills.model.Map.MapArea;
-import java.util.Random;
-import javax.swing.JOptionPane;
+import com.spakborhills.model.Enum.RelationshipStatus;
+import com.spakborhills.model.Enum.Season;
+import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
+import com.spakborhills.model.Item.EdibleItem;
+import com.spakborhills.model.Item.Equipment;
 import com.spakborhills.model.Item.Fish;
-import com.spakborhills.model.Enum.FishRarity;
+import com.spakborhills.model.Item.Item;
+import com.spakborhills.model.Item.ProposalRing;
+import com.spakborhills.model.Item.Seed;
+import com.spakborhills.model.Map.FarmMap;
+import com.spakborhills.model.Map.MapArea;
+import com.spakborhills.model.Map.Tile;
 import com.spakborhills.model.NPC.NPC;
-import java.util.Optional;
+import com.spakborhills.model.Util.GameTime;
+import com.spakborhills.model.Util.PriceList;
+import com.spakborhills.model.Util.ShippingBin;
+// GamePanel might be needed later for more complex interactions or direct view updates
+import com.spakborhills.view.GamePanel;
 
 public class GameController {
 
@@ -1120,35 +1123,38 @@ public class GameController {
         NPC targetNPC = findNearbyNPCForChat(player);
 
         if (targetNPC == null) {
-            // gamePanel.displayMessage("Tidak ada NPC di dekatmu untuk diajak bicara.");
-            // Pesan ini sudah ditampilkan oleh findNearbyNPCForChat jika tidak ada NPC
             return;
         }
 
-        // 2. Attempt to perform the chat logic (energy, time, heart points)
-        // The Player.chat() method now handles its own checks (energy, proximity, map)
-        // We need to pass the map where the NPC is currently located.
-        // Assuming NPC is always on the FarmMap for now, or their specific home map.
-        // For simplicity, we assume the findNearbyNPCForChat already ensures they are on the same map.
-        MapArea npcCurrentMap = player.getCurrentMap(); // Simplified: assume NPC is on player's current map if found nearby
+        // Special handling for Emily
+        if (targetNPC.getName().equals("Emily")) {
+            String[] options = {"Chat", "Open Store"};
+            int choice = gamePanel.showOptionDialog(
+                "Kamu bertemu Emily. Apa yang ingin kamu lakukan?",
+                "Interaksi dengan Emily",
+                options
+            );
 
-        boolean chatSuccess = player.chat(targetNPC, gameTime, npcCurrentMap);
-
-        if (chatSuccess) {
-            // 3. If successful, get the dialogue from the NPC
-            String dialogue = targetNPC.getDialogue(player);
-
-            // 4. Display the dialogue using GamePanel
-            gamePanel.showNPCDialogue(targetNPC.getName(), dialogue);
-            // gamePanel.updatePlayerInfoPanel(); // Update info panel after successful chat (energy, time changes)
-            // gamePanel.updateGameRender(); // Request a repaint
+            if (choice == 0) { // Chat
+                MapArea npcCurrentMap = player.getCurrentMap();
+                boolean chatSuccess = player.chat(targetNPC, gameTime, npcCurrentMap);
+                if (chatSuccess) {
+                    String dialogue = targetNPC.getDialogue(player);
+                    gamePanel.showNPCDialogue(targetNPC.getName(), dialogue);
+                }
+            } else if (choice == 1) { // Open Store
+                gamePanel.openStoreDialog();
+            }
         } else {
-            // Player.chat() or findNearbyNPCForChat() should have displayed an appropriate message.
-            // If not, gamePanel.displayMessage("Tidak bisa berbicara dengan " + targetNPC.getName() + " saat ini.");
-            // gamePanel.updatePlayerInfoPanel(); 
-            // gamePanel.updateGameRender(); 
+            // Existing chat logic for other NPCs
+            MapArea npcCurrentMap = player.getCurrentMap();
+            boolean chatSuccess = player.chat(targetNPC, gameTime, npcCurrentMap);
+
+            if (chatSuccess) {
+                String dialogue = targetNPC.getDialogue(player);
+                gamePanel.showNPCDialogue(targetNPC.getName(), dialogue);
+            }
         }
-        // Selalu update panel info dan render setelah mencoba aksi
         gamePanel.updatePlayerInfoPanel();
         gamePanel.updateGameRender();
     }
@@ -1282,6 +1288,176 @@ public class GameController {
     }
     // END OF handleGiftRequest METHOD
 
-    // Cheat method for setting weather
-    // ... existing code ...
-} 
+    public void handleProposeRequest() {
+        if (farmModel == null || gamePanel == null) {
+            System.err.println("GameController.handleProposeRequest: Critical component (farmModel or gamePanel) is null.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime(); // Ambil GameTime dari farmModel
+
+        if (player == null || gameTime == null) { // Periksa juga gameTime
+            System.err.println("GameController.handleProposeRequest: Player or GameTime is null.");
+            if (gamePanel != null) gamePanel.displayMessage("Error internal: Cannot attempt proposal.");
+            return;
+        }
+
+        NPC targetNPC = findNearbyNPCForChat(player); 
+
+        if (targetNPC == null) {
+            gamePanel.displayMessage("Tidak ada NPC di dekatmu untuk dilamar.");
+            return;
+        }
+
+        Item selectedItem = player.getSelectedItem();
+        if (selectedItem == null) {
+            gamePanel.displayMessage("Select the Proposal Ring from your inventory first!");
+            return;
+        }
+
+        if (selectedItem instanceof ProposalRing) {
+            ProposalRing ring = (ProposalRing) selectedItem;
+            
+            // Panggil Item.use() dulu untuk validasi dasar (misal, memastikan target adalah NPC)
+            if (ring.use(player, targetNPC)) { // Panggil Item.use()
+                // Jika Item.use() mengembalikan true (target valid), baru panggil Player.propose()
+                int currentTotalDays = gameTime.getTotalDaysPlayed();
+                String proposalMessage = player.propose(targetNPC, ring, currentTotalDays); // Panggil Player.propose() dengan semua argumen
+
+                if (proposalMessage == null) { // Lamaran diterima
+                    player.changeEnergy(-10); // Sesuai spesifikasi: -10 energi jika diterima
+                    gameTime.advance(60);   // Sesuai spesifikasi: -1 jam (60 menit)
+                    gamePanel.displayMessage(player.getName() + " dan " + targetNPC.getName() + " sekarang bertunangan! Waktu maju 1 jam.");
+                    System.out.println("Lamaran diterima! Energi player: " + player.getEnergy());
+                } else { // Lamaran ditolak
+                    player.changeEnergy(-20); // Sesuai spesifikasi: -20 energi jika ditolak
+                    gameTime.advance(60);   // Sesuai spesifikasi: -1 jam (60 menit)
+                    gamePanel.displayMessage(proposalMessage + " Waktu tetap maju 1 jam.");
+                    System.out.println("Lamaran gagal!\nPesan: " + proposalMessage + "\nEnergi player: " + player.getEnergy());
+                }
+            } else {
+                // Pesan error dari ProposalRing.use() sudah dicetak jika target tidak valid
+                gamePanel.displayMessage("Proposal Ring tidak bisa digunakan pada target ini."); // Opsional
+            }
+        } else {
+            gamePanel.displayMessage("Kamu harus memegang cincin lamaran untuk melamar.");
+        }
+
+        if (gamePanel != null) {
+            gamePanel.updatePlayerInfoPanel();
+            gamePanel.updateGameRender();
+        }
+        checkPassOut(); 
+    }
+
+    private NPC findTargetNPCForInteraction(Player player, int maxDistance) {
+        if (farmModel == null || farmModel.getNPCs() == null || player == null || player.getCurrentMap() == null) {
+            System.err.println("GameController.findTargetNPCForInteraction: Komponen kritis null.");
+            return null;
+        }
+        MapArea playerMap = player.getCurrentMap();
+        int playerX = player.getCurrentTileX();
+        int playerY = player.getCurrentTileY();
+
+        Optional<NPC> nearbyNPCOptional = farmModel.getNPCs().stream()
+            .filter(npc -> {
+                MapArea npcExpectedMap = farmModel.getMapArea(npc.getHomeLocation());
+                if (npcExpectedMap != playerMap) {
+                    return false;
+                }
+                int npcX = npc.getCurrentTileX();
+                int npcY = npc.getCurrentTileY();
+                int distance = Math.abs(playerX - npcX) + Math.abs(playerY - npcY);
+                return distance <= maxDistance;
+            })
+            .min(Comparator.comparingInt(npc -> {
+                int npcX = npc.getCurrentTileX();
+                int npcY = npc.getCurrentTileY();
+                return Math.abs(playerX - npcX) + Math.abs(playerY - npcY);
+            }));
+        
+        return nearbyNPCOptional.orElse(null);
+    }
+
+
+
+    public void handleMarryRequest() {
+        if (farmModel == null || gamePanel == null) {
+            System.err.println("GameController.handleMarryRequest: Critical component null.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime();
+        FarmMap farmMap = farmModel.getFarmMap(); 
+
+        if (player == null || gameTime == null || farmMap == null) {
+            System.err.println("GameController.handleMarryRequest: Player, GameTime, or FarmMap is null.");
+            if (gamePanel != null) gamePanel.displayMessage("Error internal: Tidak bisa memproses pernikahan.");
+            return;
+        }
+
+        final int MARRY_ENERGY_COST = 80;
+        if (player.getEnergy() < MARRY_ENERGY_COST) {
+            gamePanel.displayMessage("Energi tidak cukup untuk menikah. Kamu membutuhkan " + MARRY_ENERGY_COST + " energi, hanya punya " + player.getEnergy() + ".");
+            if (gamePanel != null) {
+                 gamePanel.updatePlayerInfoPanel();
+                 gamePanel.updateGameRender();
+            }
+            return;
+        }
+
+        // 1. Tentukan NPC yang DIDEKATI pemain untuk interaksi
+        NPC npcInteraksi = findTargetNPCForInteraction(player, Player.CHAT_MAX_DISTANCE); 
+
+        if (npcInteraksi == null) {
+            gamePanel.displayMessage("Kamu tidak berada cukup dekat dengan NPC manapun untuk diajak menikah.");
+            return;
+        }
+        
+        // Tidak perlu lagi validasi di controller apakah npcInteraksi adalah tunangan,
+        // karena Player.marry() akan menangani semua validasi tersebut dan mengembalikan pesan error jika perlu.
+        
+        int currentTotalDays = gameTime.getTotalDaysPlayed();
+        String marryMessage = player.marry(npcInteraksi, currentTotalDays); // Gunakan npcInteraksi sebagai target
+
+        if (marryMessage == null) { // Sukses menikah (Player.marry() mengembalikan null jika sukses)
+            player.changeEnergy(-MARRY_ENERGY_COST);
+
+            int currentHour = gameTime.getHour();
+            int currentMinute = gameTime.getMinute();
+            int minutesToAdvance = 0;
+            if (currentHour < 22) {
+                minutesToAdvance = (22 - currentHour) * 60 - currentMinute;
+            } else if (currentHour == 22 && currentMinute == 0) {
+                minutesToAdvance = 0;
+            } else {
+                 if (currentHour > 22 || (currentHour == 22 && currentMinute > 0)) {
+                    System.out.println("Pernikahan terjadi setelah atau tepat pukul 22:00, waktu tidak di-skip mundur.");
+                }
+            }
+            if (minutesToAdvance > 0) {
+                gameTime.advance(minutesToAdvance);
+            }
+
+            int homeX = 5; 
+            int homeY = 5; 
+            player.setCurrentMap(farmMap);
+            player.setPosition(homeX, homeY);
+
+            gamePanel.displayMessage("Selamat! Kamu dan " + npcInteraksi.getName() + " telah menikah! Waktu sekarang " + gameTime.getTimeString() + ".");
+            System.out.println("Pernikahan berhasil! Energi player: " + player.getEnergy() + ", Waktu: " + gameTime.getTimeString());
+            
+        } else { 
+            // Ada pesan error dari Player.marry()
+            gamePanel.displayMessage(marryMessage);
+            System.out.println("Pernikahan gagal/tidak valid. Pesan: " + marryMessage);
+            // Tidak ada perubahan energi atau waktu jika pernikahan gagal di tahap validasi Player.marry()
+        }
+
+        if (gamePanel != null) {
+            gamePanel.updatePlayerInfoPanel();
+            gamePanel.updateGameRender();
+        }
+        checkPassOut();
+    }    
+}

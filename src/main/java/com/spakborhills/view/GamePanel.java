@@ -437,9 +437,21 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             case KeyEvent.VK_G: // Gift
                 if (gameController != null) {
                     gameController.handleGiftRequest();
+                    actionTaken = true; // Assuming gift request is an action
                 }
                 break;
-            // Add other key bindings here
+            case KeyEvent.VK_P: // Propose
+                if (gameController != null) {
+                    gameController.handleProposeRequest();
+                    actionTaken = true; // Assuming propose request is an action
+                }
+                break;
+            case KeyEvent.VK_M:
+                if(gameController != null){
+                    gameController.handleMarryRequest();
+                    actionTaken = true;
+                }
+                break;
         }
 
         if (actionTaken) {
@@ -492,96 +504,19 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
     }
     
-    private void openStoreDialog() {
+    public void openStoreDialog() {
         if (gameController == null || farmModel == null) {
             JOptionPane.showMessageDialog(this, "Sistem toko belum siap.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        List<Item> itemsForSale = gameController.getStoreItemsForDisplay();
-        PriceList priceList = farmModel.getPriceList(); 
+        // Get the parent frame to pass to the dialog
+        Frame parentFrame = JOptionPane.getFrameForComponent(this);
+        StoreDialog storeDialog = new StoreDialog(parentFrame, gameController, farmModel);
+        storeDialog.setVisible(true); // This will block until the dialog is closed
 
-        if (priceList == null) {
-            JOptionPane.showMessageDialog(this, "Daftar harga tidak tersedia.", "Error Toko", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        if (itemsForSale == null || itemsForSale.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Toko sedang kosong atau tidak ada barang yang dijual saat ini.", "Toko Kosong", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        List<String> displayItemsList = new ArrayList<>();
-        for (Item item : itemsForSale) {
-            int buyPrice = priceList.getBuyPrice(item.getName());
-            if (buyPrice >= 0 || item.getName().equals("Koran Edisi Baru")) {
-                 String displayText = item.getName() + " - " + buyPrice + "G";
-                 displayItemsList.add(displayText);
-            }
-        }
-        
-        if (displayItemsList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Tidak ada barang yang bisa dibeli saat ini (cek harga).", "Toko Kosong", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-        String[] displayItemsArray = displayItemsList.toArray(new String[0]);
-
-        String chosenItemString = (String) JOptionPane.showInputDialog(
-                this,
-                "Selamat datang di Toko Spakbor Hills! Apa yang ingin kamu beli?",
-                "Toko Spakbor Hills - Beli",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                displayItemsArray,
-                displayItemsArray[0]
-        );
-
-        if (chosenItemString != null && !chosenItemString.isEmpty()) {
-            String originalItemName = chosenItemString.substring(0, chosenItemString.lastIndexOf(" - ")).trim();
-            
-            Item selectedItemObject = null;
-            for(Item item : itemsForSale){
-                if(item.getName().equals(originalItemName)){
-                    if (priceList.getBuyPrice(item.getName()) >= 0 || item.getName().equals("Koran Edisi Baru")) {
-                        selectedItemObject = item;
-                        break;
-                    }
-                }
-            }
-
-            if (selectedItemObject == null) {
-                 JOptionPane.showMessageDialog(this, "Item yang dipilih tidak valid atau tidak dapat dibeli.", "Error Pilihan", JOptionPane.ERROR_MESSAGE);
-                 return;
-            }
-
-            String quantityString = JOptionPane.showInputDialog(
-                    this,
-                    "Berapa banyak '" + originalItemName + "' yang ingin kamu beli?",
-                    "Jumlah Pembelian",
-                    JOptionPane.QUESTION_MESSAGE
-            );
-
-            if (quantityString != null && !quantityString.trim().isEmpty()) {
-                try {
-                    int quantity = Integer.parseInt(quantityString.trim());
-            if (quantity <= 0) {
-                        JOptionPane.showMessageDialog(this, "Jumlah harus lebih dari nol.", "Input Tidak Valid", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-                    boolean success = gameController.requestBuyItem(originalItemName, quantity);
-
-            if (success) {
-                        JOptionPane.showMessageDialog(this, "Kamu berhasil membeli " + quantity + " " + originalItemName + "!", "Pembelian Berhasil", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                        JOptionPane.showMessageDialog(this, "Pembelian gagal. Pastikan kamu memiliki cukup Gold atau item tersedia.", "Pembelian Gagal", JOptionPane.ERROR_MESSAGE);
-            }
-                    repaint(); 
-        } catch (NumberFormatException e) {
-                    JOptionPane.showMessageDialog(this, "Jumlah yang dimasukkan tidak valid. Harap masukkan angka.", "Input Salah", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        }
+        // After the dialog is closed, repaint the game panel to reflect any changes (e.g., gold, inventory)
+        repaint();
     }
 
     /**
@@ -826,6 +761,13 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             scrollPane.setPreferredSize(new Dimension(600, 400)); // Adjust size as needed
             JOptionPane.showMessageDialog(this, scrollPane, "Fish Debug Information", JOptionPane.INFORMATION_MESSAGE);
 
+        } else if (command.equals("gold")) {
+            if (parts.length > 1) {
+                int newGold = Integer.parseInt(parts[1]);
+                farmModel.getPlayer().addGold(newGold);
+                JOptionPane.showMessageDialog(this, "Gold changed to " + newGold, "Cheat Activated", JOptionPane.INFORMATION_MESSAGE);
+                repaint(); // Update display
+            }
         } else {
             JOptionPane.showMessageDialog(this, "Unknown cheat code: " + cheat, "Cheat Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -852,6 +794,10 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         helpText.append("• season SUMMER - Changes to Summer<br>");
         helpText.append("• season FALL - Changes to Fall<br>");
         helpText.append("• season WINTER - Changes to Winter</p>");
+
+        helpText.append("<p><b>Gold Control:</b><br>");
+        helpText.append("• gold 1000 - Adds 1000 gold to player<br>");
+        helpText.append("• gold -1000 - Removes 1000 gold from player</p>");
         
         helpText.append("<p><b>Debug Commands:</b><br>");
         helpText.append("• fishdebug - Shows fish availability info<br>");
@@ -1057,4 +1003,38 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         UIManager.put("OptionPane.messageFont", originalMessageFont);
         UIManager.put("OptionPane.buttonFont", originalButtonFont);
     }
-} 
+
+    /**
+     * Displays an option dialog to the player and returns the chosen option index.
+     * @param message The message to display.
+     * @param title The title of the dialog.
+     * @param options An array of strings representing the options.
+     * @return The index of the chosen option, or JOptionPane.CLOSED_OPTION if the dialog was closed.
+     */
+    public int showOptionDialog(String message, String title, String[] options) {
+        // Store original fonts
+        Object originalMessageFont = UIManager.get("OptionPane.messageFont");
+        Object originalButtonFont = UIManager.get("OptionPane.buttonFont");
+
+        // Set custom font for this dialog
+        UIManager.put("OptionPane.messageFont", DIALOG_FONT);
+        UIManager.put("OptionPane.buttonFont", DIALOG_FONT);
+
+        int choice = JOptionPane.showOptionDialog(
+            this,
+            message,
+            title,
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.PLAIN_MESSAGE,
+            null, // no custom icon
+            options,
+            options[0] // default selection
+        );
+
+        // Restore original fonts
+        UIManager.put("OptionPane.messageFont", originalMessageFont);
+        UIManager.put("OptionPane.buttonFont", originalButtonFont);
+        
+        return choice;
+    }
+}

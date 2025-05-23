@@ -117,6 +117,7 @@ public class Player {
     private int currentTileY;
     private String favoriteItemName;
     private Item selectedItem; // Ditambahkan
+    private int engagementDay;
 
     /**
      * Konstruktor untuk kelas Player.
@@ -143,6 +144,7 @@ public class Player {
         this.favoriteItemName = ""; // Default kosong
         this.partner = null; // Mulai single
         this.selectedItem = null; // Inisialisasi selectedItem
+        this.engagementDay = -1; // Inisialisasi engagementDay
 
         // Inisialisasi inventory dengan item default (Halaman 23)
         if (itemRegistry != null) {
@@ -150,6 +152,7 @@ public class Player {
             // Khusus debug gift aja
             // Legend fish untuk MayorTadi
             Item legendFish = itemRegistry.get("Legend");
+            Item proposalRing = itemRegistry.get("Proposal Ring");
 
             // Potato untuk Caroline
             Item potato = itemRegistry.get("Potato");
@@ -168,6 +171,7 @@ public class Player {
                 }
             } else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
             if (legendFish != null) this.inventory.addItem(legendFish, 2); else System.err.println("PERINGATAN: Legend Fish tidak ditemukan di registry.");
+            if (proposalRing != null) this.inventory.addItem(proposalRing, 1); else System.err.println("PERINGATAN: Proposal Ring tidak ditemukan di registry.");
             if (potato != null) this.inventory.addItem(potato, 10); else System.err.println("PERINGATAN: Potato tidak ditemukan di registry.");
             if (stone != null) this.inventory.addItem(stone, 10); else System.err.println("PERINGATAN: Stone tidak ditemukan di registry.");
             if (wheat != null) this.inventory.addItem(wheat, 10); else System.err.println("PERINGATAN: Wheat tidak ditemukan di registry.");
@@ -236,6 +240,8 @@ public class Player {
     public Point getPosition() { return new Point(currentTileX, currentTileY); }
     public String getFavoriteItemName() { return favoriteItemName; }
     public Item getSelectedItem() { return selectedItem; } // Ditambahkan
+    public int getEngagementDay() { return engagementDay; } // Ditambahkan
+    public void setEngagementDay(int engagementDay) { this.engagementDay = engagementDay; } // Ditambahkan
 
     // --- Setters ---
     public void setPartner(NPC partner) { this.partner = partner; }
@@ -716,49 +722,44 @@ public class Player {
 
     /**
      * Mencoba melamar seorang NPC. Membutuhkan Proposal Ring.
-     * Biaya energi (-10 jika diterima, -20 jika ditolak) ditangani oleh Controller.
-     * Biaya waktu (1 jam) ditangani oleh Controller.
      *
      * @param npcTarget NPC yang akan dilamar.
-     * @param ring Item ProposalRing.
-     * @return true jika percobaan lamaran dilakukan (cincin ada), false jika gagal.
-     *         Logika sukses/gagal sebenarnya kompleks dan kemungkinan di Controller.
+     * @param ring Item ProposalRing (untuk konfirmasi item dipegang).
+     * @param currentTotalDaysPlayed Total hari yang telah dimainkan, untuk mencatat tanggal pertunangan.
+     * @return String pesan error jika gagal, atau null jika berhasil.
      */
-    public boolean propose(NPC npcTarget, ProposalRing ring) {
-        
+    public String propose(NPC npcTarget, ProposalRing ring, int currentTotalDaysPlayed) {
         if (npcTarget == null || ring == null) {
-            System.out.println("Target NPC atau cincin tidak valid untuk melamar.");
-            return false;
+            return "Target NPC atau cincin tidak valid untuk melamar.";
         }
 
-        // Panggil ProposalRing.use() untuk efek awal / pesan (meski saat ini hanya validasi dasar)
-        // Sebenarnya, Player.propose yang harusnya memegang semua logika inti.
-        // ring.use(this, npcTarget); // Ini hanya print pesan, tidak krusial untuk logika di sini
+        // 1. Cek dulu apakah pemain sudah menikah
+        if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE) {
+            return "Kamu sudah menikah dengan " + this.partner.getName() + "! Tidak bisa melamar siapapun lagi.";
+        }
 
-        System.out.println(this.getName() + " mengeluarkan Proposal Ring dan mencoba melamar " + npcTarget.getName() + "...");
-
+        // 2. Jika belum menikah, baru cek apakah sudah bertunangan
+        if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.FIANCE) {
+            if (this.partner == npcTarget) { // Mencoba melamar tunangan sendiri lagi
+                return "Kamu sudah bertunangan dengan " + npcTarget.getName() + ".";
+            } else { // Sudah punya tunangan, tapi mencoba melamar NPC lain
+                return "Kamu sudah bertunangan dengan " + this.partner.getName() + " dan tidak bisa melamar " + npcTarget.getName() + ".";
+            }
+        }
+        
         if (!npcTarget.isBachelor()) {
-            System.out.println(npcTarget.getName() + " tidak bisa dilamar (bukan bachelor/bachelorette).");
-            changeEnergy(-5); // Misal, energi tetap berkurang untuk usaha
-            return false;
+            return npcTarget.getName() + " tidak bisa dilamar (bukan bachelor/bachelorette).";
         }
 
-        // Asumsi proposal memerlukan poin hati maksimal untuk bachelor/bachelorette
         if (npcTarget.getHeartPoints() < npcTarget.getMaxHeartPoints()) {
-            System.out.println("Sayangnya, " + npcTarget.getName() + " merasa hubungan kalian belum cukup dekat untuk lamaran.");
-            changeEnergy(-10); // Energi berkurang lebih banyak jika ditolak karena hati
-            return false;
+            return "Sayangnya, " + npcTarget.getName() + " merasa hubungan kalian belum cukup dekat untuk lamaran. (Hati: " + npcTarget.getHeartPoints() + "/" + npcTarget.getMaxHeartPoints() + ")";
         }
 
-        // Lamaran berhasil!
-        System.out.println(npcTarget.getName() + " menerima lamaranmu dengan bahagia!");
         npcTarget.setRelationshipStatus(RelationshipStatus.FIANCE);
-        this.setPartner(npcTarget); // Pemain kini punya tunangan
-        changeEnergy(-15); // Energi berkurang untuk lamaran sukses
-        // Hapus ProposalRing jika itemnya consumable, atau biarkan jika reusable
-        // Berdasarkan spek Hal 27, ProposalRing tidak hilang.
-        // inventory.removeItem(ring, 1); 
-        return true;
+        this.setPartner(npcTarget); 
+        this.setEngagementDay(currentTotalDaysPlayed); 
+        
+        return null; // Mengindikasikan sukses
     }
 
     /**
@@ -768,23 +769,52 @@ public class Player {
      * @param npcTarget NPC yang akan dinikahi.
      * @return true jika kondisi pernikahan terpenuhi di awal, false jika gagal.
      */
-    public boolean marry(NPC npcTarget) {
+    /**
+     * Mencoba menikahi seorang NPC (harus tunangan dan minimal 1 hari setelah tunangan).
+     *
+     * @param npcTarget NPC yang akan dinikahi.
+     * @param currentTotalDaysPlayed Total hari yang telah dimainkan saat ini.
+     * @return String pesan error jika gagal, atau null jika berhasil.
+     */
+    public String marry(NPC npcTarget, int currentTotalDaysPlayed) { 
         if (npcTarget == null ) {
-            System.out.println("Target NPC tidak valid untuk menikah.");
-            return false;
+            return "Target NPC tidak valid untuk menikah.";
         }
-        if (this.partner != npcTarget || npcTarget.getRelationshipStatus() != RelationshipStatus.FIANCE) {
-            System.out.println("Kamu hanya bisa menikahi tunanganmu saat ini, " + (this.partner != null ? this.partner.getName() : "belum ada") + ".");
-            if (npcTarget.getRelationshipStatus() != RelationshipStatus.FIANCE) {
-                 System.out.println(npcTarget.getName() + " belum menjadi tunanganmu.");
-            }
-            return false;
+
+        // Prioritas #1: Cek apakah pemain sudah menikah DENGAN TARGET INI
+        if (this.partner != null && this.partner == npcTarget && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE) {
+            return "Kamu sudah menikah dengan " + npcTarget.getName() + "!";
+        }
+
+        // Prioritas #2: Cek apakah pemain sudah menikah DENGAN ORANG LAIN
+        if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE && this.partner != npcTarget) {
+            return "Kamu sudah menikah dengan " + this.partner.getName() + " dan tidak bisa menikah dengan " + npcTarget.getName() + ".";
         }
         
-        System.out.println("Hari pernikahan dengan " + npcTarget.getName() + " telah tiba! Selamat!");
+        // Prioritas #3: Cek kondisi pertunangan jika belum menikah
+        if (this.partner == null) { // Belum punya partner sama sekali (belum tunangan)
+            return "Kamu belum bertunangan dengan siapapun. Lamar dulu " + npcTarget.getName() + "!";
+        }
+        
+        if (this.partner != npcTarget) { // Punya tunangan, tapi targetnya beda orang
+            return npcTarget.getName() + " bukanlah tunanganmu saat ini. Tunanganmu adalah " + this.partner.getName() + ".";
+        }
+
+        // Jika sampai sini, berarti this.partner == npcTarget. Sekarang cek statusnya.
+        if (npcTarget.getRelationshipStatus() != RelationshipStatus.FIANCE) {
+            // Partner adalah target, tapi statusnya bukan FIANCE (misal, masih SINGLE karena bug, atau sudah SPOUSE tapi lolos cek #1)
+             return "Status hubunganmu dengan " + npcTarget.getName() + " adalah " + npcTarget.getRelationshipStatus() + ". Kamu hanya bisa menikahi seorang FIANCE.";
+        }
+
+        // Pengecekan minimal 1 hari setelah tunangan
+        if (this.engagementDay < 0 || currentTotalDaysPlayed <= this.engagementDay) {
+            return "Kamu harus menunggu setidaknya satu hari setelah bertunangan untuk menikah.";
+        }
+        
+        // Pernikahan berhasil
         npcTarget.setRelationshipStatus(RelationshipStatus.SPOUSE);
-        // Energi dan waktu diatur oleh GameController/Farm.
-        return true; 
+        
+        return null; // Mengindikasikan sukses 
     }
 
     /**
