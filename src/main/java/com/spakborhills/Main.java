@@ -75,62 +75,62 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        // Main Menu Logic
-        String[] menuOptions = {"New Game", "Help", "Credits", "Exit"};
-        boolean startGame = false;
+        // Main Menu Logic - REMOVED JOptionPane based menu
+        // String[] menuOptions = {"New Game", "Help", "Credits", "Exit"};
+        // boolean startGame = false;
 
-        while (!startGame) {
-            int choice = JOptionPane.showOptionDialog(
-                    null,
-                    "Welcome to Spakbor Hills!",
-                    "Main Menu",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.INFORMATION_MESSAGE,
-                    null,
-                    menuOptions,
-                    menuOptions[0]
-            );
+        // while (!startGame) {
+        //     int choice = JOptionPane.showOptionDialog(
+        //             null,
+        //             "Welcome to Spakbor Hills!",
+        //             "Main Menu",
+        //             JOptionPane.DEFAULT_OPTION,
+        //             JOptionPane.INFORMATION_MESSAGE,
+        //             null,
+        //             menuOptions,
+        //             menuOptions[0]
+        //     );
 
-            switch (choice) {
-                case 0: // New Game
-                    startGame = true; // Signal to exit the loop and start the game
-                    break;
-                case 1: // Help
-                    JOptionPane.showMessageDialog(null,
-                            "Spakbor Hills - A Farming Adventure Game!\n\n" +
-                            "Objective: Become a successful farmer and achieve milestones!\n\n" +
-                            "Controls:\n" +
-                            "• WASD/Arrows: Move\n" +
-                            "• E: Interact/Use Tool/Harvest\n" +
-                            "• F: Eat Selected Item\n" +
-                            "• T: Open Store\n" +
-                            "• B: Open Shipping Bin\n" +
-                            "• 1, 2: Cycle Inventory\n" +
-                            "• X: Chat with NPC\n" +
-                            "• G: Gift to NPC\n" +
-                            "• L: Sleep\n" +
-                            "• K: Cook\n" +
-                            "• V: Watch TV\n" +
-                            "• I: View Player Info\n" +
-                            "• O: View Current Progress\n" +
-                            "• C: Open Cheat Menu\n\n",
-                            "Help", JOptionPane.INFORMATION_MESSAGE);
-                    break; // Stay in the menu loop
-                case 2: // Credits
-                    JOptionPane.showMessageDialog(null,
-                            "Spakbor Hills - Game created by Kelompok Kito", // Placeholder for actual team name
-                            "Credits", JOptionPane.INFORMATION_MESSAGE);
-                    break; // Stay in the menu loop
-                case 3: // Exit
-                case JOptionPane.CLOSED_OPTION: // Handle dialog close
-                default:
-                    System.out.println("Exiting Spakbor Hills.");
-                    System.exit(0); // Terminate the application
-                    return; // Exit main method
-            }
-        }
+        //     switch (choice) {
+        //         case 0: // New Game
+        //             startGame = true; // Signal to exit the loop and start the game
+        //             break;
+        //         case 1: // Help
+        //             JOptionPane.showMessageDialog(null,
+        //                     "Spakbor Hills - A Farming Adventure Game!\n\n" +
+        //                     "Objective: Become a successful farmer and achieve milestones!\n\n" +
+        //                     "Controls:\n" +
+        //                     "• WASD/Arrows: Move\n" +
+        //                     "• E: Interact/Use Tool/Harvest\n" +
+        //                     "• F: Eat Selected Item\n" +
+        //                     "• T: Open Store\n" +
+        //                     "• B: Open Shipping Bin\n" +
+        //                     "• 1, 2: Cycle Inventory\n" +
+        //                     "• X: Chat with NPC\n" +
+        //                     "• G: Gift to NPC\n" +
+        //                     "• L: Sleep\n" +
+        //                     "• K: Cook\n" +
+        //                     "• V: Watch TV\n" +
+        //                     "• I: View Player Info\n" +
+        //                     "• O: View Current Progress\n" +
+        //                     "• C: Open Cheat Menu\n\n",
+        //                     "Help", JOptionPane.INFORMATION_MESSAGE);
+        //             break; // Stay in the menu loop
+        //         case 2: // Credits
+        //             JOptionPane.showMessageDialog(null,
+        //                     "Spakbor Hills - Game created by Kelompok Kito", // Placeholder for actual team name
+        //                     "Credits", JOptionPane.INFORMATION_MESSAGE);
+        //             break; // Stay in the menu loop
+        //         case 3: // Exit
+        //         case JOptionPane.CLOSED_OPTION: // Handle dialog close
+        //         default:
+        //             System.out.println("Exiting Spakbor Hills.");
+        //             System.exit(0); // Terminate the application
+        //             return; // Exit main method
+        //     }
+        // }
 
-        // If startGame is true, proceed to initialize and launch the game
+        // If startGame is true, proceed to initialize and launch the game -> Now always proceeds
         // printSectionHeader("MEMULAI COMPREHENSIVE TESTING SPAKBOR HILLS");
 
         Map<String, Item> itemRegistry = setupItemRegistry();

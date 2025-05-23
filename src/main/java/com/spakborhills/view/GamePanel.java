@@ -25,6 +25,7 @@ import com.spakborhills.model.Util.GameTime; // Added for fishdebug
 import com.spakborhills.model.Enum.LocationType; // Added for fishdebug
 import com.spakborhills.model.Enum.FishRarity; // Added for fishdebug
 import com.spakborhills.model.NPC.NPC; // Make sure NPC is imported
+import com.spakborhills.model.Enum.GameState; // Added import for GameState
 
 import javax.swing.*;
 import java.awt.*;
@@ -50,6 +51,15 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private javax.swing.Timer gameTimer;
     private boolean statisticsShown = false; // Flag to ensure stats are shown only once
 
+    // Main Menu state
+    private String[] menuOptions = {"New Game", "Load Game", "Help", "Credits", "Exit"};
+    private int currentMenuSelection = 0;
+    private static final Font MENU_FONT = new Font("Arial", Font.BOLD, 30);
+    private static final Font MENU_ITEM_FONT = new Font("Arial", Font.PLAIN, 24);
+    private static final Color MENU_BACKGROUND_COLOR = new Color(50, 50, 100); // Dark blue
+    private static final Color MENU_TEXT_COLOR = Color.WHITE;
+    private static final Color MENU_SELECTED_TEXT_COLOR = Color.YELLOW;
+
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
         this.gameController = gameController;
@@ -66,18 +76,23 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (farmModel != null && farmModel.getCurrentTime() != null && gameController != null) {
-                    // Check for end game conditions FIRST
-                    if (!statisticsShown && farmModel.checkEndConditions()) {
-                        System.out.println("GAME PANEL: End game condition met! Requesting stats display.");
-                        gameController.requestShowStatistics(); // This will also stop the timer
-                        statisticsShown = true; // Set flag so it doesn't trigger repeatedly
-                        return; // Crucial: Do not advance time or repaint if stats are shown
-                    }
+                    // Only advance time and check end conditions if IN_GAME
+                    if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+                        // Check for end game conditions FIRST
+                        if (!statisticsShown && farmModel.checkEndConditions()) {
+                            System.out.println("GAME PANEL: End game condition met! Requesting stats display.");
+                            gameController.requestShowStatistics(); // This will also stop the timer
+                            statisticsShown = true; // Set flag so it doesn't trigger repeatedly
+                            return; // Crucial: Do not advance time or repaint if stats are shown
+                        }
 
-                    // If timer is still running (i.e., stats not shown and timer not stopped by stats display)
-                    if (gameTimer.isRunning()) { 
-                        farmModel.getCurrentTime().advance(5); // Advance 5 game minutes
-                        repaint(); // Redraw the panel to update time, etc.
+                        // If timer is still running (i.e., stats not shown and timer not stopped by stats display)
+                        if (gameTimer.isRunning()) { 
+                            farmModel.getCurrentTime().advance(5); // Advance 5 game minutes
+                            repaint(); // Redraw the panel to update time, etc.
+                        }
+                    } else if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
+                        repaint(); // Keep repainting menu for potential animations or cursor blink later
                     }
                 }
             }
@@ -94,7 +109,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getPlayer().getCurrentMap() == null) {
+
+        if (farmModel == null) { // Simplified initial check
             g.setColor(Color.BLACK);
             g.fillRect(0, 0, getWidth(), getHeight());
             g.setColor(Color.WHITE);
@@ -103,21 +119,66 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             return;
         }
 
-        // Draw player info panel first (unclipped)
-        drawPlayerInfo(g);
+        if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
+            drawMainMenu(g);
+        } else if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+            if (farmModel.getPlayer() == null || farmModel.getPlayer().getCurrentMap() == null) {
+                // Still loading or error state after selecting new game but before player is ready
+                g.setColor(Color.BLACK);
+                g.fillRect(0, 0, getWidth(), getHeight());
+                g.setColor(Color.WHITE);
+                g.setFont(new Font("Arial", Font.BOLD, 16));
+                g.drawString("Initializing Game World...", 20, getHeight() / 2);
+                return;
+            }
+            // Draw player info panel first (unclipped)
+            drawPlayerInfo(g);
 
-        // Store original clip and set new clip for map area
-        Shape originalClip = g.getClip();
-        g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
+            // Store original clip and set new clip for map area
+            Shape originalClip = g.getClip();
+            g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
 
-        // These are drawn within the new clipped area
-        drawCurrentMap(g);
-        drawNPCs(g);
-        drawPlayer(g);
-        drawDayNightTint(g); // Draw tint over the game world
+            // These are drawn within the new clipped area
+            drawCurrentMap(g);
+            drawNPCs(g);
+            drawPlayer(g);
+            // drawDayNightTint(g); // Commented out as per user request
 
-        // Restore original clip
-        g.setClip(originalClip);
+            // Restore original clip
+            g.setClip(originalClip);
+        }
+    }
+
+    private void drawMainMenu(Graphics g) {
+        // Draw background
+        g.setColor(MENU_BACKGROUND_COLOR);
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        // Draw Title (similar to Harvest Moon image)
+        g.setFont(MENU_FONT.deriveFont(Font.BOLD, 60f)); // Larger for title
+        g.setColor(MENU_TEXT_COLOR);
+        String title = "Spakbor Hills";
+        FontMetrics fmTitle = g.getFontMetrics();
+        int titleWidth = fmTitle.stringWidth(title);
+        g.drawString(title, (getWidth() - titleWidth) / 2, getHeight() / 4);
+
+        // Draw Menu Items
+        g.setFont(MENU_ITEM_FONT);
+        FontMetrics fmItems = g.getFontMetrics();
+        int itemHeight = fmItems.getHeight();
+        int startY = getHeight() / 2; // Start items from midpoint
+
+        for (int i = 0; i < menuOptions.length; i++) {
+            String itemText = menuOptions[i];
+            if (i == currentMenuSelection) {
+                g.setColor(MENU_SELECTED_TEXT_COLOR);
+                itemText = "> " + itemText + " <"; // Indicator for selection
+            } else {
+                g.setColor(MENU_TEXT_COLOR);
+            }
+            int itemWidth = fmItems.stringWidth(itemText);
+            g.drawString(itemText, (getWidth() - itemWidth) / 2, startY + i * (itemHeight + 15)); // 15px spacing
+        }
     }
 
     private void drawDayNightTint(Graphics g) {
@@ -461,95 +522,100 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (gameController == null) return;
+        if (gameController == null || farmModel == null) return; // Added farmModel check
 
         int keyCode = e.getKeyCode();
         boolean actionTaken = false;
 
-        switch (keyCode) {
-            case KeyEvent.VK_W: case KeyEvent.VK_UP:
-                actionTaken = gameController.requestPlayerMove(Direction.NORTH);
-                break;
-            case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
-                actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
-                break;
-            case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
-                actionTaken = gameController.requestPlayerMove(Direction.WEST);
-                break;
-            case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
-                actionTaken = gameController.requestPlayerMove(Direction.EAST);
-                break;
-            case KeyEvent.VK_E: // General Action Key
-                actionTaken = tryGeneralAction();
-                break;
-            case KeyEvent.VK_F: // Eat
-                actionTaken = gameController.requestEatSelectedItem();
-                break;
-            case KeyEvent.VK_T: // Store
-                openStoreDialog(); // This is a view-specific action opening a dialog
-                actionTaken = true; // Assume dialog opening is an action
-                break;
-            case KeyEvent.VK_B: // Shipping Bin
-                 actionTaken = tryOpenShippingBinDialog();
-                break;
-            case KeyEvent.VK_C:
-                handleCheatInput(); // Cheat input is an action itself
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_1:
-                gameController.selectPreviousItem();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_2:
-                gameController.selectNextItem();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_X: // Chat with NPC
-                gameController.handleChatRequest(); // Returns void, handles its own feedback
-                actionTaken = true; // An attempt to chat was made
-                break;
-            case KeyEvent.VK_G: // Gift to NPC
-                System.out.println("G key pressed - Attempting Gift");
-                    gameController.handleGiftRequest();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_L: // Sleep (Lodge/Lie down)
-                gameController.requestNormalSleep(); // This will handle location check & next day
-                actionTaken = true; // Assuming sleep always initiates a process
-                break;
-            case KeyEvent.VK_P: // Propose
-                if (gameController != null) {
-                    gameController.handleProposeRequest();
-                    actionTaken = true; // Assuming propose request is an action
-                }
-                break;
-            case KeyEvent.VK_M:
-                if(gameController != null){
-                    gameController.handleMarryRequest();
+        if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
+            handleMainMenuInput(keyCode);
+            actionTaken = true; // Input was processed by menu
+        } else if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+            switch (keyCode) {
+                case KeyEvent.VK_W: case KeyEvent.VK_UP:
+                    actionTaken = gameController.requestPlayerMove(Direction.NORTH);
+                    break;
+                case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
+                    actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
+                    break;
+                case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
+                    actionTaken = gameController.requestPlayerMove(Direction.WEST);
+                    break;
+                case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
+                    actionTaken = gameController.requestPlayerMove(Direction.EAST);
+                    break;
+                case KeyEvent.VK_E: // General Action Key
+                    actionTaken = tryGeneralAction();
+                    break;
+                case KeyEvent.VK_F: // Eat
+                    actionTaken = gameController.requestEatSelectedItem();
+                    break;
+                case KeyEvent.VK_T: // Store
+                    openStoreDialog(); // This is a view-specific action opening a dialog
+                    actionTaken = true; // Assume dialog opening is an action
+                    break;
+                case KeyEvent.VK_B: // Shipping Bin
+                     actionTaken = tryOpenShippingBinDialog();
+                    break;
+                case KeyEvent.VK_C:
+                    handleCheatInput(); // Cheat input is an action itself
                     actionTaken = true;
-                }
-                break;
-            case KeyEvent.VK_K: //cooking
-                if(gameController != null){
-                    gameController.handleCookRequest();
+                    break;
+                case KeyEvent.VK_1:
+                    gameController.selectPreviousItem();
                     actionTaken = true;
-                }
-                break;
-            case KeyEvent.VK_V: // Added for Watching TV
-                System.out.println("V key pressed - Attempting to Watch TV");
-                gameController.requestWatchTV();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_I: // Added for View Player Info
-                System.out.println("I key pressed - Viewing Player Info");
-                gameController.requestViewPlayerInfo();
-                actionTaken = true; // Technically not an action that changes game state, but good to acknowledge
-                break;
-            case KeyEvent.VK_O: // Added for View Statistics
-                System.out.println("O key pressed - Viewing Statistics");
-                gameController.requestShowStatistics();
-                actionTaken = true; // This action does stop the timer
-                break;
+                    break;
+                case KeyEvent.VK_2:
+                    gameController.selectNextItem();
+                    actionTaken = true;
+                    break;
+                case KeyEvent.VK_X: // Chat with NPC
+                    gameController.handleChatRequest(); // Returns void, handles its own feedback
+                    actionTaken = true; // An attempt to chat was made
+                    break;
+                case KeyEvent.VK_G: // Gift to NPC
+                    System.out.println("G key pressed - Attempting Gift");
+                        gameController.handleGiftRequest();
+                    actionTaken = true;
+                    break;
+                case KeyEvent.VK_L: // Sleep (Lodge/Lie down)
+                    gameController.requestNormalSleep(); // This will handle location check & next day
+                    actionTaken = true; // Assuming sleep always initiates a process
+                    break;
+                case KeyEvent.VK_P: // Propose
+                    if (gameController != null) {
+                        gameController.handleProposeRequest();
+                        actionTaken = true; // Assuming propose request is an action
+                    }
+                    break;
+                case KeyEvent.VK_M:
+                    if(gameController != null){
+                        gameController.handleMarryRequest();
+                        actionTaken = true;
+                    }
+                    break;
+                case KeyEvent.VK_K: //cooking
+                    if(gameController != null){
+                        gameController.handleCookRequest();
+                        actionTaken = true;
+                    }
+                    break;
+                case KeyEvent.VK_V: // Added for Watching TV
+                    System.out.println("V key pressed - Attempting to Watch TV");
+                    gameController.requestWatchTV();
+                    actionTaken = true;
+                    break;
+                case KeyEvent.VK_I: // Added for View Player Info
+                    System.out.println("I key pressed - Viewing Player Info");
+                    gameController.requestViewPlayerInfo();
+                    actionTaken = true; // Technically not an action that changes game state, but good to acknowledge
+                    break;
+                case KeyEvent.VK_O: // Added for View Statistics
+                    System.out.println("O key pressed - Viewing Statistics");
+                    gameController.requestShowStatistics();
+                    actionTaken = true; // This action does stop the timer
+                    break;
+            }
         }
 
         if (actionTaken) {
@@ -1194,5 +1260,85 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 scrollPane,
                 "Player Information",
                 JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void handleMainMenuInput(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.VK_UP:
+                currentMenuSelection--;
+                if (currentMenuSelection < 0) {
+                    currentMenuSelection = menuOptions.length - 1;
+                }
+                break;
+            case KeyEvent.VK_DOWN:
+                currentMenuSelection++;
+                if (currentMenuSelection >= menuOptions.length) {
+                    currentMenuSelection = 0;
+                }
+                break;
+            case KeyEvent.VK_ENTER:
+                selectMainMenuItem();
+                break;
+        }
+        repaint(); // Repaint after menu navigation
+    }
+
+    private void selectMainMenuItem() {
+        String selectedOption = menuOptions[currentMenuSelection];
+        System.out.println("Main Menu item selected: " + selectedOption);
+        switch (selectedOption) {
+            case "New Game":
+                // The player name/gender prompt is still in Main.java
+                // For a true in-game menu, this prompt should also be moved to a GameState
+                // or handled after transitioning to IN_GAME.
+                // For now, we'll just switch state. Main.java already collected player info.
+                farmModel.setCurrentGameState(GameState.IN_GAME);
+                // Game timer is already created, ensure it starts/resumes if it was paused for menu
+                if (gameTimer != null && !gameTimer.isRunning()) {
+                    gameTimer.start();
+                }
+                // Reset statisticsShown flag for a new game
+                statisticsShown = false; 
+                break;
+            case "Load Game":
+                JOptionPane.showMessageDialog(this, "Load Game feature is not yet implemented.", "Load Game", JOptionPane.INFORMATION_MESSAGE);
+                break;
+            case "Help":
+                // Re-use existing JOptionPane for help for now
+                 JOptionPane.showMessageDialog(this,
+                            "Spakbor Hills - A Farming Adventure Game!\n\n" +
+                            "Objective: Become a successful farmer and achieve milestones!\n\n" +
+                            "Controls (In-Game):\n" +
+                            "• WASD/Arrows: Move\n" +
+                            "• E: Interact/Use Tool/Harvest\n" +
+                            "• F: Eat Selected Item\n" +
+                            "• T: Open Store\n" +
+                            "• B: Open Shipping Bin\n" +
+                            "• 1, 2: Cycle Inventory\n" +
+                            "• X: Chat with NPC\n" +
+                            "• G: Gift to NPC\n" +
+                            "• L: Sleep\n" +
+                            "• K: Cook\n" +
+                            "• V: Watch TV\n" +
+                            "• I: View Player Info\n" +
+                            "• O: View Current Progress\n" +
+                            "• C: Open Cheat Menu\n\n" +
+                            "Menu Controls:\n" +
+                            "• UP/DOWN Arrows: Navigate\n" +
+                            "• ENTER: Select",
+                            "Help", JOptionPane.INFORMATION_MESSAGE);
+                break;
+            case "Credits":
+                // Re-use existing JOptionPane
+                JOptionPane.showMessageDialog(this,
+                            "Spakbor Hills - Game created by Kelompok Kito\n" +
+                            "Inspired by Harvest Moon Series", 
+                            "Credits", JOptionPane.INFORMATION_MESSAGE);
+                break;
+            case "Exit":
+                System.out.println("Exiting Spakbor Hills via menu.");
+                System.exit(0);
+                break;
+        }
     }
 }

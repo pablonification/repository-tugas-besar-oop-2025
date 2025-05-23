@@ -38,6 +38,7 @@ import java.util.Map;
 
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Enum.RelationshipStatus;
+import com.spakborhills.model.Enum.GameState;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.NPC.NPC;
 import com.spakborhills.model.Map.FarmMap;
@@ -64,6 +65,7 @@ public class Farm {
     private EndGameStatistics statistics;
     private PriceList priceList;
     private Map<String, Item> itemRegistry;
+    private GameState currentGameState;
     
 /**
      * Konstruktor untuk Farm. Menginisialisasi seluruh state dunia game.
@@ -94,6 +96,7 @@ public class Farm {
       this.statistics = statistics;
       this.priceList = priceList;
       this.itemRegistry = itemRegistry;
+      this.currentGameState = GameState.MAIN_MENU;
       System.out.println("Selamat datang di Kebun '" + name + "'!");
     }
 
@@ -143,6 +146,15 @@ public class Farm {
     
     public Map<String, Item> getItemRegistry() {
         return itemRegistry;
+    }
+
+    public GameState getCurrentGameState() {
+        return currentGameState;
+    }
+
+    public void setCurrentGameState(GameState gameState) {
+        this.currentGameState = gameState;
+        System.out.println("GameState changed to: " + gameState);
     }
 
     /**

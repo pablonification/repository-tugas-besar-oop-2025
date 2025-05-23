@@ -156,8 +156,8 @@ K: Cooking
 L: Sleeping
 X: Chat
 V: Watch TV (Today's Weather)
-+I: View Player Info
-+O: View Statistics
+I: View Player Info
+O: View Statistics
 1, 2: Swap Tools
 C: Cheat weather dan season
 X: Chat dengan NPC terdekat
