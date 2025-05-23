@@ -92,21 +92,21 @@ Gifting:
 [IMPLEMENTED] Update heartPoints berdasarkan preferensi.
 [IMPLEMENTED] Feedback dari NPC.
 [IMPLEMENTED] Dialog peringatan energi tidak cukup untuk gifting.
-[IMPLEMENTED] Proposing & Marrying:
+Proposing & Marrying:
 [IMPLEMENTED] Memerlukan ProposalRing.
 [IMPLEMENTED] Kondisi heartPoints maksimal, status NPC.
 [IMPLEMENTED] Input pemain -> Controller -> Model.
 [IMPLEMENTED] Feedback dan perubahan status.
 [IMPLEMENTED] Efek Marry (time skip, dll.).
 Cooking (Memasak):
-[UNTUK DILAKUKAN] Kondisi Memasak: Pemain di House (atau dekat Stove jika ada bonus furnitur).
+[SEBAGIAN SUDAH] Kondisi Memasak: Pemain di House (atau dekat Stove jika ada bonus furnitur). [KALO GA SAMA BONUS DAH KELAR]
 [UNTUK DILAKUKAN] GUI Memasak:
 Menampilkan daftar resep yang diketahui/bisa dibuat.
 Menunjukkan bahan yang dibutuhkan vs. yang dimiliki.
 Memilih bahan bakar (Coal, Firewood).
-[UNTUK DILAKUKAN] Input Pemain -> GameController.requestCook(recipe, fuel) -> player.cook():
-Mengurangi bahan, bahan bakar, energi.
-Penanganan aksi pasif (1 jam) -> makanan muncul di inventory setelahnya. (Ini perlu mekanisme timer/event).
+[IMPLEMENTED] Input Pemain -> GameController.requestCook(recipe, fuel) -> player.cook():
+[IMPLEMENTED] Mengurangi bahan, bahan bakar, energi.
+[IMPLEMENTED] Penanganan aksi pasif (1 jam) -> makanan muncul di inventory setelahnya. (Ini perlu mekanisme timer/event).
 Sleeping (Tidur Normal):
 [UNTUK DILAKUKAN] Interaksi dengan Tempat Tidur di Rumah: (Perlu House Map jika ada bonus furnitur, atau aksi umum jika di House).
 [UNTUK DILAKUKAN] Input Pemain -> GameController.requestSleep():

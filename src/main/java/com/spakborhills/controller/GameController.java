@@ -7,6 +7,7 @@ import java.util.List; // For returning list of items
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.awt.Point; // Added for Point
 
 import javax.swing.JOptionPane;
 
@@ -22,21 +23,16 @@ import com.spakborhills.model.Enum.RelationshipStatus;
 import com.spakborhills.model.Enum.Season;
 import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
-import com.spakborhills.model.Item.EdibleItem;
-import com.spakborhills.model.Item.Equipment;
-import com.spakborhills.model.Item.Fish;
-import com.spakborhills.model.Item.Item;
-import com.spakborhills.model.Item.ProposalRing;
-import com.spakborhills.model.Item.Seed;
+import com.spakborhills.model.Item.*;
 import com.spakborhills.model.Map.FarmMap;
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
 import com.spakborhills.model.NPC.NPC;
-import com.spakborhills.model.Util.GameTime;
-import com.spakborhills.model.Util.PriceList;
-import com.spakborhills.model.Util.ShippingBin;
+import com.spakborhills.model.Util.*;
 // GamePanel might be needed later for more complex interactions or direct view updates
 import com.spakborhills.view.GamePanel;
+import com.spakborhills.model.Object.DeployedObject; // Added import
+import com.spakborhills.model.Object.House; // Added import
 
 public class GameController {
 
@@ -271,7 +267,8 @@ public class GameController {
         // 2. Adding the returned items to its inventory
         // 3. Deducting energy (e.g., 5 energy per crop)
         // 4. Returning true/false
-        boolean harvested = player.harvest(targetTile, itemRegistry);
+        // Now also needs EndGameStatistics
+        boolean harvested = player.harvest(targetTile, itemRegistry, farmModel.getStatistics()); // Pass statistics
 
         if (harvested) {
             System.out.println("Successfully harvested from tile (" + player.getCurrentTileX() + "," + player.getCurrentTileY() + ")");
@@ -511,6 +508,24 @@ public class GameController {
         boolean success = store.sellToPlayer(player, itemToBuy, quantity, priceList, itemRegistry);
         if (success) {
             System.out.println("Purchased " + quantity + " of " + itemName);
+
+            // Check if the bought item unlocks a recipe
+            if (itemToBuy instanceof Food) { // Recipes bought from store are Food items
+                String normalizedItemName = itemName.toUpperCase().replace(" ", "_");
+                String eventKey = null;
+
+                if (itemName.equalsIgnoreCase("Fish n' Chips")) {
+                    eventKey = "BOUGHT_RECIPE_FISH_N'_CHIPS"; // Make sure this matches Recipe.isUnlocked
+                } else if (itemName.equalsIgnoreCase("Fish Sandwich")) {
+                    eventKey = "BOUGHT_RECIPE_FISH_SANDWICH"; // Make sure this matches Recipe.isUnlocked
+                }
+                // Add other "buy-to-unlock" recipe items here if any
+
+                if (eventKey != null && farmModel.getStatistics() != null) {
+                    farmModel.getStatistics().recordKeyEventOrItem(eventKey);
+                    System.out.println("Recipe unlock event recorded: " + eventKey);
+                }
+            }
             // No direct energy cost for buying, so no checkPassOut() here unless specified.
         }
         return success;
@@ -976,10 +991,17 @@ public class GameController {
         // Process result
         if (caughtFish) {
             // Generate a random fish based on the type and add to inventory
-            Item fishCaught = generateRandomFish(fishType, fishingLocation, currentSeason, currentWeather);
-            if (fishCaught != null) {
-                farmModel.getPlayer().getInventory().addItem(fishCaught, 1);
-                JOptionPane.showMessageDialog(gamePanel, "You caught a " + fishCaught.getName() + "!");
+            Item itemCaught = generateRandomFish(fishType, fishingLocation, currentSeason, currentWeather);
+            if (itemCaught != null && itemCaught instanceof Fish) { // Ensure it's a Fish object
+                Fish fishCaughtObject = (Fish) itemCaught;
+                farmModel.getPlayer().getInventory().addItem(fishCaughtObject, 1);
+                JOptionPane.showMessageDialog(gamePanel, "You caught a " + fishCaughtObject.getName() + "!");
+                
+                // Record the catch in statistics
+                if (farmModel.getStatistics() != null) {
+                    farmModel.getStatistics().recordFishCatch(fishCaughtObject.getName(), fishCaughtObject.getRarity());
+                    System.out.println("Fish catch recorded: " + fishCaughtObject.getName() + ", Rarity: " + fishCaughtObject.getRarity());
+                }
             } else {
                 JOptionPane.showMessageDialog(gamePanel, "You caught a fish, but it got away!");
             }
@@ -1098,6 +1120,206 @@ public class GameController {
         // Pick a random fish from the final list
         Random rng = new Random();
         return listToPickFrom.get(rng.nextInt(listToPickFrom.size()));
+    }
+
+    /**
+     * Menangani permintaan pemain untuk memasak.
+     * Ini akan menampilkan UI untuk memilih resep dan bahan bakar,
+     * kemudian memanggil Player.cook() dan menangani hasilnya.
+     */
+    public void handleCookRequest() {
+        if (farmModel == null || gamePanel == null) {
+            if (gamePanel != null) gamePanel.displayMessage("Sistem memasak belum siap atau ada data yang hilang.");
+            System.err.println("GameController.handleCookRequest: Komponen penting null.");
+            return;
+        }
+        
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime();
+        Map<String, Item> itemRegistry = farmModel.getItemRegistry();
+        List<Recipe> availableRecipes = farmModel.getRecipes(); // Asumsi Farm punya getter ini
+
+        // Pengecekan untuk komponen yang diambil dari farmModel
+        if (player == null || gameTime == null || itemRegistry == null) {
+            gamePanel.displayMessage("Error internal: Data pemain, waktu, atau item tidak lengkap.");
+            System.err.println("GameController.handleCookRequest: Player, GameTime, atau ItemRegistry adalah null.");
+            return;
+        }
+
+        if (availableRecipes == null) { // Cek spesifik untuk recipes
+            gamePanel.displayMessage("Daftar resep tidak tersedia saat ini.");
+            System.err.println("GameController.handleCookRequest: farmModel.getRecipes() mengembalikan null.");
+            return;
+        }
+
+        // --- KONDISI LOKASI MEMASAK (Spesifikasi hal 29) ---
+        // Player must be in the PlayerHouseInterior map OR on FarmMap adjacent to a House object
+        boolean canCookLocation = false;
+        if (player.getCurrentMap() instanceof com.spakborhills.model.Map.PlayerHouseInterior) {
+            canCookLocation = true;
+        } else if (player.getCurrentMap() instanceof FarmMap) {
+            FarmMap farmMap = (FarmMap) player.getCurrentMap();
+            if (findAdjacentHouse(player, farmMap) != null) {
+                canCookLocation = true;
+            }
+        }
+
+        if (!canCookLocation) {
+            gamePanel.displayMessage("Kamu hanya bisa memasak di dalam rumah atau di dekat rumah (di kebun).");
+            return;
+        }
+        // TODO: Jika ada bonus Stove, tambahkan pengecekan isNearStove di PlayerHouseInterior.
+
+        if (availableRecipes.isEmpty()) {
+            gamePanel.displayMessage("Tidak ada resep yang tersedia saat ini.");
+            return;
+        }
+
+        // --- BAGIAN UI UNTUK MEMILIH RESEP (Contoh dengan JOptionPane) ---
+        List<String> unlockedRecipeNames = new ArrayList<>();
+        for (Recipe r : availableRecipes) {
+            // Asumsi EndGameStatistics ada di Farm dan bisa diakses untuk cek unlock
+            if (r.isUnlocked(farmModel.getStatistics(), player)) {
+                unlockedRecipeNames.add(r.getName());
+            }
+        }
+
+        if (unlockedRecipeNames.isEmpty()) {
+            gamePanel.displayMessage("Kamu belum membuka resep apapun!");
+            return;
+        }
+
+        String chosenRecipeName = (String) JOptionPane.showInputDialog(
+                gamePanel,
+                "Pilih resep yang ingin dimasak:",
+                "Memasak",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                unlockedRecipeNames.toArray(),
+                unlockedRecipeNames.get(0)
+        );
+
+        if (chosenRecipeName == null) return; // User cancel
+
+        Recipe selectedRecipe = null;
+        for (Recipe r : availableRecipes) {
+            if (r.getName().equals(chosenRecipeName)) {
+                selectedRecipe = r;
+                break;
+            }
+        }
+        if (selectedRecipe == null) { // Seharusnya tidak terjadi jika nama dari list
+            gamePanel.displayMessage("Resep tidak valid.");
+            return;
+        }
+
+        // --- BAGIAN UI UNTUK MEMILIH BAHAN BAKAR (Contoh dengan JOptionPane) ---
+        String[] fuelOptions = {"Coal", "Firewood"};
+        // Filter fuel yang dimiliki pemain
+        List<String> availableFuelOptions = new ArrayList<>();
+        Item coalItem = itemRegistry.get("Coal");
+        Item firewoodItem = itemRegistry.get("Firewood");
+
+        if (coalItem != null && player.getInventory().hasItem(coalItem, 1)) {
+            availableFuelOptions.add("Coal");
+        }
+        if (firewoodItem != null && player.getInventory().hasItem(firewoodItem, 1)) {
+            availableFuelOptions.add("Firewood");
+        }
+
+        if (availableFuelOptions.isEmpty()) {
+            gamePanel.displayMessage("Kamu tidak memiliki bahan bakar (Coal/Firewood) untuk memasak.");
+            return;
+        }
+        
+        String chosenFuelName = (String) JOptionPane.showInputDialog(
+                gamePanel,
+                "Pilih bahan bakar:",
+                "Bahan Bakar Memasak",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                availableFuelOptions.toArray(),
+                availableFuelOptions.get(0)
+        );
+
+        if (chosenFuelName == null) return; // User cancel
+
+        Item selectedFuelItem = itemRegistry.get(chosenFuelName);
+        if (selectedFuelItem == null) { // Seharusnya tidak terjadi
+            gamePanel.displayMessage("Bahan bakar tidak valid.");
+            return;
+        }
+        
+        // --- EFEK INISIASI & MEMANGGIL PLAYER.COOK() ---
+        final int COOK_ENERGY_COST = 10; // Spesifikasi Hal 29
+        if (player.getEnergy() < COOK_ENERGY_COST) {
+            gamePanel.displayMessage("Energi tidak cukup untuk memulai memasak (butuh " + COOK_ENERGY_COST + ").");
+            return;
+        }
+        player.changeEnergy(-COOK_ENERGY_COST); // Kurangi energi untuk memulai
+
+        String cookResultOutcome = player.cook(selectedRecipe, selectedFuelItem, itemRegistry);
+
+        if (cookResultOutcome != null && itemRegistry.containsKey(cookResultOutcome)) { // Sukses mempersiapkan bahan
+            Item foodProduct = itemRegistry.get(cookResultOutcome);
+            int servingsMade = 1;
+
+            // Logika efisiensi Coal
+            if (selectedFuelItem.getName().equals("Coal")) {
+                // Cek apakah pemain punya cukup bahan untuk porsi kedua
+                boolean canMakeSecondServing = true;
+                for (Map.Entry<String, Integer> entry : selectedRecipe.getIngredients().entrySet()) {
+                    Item ingredient = itemRegistry.get(entry.getKey());
+                    if (ingredient == null || !player.getInventory().hasItem(ingredient, entry.getValue())) {
+                        canMakeSecondServing = false;
+                        break;
+                    }
+                }
+
+                if (canMakeSecondServing) {
+                    // Kurangi bahan untuk porsi kedua
+                    for (Map.Entry<String, Integer> entry : selectedRecipe.getIngredients().entrySet()) {
+                        Item ingredient = itemRegistry.get(entry.getKey());
+                        player.getInventory().removeItem(ingredient, entry.getValue());
+                    }
+                    servingsMade = 2;
+                    gamePanel.displayMessage("Dengan Coal, kamu membuat porsi ganda!");
+                } else {
+                    gamePanel.displayMessage("Kamu menggunakan Coal, tapi tidak cukup bahan untuk porsi kedua.");
+                }
+            }
+
+            gamePanel.displayMessage("Kamu mulai memasak " + servingsMade + " " + cookResultOutcome + ". Akan selesai dalam 1 jam.");
+            System.out.println(player.getName() + " mulai memasak " + servingsMade + " " + cookResultOutcome + ". Energi: " + player.getEnergy() + ", Waktu: " + gameTime.getTimeString());
+
+            // Simulasi selesai masak setelah 1 jam
+            // TODO: Ganti dengan GameTaskManager yang sebenarnya
+            final int finalServings = servingsMade;
+            // Untuk sekarang, kita simulasikan selesai langsung untuk testing, tapi idealnya pakai TaskManager
+            for (int i = 0; i < finalServings; i++) {
+                 player.getInventory().addItem(foodProduct, 1); // Tambah item sejumlah porsi
+            }
+            gameTime.advance(60); // Majukan waktu 1 jam SEKALI untuk seluruh batch
+            gamePanel.displayMessage(finalServings + " " + cookResultOutcome + " sudah matang!");
+
+
+            System.out.println("Inventory: " + player.getInventory().toString());
+
+        } else {
+            // Ada pesan error dari player.cook(), tampilkan
+            gamePanel.displayMessage("Gagal memasak: " + cookResultOutcome); // cookResultOutcome akan berisi pesan error
+            System.out.println(player.getName() + " gagal memasak. Alasan: " + cookResultOutcome + ". Energi: " + player.getEnergy());
+            // Kembalikan energi jika gagal di tahap persiapan bahan oleh player.cook (misal kurang bahan)
+            // Jika energi dikurangi SEBELUM player.cook(), maka tidak perlu dikembalikan di sini.
+            // Berdasarkan implementasi kita, energi dikurangi SEBELUM player.cook(), jadi jika player.cook gagal
+            // karena kurang bahan, energi tetap terkurang untuk "percobaan". Ini sesuai dengan "10 energi untuk tiap percobaan memasak".
+        }
+
+        if (gamePanel != null) {
+            gamePanel.updatePlayerInfoPanel();
+            gamePanel.updateGameRender();
+        }
+        checkPassOut();
     }
 
     /**
@@ -1460,4 +1682,84 @@ public class GameController {
         }
         checkPassOut();
     }    
+
+    /**
+     * Handles the player's request to enter their house.
+     */
+    public void handleEnterHouseRequest() {
+        if (farmModel == null || gamePanel == null) {
+            System.err.println("GameController: Farm model or GamePanel is null. Cannot handle enter house request.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        if (player == null) {
+            System.err.println("GameController: Player is null. Cannot handle enter house request.");
+            return;
+        }
+
+        // Check 1: Player must be on the FarmMap
+        if (!(player.getCurrentMap() instanceof FarmMap)) {
+            // gamePanel.displayMessage("Kamu tidak bisa masuk rumah dari sini."); // Optional message
+            return; // Silently fail or provide feedback
+        }
+        FarmMap farmMap = (FarmMap) player.getCurrentMap();
+
+        // Check 2: Player must be adjacent to the House object
+        DeployedObject houseObject = findAdjacentHouse(player, farmMap);
+        if (houseObject == null) {
+            // gamePanel.displayMessage("Tidak ada rumah di dekatmu untuk dimasuki."); // Optional message
+            return; // Silently fail or provide feedback
+        }
+
+        // Transition to PlayerHouseInterior map
+        MapArea houseInteriorMap = farmModel.getMapArea(LocationType.PLAYER_HOUSE_INTERIOR);
+        if (houseInteriorMap == null) {
+            System.err.println("GameController: PlayerHouseInterior map not found in Farm model.");
+            gamePanel.displayMessage("Error: Interior rumah tidak ditemukan.");
+            return;
+        }
+
+        List<Point> entryPoints = houseInteriorMap.getEntryPoints();
+        if (entryPoints.isEmpty()) {
+            System.err.println("GameController: PlayerHouseInterior map has no entry points defined.");
+            gamePanel.displayMessage("Error: Tidak ada titik masuk ke interior rumah.");
+            return;
+        }
+        Point entryPoint = entryPoints.get(0); // Use the first defined entry point
+
+        if (player.visit(houseInteriorMap, entryPoint.x, entryPoint.y)) {
+            System.out.println("Player entered house. Now on map: " + player.getCurrentMap().getName());
+            // No energy or time cost for entering house specified, can be added here if needed.
+            if (gamePanel != null) {
+                gamePanel.repaint(); // Update view to show house interior
+            }
+        } else {
+            gamePanel.displayMessage("Gagal masuk rumah.");
+        }
+    }
+
+    /**
+     * Helper method to find a House object adjacent to the player on the FarmMap.
+     * @param player The player.
+     * @param farmMap The FarmMap.
+     * @return The House object if found and adjacent, null otherwise.
+     */
+    private DeployedObject findAdjacentHouse(Player player, FarmMap farmMap) {
+        int playerX = player.getCurrentTileX();
+        int playerY = player.getCurrentTileY();
+        int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}; // N, S, W, E
+
+        for (int[] dir : directions) {
+            int checkX = playerX + dir[0];
+            int checkY = playerY + dir[1];
+
+            if (farmMap.isWithinBounds(checkX, checkY)) {
+                DeployedObject obj = farmMap.getObjectAt(checkX, checkY);
+                if (obj instanceof House) {
+                    return obj; // Found adjacent House
+                }
+            }
+        }
+        return null; // No adjacent House found
+    }
 }

@@ -160,7 +160,7 @@ public class Main {
         testMovement(player, farmMap);
 
         // === FARMING TESTS ===
-        testFarming(player, farmMap, gameTime, itemRegistry);
+        testFarming(player, farmMap, gameTime, itemRegistry, farm);
 
         // === NPC INTERACTION TESTS ===
         testNPCInteractions(player, farm, itemRegistry);
@@ -413,40 +413,85 @@ public class Main {
     private static List<Recipe> setupRecipes() {
         List<Recipe> recipes = new ArrayList<>();
         
-        // Buat maps untuk ingredientReferences
-        Map<String, Integer> fishNChipsIngredients = new HashMap<>();
-        fishNChipsIngredients.put("Fish", 2);
-        fishNChipsIngredients.put("Wheat", 1);
-        fishNChipsIngredients.put("Potato", 1);
-        
-        Map<String, Integer> baguetteIngredients = new HashMap<>();
-        baguetteIngredients.put("Wheat", 3);
-        
-        Map<String, Integer> sashimiIngredients = new HashMap<>();
-        sashimiIngredients.put("Salmon", 3);
-        
-        Map<String, Integer> fuguIngredients = new HashMap<>();
-        fuguIngredients.put("Pufferfish", 1);
-        
-        Map<String, Integer> wineIngredients = new HashMap<>();
-        wineIngredients.put("Grape", 2);
-        
-        // Buat recipe objects
-        Recipe fishNChips = new Recipe("Fish n' Chips", fishNChipsIngredients, "Fish n' Chips", "Coal", "default");
-        Recipe baguette = new Recipe("Baguette", baguetteIngredients, "Baguette", "Coal", "default");
-        Recipe sashimi = new Recipe("Sashimi", sashimiIngredients, "Sashimi", "Coal", "fish_10");
-        Recipe fugu = new Recipe("Fugu", fuguIngredients, "Fugu", "Coal", "pufferfish");
-        Recipe wine = new Recipe("Wine", wineIngredients, "Wine", "Coal", "default");
-        
-        // Tambahkan recipes ke list
-        recipes.add(fishNChips);
-        recipes.add(baguette);
-        recipes.add(sashimi);
-        recipes.add(fugu);
-        recipes.add(wine);
-        
+        // Resep yang sudah ada
+        Map<String, Integer> fishNChipsIngredients = new HashMap<>() {{
+            put("Any Fish", 2); // Gunakan "Any Fish" sebagai key
+            put("Wheat", 1);
+            put("Potato", 1);
+        }};
+        recipes.add(new Recipe("Fish n' Chips", fishNChipsIngredients, "Fish n' Chips", "Coal", "BELI_DI_STORE")); // ID recipe_1, unlock: Beli di store
+
+        Map<String, Integer> baguetteIngredients = new HashMap<>() {{
+            put("Wheat", 3);
+        }};
+        recipes.add(new Recipe("Baguette", baguetteIngredients, "Baguette", "Coal", "DEFAULT")); // ID recipe_2, unlock: Default
+
+        Map<String, Integer> sashimiIngredients = new HashMap<>() {{
+            put("Salmon", 3);
+        }};
+        recipes.add(new Recipe("Sashimi", sashimiIngredients, "Sashimi", "Coal", "FISH_10")); // ID recipe_3, unlock: Mancing 10 ikan
+
+        Map<String, Integer> fuguIngredients = new HashMap<>() {{
+            put("Pufferfish", 1);
+        }};
+        recipes.add(new Recipe("Fugu", fuguIngredients, "Fugu", "Coal", "PUFFERFISH")); // ID recipe_4, unlock: Memancing pufferfish (key "PUFFERFISH")
+
+        Map<String, Integer> wineIngredients = new HashMap<>() {{
+            put("Grape", 2);
+        }};
+        recipes.add(new Recipe("Wine", wineIngredients, "Wine", "Coal", "DEFAULT")); // ID recipe_5, unlock: Default
+
+        // --- TAMBAHKAN RESEP BARU DI SINI ---
+        Map<String, Integer> pumpkinPieIngredients = new HashMap<>() {{
+            put("Egg", 1); // Asumsi item "Egg" sudah ada di registry
+            put("Wheat", 1);
+            put("Pumpkin", 1);
+        }};
+        recipes.add(new Recipe("Pumpkin Pie", pumpkinPieIngredients, "Pumpkin Pie", "Coal", "DEFAULT")); // ID recipe_6, unlock: Default
+
+        Map<String, Integer> veggieSoupIngredients = new HashMap<>() {{
+            put("Cauliflower", 1);
+            put("Parsnip", 1);
+            put("Potato", 1);
+            put("Tomato", 1);
+        }};
+        recipes.add(new Recipe("Veggie Soup", veggieSoupIngredients, "Veggie Soup", "Coal", "FIRST_HARVEST")); // ID recipe_7, unlock: Memanen pertama kali
+
+        Map<String, Integer> fishStewIngredients = new HashMap<>() {{
+            put("Any Fish", 2);
+            put("Hot Pepper", 1);
+            put("Cauliflower", 2);
+        }};
+        recipes.add(new Recipe("Fish Stew", fishStewIngredients, "Fish Stew", "Firewood", "OBTAINED_HOT_PEPPER")); // ID recipe_8, unlock: Dapatkan Hot Pepper
+
+        Map<String, Integer> spakborSaladIngredients = new HashMap<>() {{
+            put("Melon", 1);
+            put("Cranberry", 1);
+            put("Blueberry", 1);
+            put("Tomato", 1);
+        }};
+        recipes.add(new Recipe("Spakbor Salad", spakborSaladIngredients, "Spakbor Salad", null, "DEFAULT")); // ID recipe_9, unlock: Default, Fuel null (jika tidak perlu)
+
+        Map<String, Integer> fishSandwichIngredients = new HashMap<>() {{
+            put("Any Fish", 1);
+            put("Wheat", 2);
+            put("Tomato", 1);
+            put("Hot Pepper", 1);
+        }};
+        recipes.add(new Recipe("Fish Sandwich", fishSandwichIngredients, "Fish Sandwich", "Firewood", "BELI_DI_STORE")); // ID recipe_10, unlock: Beli di store
+
+        Map<String, Integer> legendsOfSpakborIngredients = new HashMap<>() {{
+            put("Legend", 1); // Menggunakan nama ikan "Legend"
+            put("Potato", 2);
+            put("Parsnip", 1);
+            put("Tomato", 1);
+            put("Eggplant", 1); // Asumsi item "Eggplant" sudah ada di registry
+        }};
+        recipes.add(new Recipe("The Legends of Spakbor", legendsOfSpakborIngredients, "The Legends of Spakbor", "Coal", "FISH_LEGEND")); // ID recipe_11, unlock: Memancing Legend
+
         return recipes;
     }
+
 
     /**
      * Test basic player functions seperti gold, energy, dsb.
@@ -632,7 +677,7 @@ public class Main {
     /**
      * Test farming functions
      */
-    private static void testFarming(Player player, FarmMap farmMap, GameTime gameTime, Map<String, Item> itemRegistry) {
+    private static void testFarming(Player player, FarmMap farmMap, GameTime gameTime, Map<String, Item> itemRegistry, Farm farm) { // Added Farm farm parameter
         printSubsectionHeader("Testing Farming Actions");
         
         Tile farmTestTile = null;
@@ -695,7 +740,7 @@ public class Main {
         
         // Test harvest (belum waktunya)
         System.out.println("\nTesting: Harvesting (Not ready yet)");
-        boolean harvestNotReadyResult = player.harvest(farmTestTile, itemRegistry);
+        boolean harvestNotReadyResult = player.harvest(farmTestTile, itemRegistry, farm.getStatistics()); // UPDATED CALL
         printTestResult("Harvest Not Ready Crop", !harvestNotReadyResult);
         
         // Simulasi growth hingga panen
@@ -716,7 +761,7 @@ public class Main {
         System.out.println("\nTesting: Harvesting (Ready)");
         // Tile might need to be watered on the harvest day too, depending on isHarvestable logic vs updateDaily logic
         // If harvestable relies on current growthDays only, prior watering is enough.
-        boolean harvestReadyResult = player.harvest(farmTestTile, itemRegistry);
+        boolean harvestReadyResult = player.harvest(farmTestTile, itemRegistry, farm.getStatistics()); // UPDATED CALL with statistics
         printTestResult("Harvest Ready Crop", harvestReadyResult && farmTestTile.getType() == TileType.TILLED && farmTestTile.getPlantedSeed() == null);
         if(harvestReadyResult) System.out.println("Hasil panen didapatkan: " + player.getInventory().getItemCount(itemRegistry.get("Parsnip")));
         else System.out.println("Gagal panen. Tile type: " + farmTestTile.getType() + ", Seed: " + farmTestTile.getPlantedSeed() + ", Growth: " + farmTestTile.getGrowthDays() + ", Harvestable: " + farmTestTile.isHarvestable());
@@ -1117,54 +1162,67 @@ public class Main {
         
         // Get recipes from farm
         List<Recipe> recipes = farm.getRecipes();
-        if (recipes.isEmpty()) {
-            System.out.println("WARNING: No recipes available. Skipping cooking test.");
+        if (recipes == null || recipes.isEmpty()) { // Tambahkan pengecekan null untuk recipes
+            System.out.println("WARNING: No recipes available or recipe list is null. Skipping cooking test.");
             return;
         }
         
         // Prepare for testing - add fuel and ingredients
         Item coal = itemRegistry.get("Coal");
+        if (coal == null) { // Tambahkan pengecekan null untuk coal
+            System.out.println("WARNING: Coal item not found in registry. Skipping cooking test.");
+            return;
+        }
         player.getInventory().addItem(coal, 5);
         
-        // Find a simple recipe to test
         Recipe recipeToTest = null;
         for (Recipe recipe : recipes) {
-            if (recipe.getName().equals("Baguette")) {
+            if (recipe.getName().equals("Baguette")) { // Contoh resep sederhana
                 recipeToTest = recipe;
                 break;
             }
         }
         
         if (recipeToTest == null) {
-            System.out.println("WARNING: Could not find Baguette recipe. Looking for any recipe.");
-            recipeToTest = recipes.get(0);
+            System.out.println("WARNING: Could not find Baguette recipe. Using first available recipe if any.");
+            if (!recipes.isEmpty()) {
+                recipeToTest = recipes.get(0);
+            } else {
+                System.out.println("WARNING: No recipes found at all. Skipping cooking test.");
+                return;
+            }
         }
         
         System.out.println("\nTesting: Cooking " + recipeToTest.getName());
         
         // Add ingredients for the recipe
         Map<String, Integer> ingredients = recipeToTest.getIngredients();
+        boolean hasAllIngredients = true; // Pindahkan inisialisasi ke sini
         for (Map.Entry<String, Integer> entry : ingredients.entrySet()) {
             Item ingredient = itemRegistry.get(entry.getKey());
             if (ingredient != null) {
-                player.getInventory().addItem(ingredient, entry.getValue() + 1); // +1 for safety
+                player.getInventory().addItem(ingredient, entry.getValue() + 1); 
             } else {
-                System.out.println("WARNING: Could not find ingredient: " + entry.getKey());
+                System.out.println("WARNING: Could not find ingredient in registry: " + entry.getKey());
+                hasAllIngredients = false; // Tandai jika ada bahan yang tidak ada di registry
             }
         }
         
-        // Check if we have all ingredients
-        boolean hasAllIngredients = true;
+        // Cek ulang apakah semua bahan ada di inventory setelah mencoba menambahkannya
+        // Ini penting jika penambahan di atas gagal karena item tidak ada di registry
         for (Map.Entry<String, Integer> entry : ingredients.entrySet()) {
             Item ingredient = itemRegistry.get(entry.getKey());
             if (ingredient == null || !player.getInventory().hasItem(ingredient, entry.getValue())) {
                 hasAllIngredients = false;
-                System.out.println("Missing ingredient: " + entry.getKey());
+                System.out.println("Missing ingredient in inventory: " + entry.getKey());
+                break; 
             }
         }
         
         if (!hasAllIngredients) {
-            System.out.println("WARNING: Missing ingredients for cooking. Skipping actual cook test.");
+            System.out.println("WARNING: Missing ingredients for cooking. Skipping actual cook test for " + recipeToTest.getName() + ".");
+            // Bersihkan bahan bakar yang mungkin sudah ditambahkan untuk test ini
+            player.getInventory().removeItem(coal, player.getInventory().getItemCount(coal));
             return;
         }
         
@@ -1172,28 +1230,69 @@ public class Main {
         int initialEnergy = player.getEnergy();
         String resultItemName = recipeToTest.getResultItemName();
         Item resultItem = itemRegistry.get(resultItemName);
-        int initialResultCount = player.getInventory().getItemCount(resultItem);
-        System.out.println("Initial Result Count: " + initialResultCount);
+        int initialResultCount = 0;
+        if (resultItem != null) { // Cek jika resultItem ada di registry
+            initialResultCount = player.getInventory().getItemCount(resultItem);
+        } else {
+            System.out.println("WARNING: Result item '" + resultItemName + "' not found in registry for recipe " + recipeToTest.getName());
+        }
+        System.out.println("Initial Result Count for " + resultItemName + ": " + initialResultCount);
         
-        boolean cookResult = player.cook(recipeToTest, coal, itemRegistry);
-        System.out.println("Cook Result: " + cookResult);
+        // --- PERUBAHAN DI SINI ---
+        String cookOutcome = player.cook(recipeToTest, coal, itemRegistry);
+        boolean cookSuccess = (cookOutcome != null && cookOutcome.equals(resultItemName)); 
+        // Anggap sukses jika nama item hasil dikembalikan dan sesuai dengan resep.
+        // Jika cookOutcome berisi pesan error, maka cookSuccess akan false.
+
+        System.out.println("Cook Outcome for " + recipeToTest.getName() + ": " + (cookOutcome == null ? "SUCCESS (null implies no error message)" : cookOutcome));
         
-        // Can't fully test since cooking is a passive action, but we can check energy decreased
-        printTestResult("Energy Decreased After Cooking", player.getEnergy() < initialEnergy);
-        
-        // Reset player energy
-        player.changeEnergy(Player.MAX_ENERGY - player.getEnergy());
+        // Jika player.cook() mengembalikan null untuk sukses (seperti pada propose/marry), logikanya:
+        // boolean cookSuccess = (cookOutcome == null);
+        // Pastikan ini konsisten dengan implementasi player.cook() Anda.
+        // Jika player.cook() mengembalikan nama item jika sukses, maka yang di atas sudah benar.
+
+        // Pengurangan energi sekarang dihandle di GameController, jadi kita tidak bisa langsung cek di sini
+        // Kita hanya bisa cek apakah metode cook mengembalikan hasil yang diharapkan (nama item jika sukses, atau pesan error).
+        printTestResult("Cooking " + recipeToTest.getName() + " (Preparation Check)", cookSuccess);
+        if (cookSuccess && resultItem != null) {
+            // Jika sukses, GameController seharusnya sudah menambahkan item & mengurangi energi/waktu
+            // Untuk test unit di Main.java, kita mungkin perlu mensimulasikan efek controller
+            // atau cukup memverifikasi bahwa player.cook() mengembalikan nilai yang benar.
+            // Untuk saat ini, kita asumsikan test ini fokus pada validasi di Player.cook().
+            // GameController akan diuji terpisah atau melalui integration test dengan UI.
+            System.out.println("  (Note: Actual item addition, energy/time change for successful cooking is handled by GameController)");
+        } else if (!cookSuccess && cookOutcome != null) {
+            System.out.println("  Cooking failed with message: " + cookOutcome);
+        }
+
 
         // Test cook without fuel
-        System.out.println("\nTesting: Cooking without fuel");
-        player.getInventory().removeItem(coal, player.getInventory().getItemCount(coal));
+        System.out.println("\nTesting: Cooking " + recipeToTest.getName() + " without fuel");
+        player.getInventory().removeItem(coal, player.getInventory().getItemCount(coal)); // Habiskan semua coal
         
-        boolean cookWithoutFuelResult = player.cook(recipeToTest, coal, itemRegistry);
-        printTestResult("Cook Without Fuel Fails", !cookWithoutFuelResult);
+        // Pastikan bahan masih ada untuk tes ini
+        for (Map.Entry<String, Integer> entry : ingredients.entrySet()) {
+            Item ingredient = itemRegistry.get(entry.getKey());
+            if (ingredient != null && !player.getInventory().hasItem(ingredient, entry.getValue())) {
+                 player.getInventory().addItem(ingredient, entry.getValue()); // Tambah lagi jika habis
+            }
+        }
+
+        // --- PERUBAHAN DI SINI ---
+        String cookWithoutFuelOutcome = player.cook(recipeToTest, coal, itemRegistry); // coal di sini mungkin sudah 0 di inventory
+                                                                                       // atau bisa juga kita pass objek Item coal tapi jumlahnya 0
+        boolean cookWithoutFuelSuccess = (cookWithoutFuelOutcome != null && !cookWithoutFuelOutcome.equals(resultItemName));
+        // Harusnya gagal dan mengembalikan pesan error, bukan nama item hasil.
+        // Jika pesan error dikembalikan, maka !cookWithoutFuelOutcome.equals(resultItemName) akan true (selama pesan error beda).
         
+        printTestResult("Cook Without Fuel Fails (Returns Error Message)", cookWithoutFuelSuccess);
+        if (cookWithoutFuelSuccess) {
+            System.out.println("  Message: " + cookWithoutFuelOutcome);
+        }
+
         // Test cook without ingredients
-        System.out.println("\nTesting: Cooking without ingredients");
-        player.getInventory().addItem(coal, 1);
+        System.out.println("\nTesting: Cooking " + recipeToTest.getName() + " without ingredients");
+        player.getInventory().addItem(coal, 1); // Tambah lagi coal
         
         // Remove ingredients
         for (Map.Entry<String, Integer> entry : ingredients.entrySet()) {
@@ -1203,8 +1302,18 @@ public class Main {
             }
         }
         
-        boolean cookWithoutIngredientsResult = player.cook(recipeToTest, coal, itemRegistry);
-        printTestResult("Cook Without Ingredients Fails", !cookWithoutIngredientsResult);
+        // --- PERUBAHAN DI SINI ---
+        String cookWithoutIngredientsOutcome = player.cook(recipeToTest, coal, itemRegistry);
+        boolean cookWithoutIngredientsSuccess = (cookWithoutIngredientsOutcome != null && !cookWithoutIngredientsOutcome.equals(resultItemName));
+
+        printTestResult("Cook Without Ingredients Fails (Returns Error Message)", cookWithoutIngredientsSuccess);
+        if (cookWithoutIngredientsSuccess) {
+            System.out.println("  Message: " + cookWithoutIngredientsOutcome);
+        }
+        
+        // Bersihkan inventory lagi jika perlu
+        player.getInventory().removeItem(coal, player.getInventory().getItemCount(coal));
+
     }
     
     /**

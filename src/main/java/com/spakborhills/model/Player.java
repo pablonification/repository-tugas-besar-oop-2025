@@ -67,6 +67,7 @@ class Player {
 import java.util.List;
 import java.util.Map;
 import java.awt.Point;
+import java.util.ArrayList;
 
 // Import kelas/enum lain yang dibutuhkan (Pastikan path benar!)
 import com.spakborhills.model.Enum.Gender;
@@ -82,6 +83,7 @@ import com.spakborhills.model.Item.EdibleItem;
 import com.spakborhills.model.Item.Seed;
 // import com.spakborhills.model.Item.Equipment; // Pastikan ada
 import com.spakborhills.model.Item.ProposalRing;
+import com.spakborhills.model.Item.Fish;
 import com.spakborhills.model.NPC.NPC; // Pastikan ada
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
@@ -92,6 +94,7 @@ import com.spakborhills.model.Util.Inventory;
 import com.spakborhills.model.Util.Recipe; // Pastikan ada
 import com.spakborhills.model.Util.ShippingBin; // Pastikan ada
 import com.spakborhills.model.Item.Equipment; // Pastikan import Equipment ada
+import com.spakborhills.model.Util.EndGameStatistics; // Pastikan import EndGameStatistics ada
 
 public class Player {
     // --- Konstanta ---
@@ -153,6 +156,8 @@ public class Player {
             // Legend fish untuk MayorTadi
             Item legendFish = itemRegistry.get("Legend");
             Item proposalRing = itemRegistry.get("Proposal Ring");
+            Item coal = itemRegistry.get("Coal");
+            Item firewood = itemRegistry.get("Firewood");
 
             // Potato untuk Caroline
             Item potato = itemRegistry.get("Potato");
@@ -170,6 +175,8 @@ public class Player {
                     this.selectedItem = hoe;
                 }
             } else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
+            if (coal != null) this.inventory.addItem(coal, 10); else System.err.println("PERINGATAN: Coal tidak ditemukan di registry.");
+            if (firewood != null) this.inventory.addItem(firewood, 10); else System.err.println("PERINGATAN: Firewood tidak ditemukan di registry.");
             if (legendFish != null) this.inventory.addItem(legendFish, 2); else System.err.println("PERINGATAN: Legend Fish tidak ditemukan di registry.");
             if (proposalRing != null) this.inventory.addItem(proposalRing, 1); else System.err.println("PERINGATAN: Proposal Ring tidak ditemukan di registry.");
             if (potato != null) this.inventory.addItem(potato, 10); else System.err.println("PERINGATAN: Potato tidak ditemukan di registry.");
@@ -527,9 +534,10 @@ public class Player {
      *
      * @param targetTile Objek Tile tempat memanen.
      * @param itemRegistry Referensi ke database item untuk mendapatkan objek Crop.
+     * @param statistics Referensi ke EndGameStatistics untuk mencatat panen.
      * @return true jika panen berhasil, false jika gagal.
      */
-    public boolean harvest(Tile targetTile, Map<String, Item> itemRegistry) {
+    public boolean harvest(Tile targetTile, Map<String, Item> itemRegistry, EndGameStatistics statistics) {
         // TODO: Implementasi lebih detail terkait item spesifik dari tanaman
         if (targetTile == null || !targetTile.isHarvestable() || targetTile.getPlantedSeed() == null) {
             System.out.println("Player.harvest: Tidak ada yang bisa dipanen atau tile tidak valid.");
@@ -544,6 +552,10 @@ public class Player {
                 if (item != null) { // Pastikan item tidak null sebelum menambahkannya
                     this.inventory.addItem(item, 1); // Untuk sekarang, asumsikan setiap hasil panen adalah 1 unit
                     System.out.println("Player memanen: " + item.getName());
+                    // Mencatat panen ke statistik
+                    if (statistics != null) {
+                        statistics.recordHarvest(item.getName(), 1); // Asumsi quantity 1 per item dari list
+                    }
                 } else {
                     allAdded = false; // Tandai jika ada item null dalam hasil panen
                 }
@@ -660,48 +672,103 @@ public class Player {
     }
 
     /**
-     * Mencoba memasak resep menggunakan bahan bakar.
-     * Membutuhkan pengecekan bahan dan bahan bakar di inventory.
-     * Biaya energi (-10 per percobaan) ditangani oleh Controller.
-     * Biaya waktu (1 jam pasif) ditangani oleh Controller.
+     * Mencoba memulai proses memasak berdasarkan resep dan bahan bakar.
+     * Metode ini akan mengurangi bahan dan bahan bakar dari inventory jika valid.
+     * Pengurangan energi dan pemajuan waktu (termasuk 1 jam pasif) akan dihandle oleh Controller.
      *
      * @param recipe Resep yang akan dimasak.
-     * @param fuelItem Item bahan bakar (Coal atau Firewood) yang digunakan.
-     * @param itemRegistry Untuk mendapatkan objek Makanan hasil.
-     * @return true jika persiapan memasak valid (bahan/bahan bakar ada), false jika gagal.
-     *         Penambahan item hasil terjadi setelah waktu pasif.
+     * @param fuelItem Item bahan bakar yang digunakan (Coal atau Firewood).
+     * @param itemRegistry Untuk mendapatkan objek Item dari nama.
+     * @return String berisi nama item hasil jika persiapan berhasil, atau pesan error jika gagal.
      */
-    public boolean cook(Recipe recipe, Item fuelItem, Map<String, Item> itemRegistry) {
-        if (recipe == null || fuelItem == null || itemRegistry == null) return false;
+    public String cook(Recipe recipe, Item fuelItem, Map<String, Item> itemRegistry) {
+        if (recipe == null) {
+            return "Resep tidak valid.";
+        }
+        if (fuelItem == null) {
+            return "Bahan bakar tidak valid.";
+        }
+        if (itemRegistry == null) {
+            return "Item registry tidak tersedia.";
+        }
 
-        if (!fuelItem.getName().equals("Coal") && !fuelItem.getName().equals("Firewood")) {
-            System.out.println("Bahan bakar tidak valid.");
-            return false;
+        // Validasi bahan bakar
+        String fuelName = fuelItem.getName();
+        if (!fuelName.equals("Coal") && !fuelName.equals("Firewood")) {
+            return "Bahan bakar tidak valid. Gunakan Coal atau Firewood.";
         }
         if (!inventory.hasItem(fuelItem, 1)) {
-            System.out.println("Kamu tidak punya " + fuelItem.getName() + ".");
-            return false;
+            return "Kamu tidak punya " + fuelName + " yang cukup.";
         }
+
+        // Validasi bahan-bahan resep
+        List<Item> fishItemsToRemove = new ArrayList<>(); // Untuk menampung ikan yang akan dihapus nanti
+        int anyFishRequired = 0;
+        int anyFishFound = 0;
 
         for (Map.Entry<String, Integer> entry : recipe.getIngredients().entrySet()) {
             String ingredientName = entry.getKey();
             int requiredQty = entry.getValue();
-            Item ingredient = itemRegistry.get(ingredientName);
-            if (ingredient == null || !inventory.hasItem(ingredient, requiredQty)) {
-                System.out.println("Kamu kekurangan bahan: " + requiredQty + " " + ingredientName);
-                return false;
+
+            if (ingredientName.equals("Any Fish")) {
+                anyFishRequired = requiredQty;
+                for (Map.Entry<Item, Integer> invEntry : inventory.getItems().entrySet()) {
+                    if (invEntry.getKey() instanceof Fish) {
+                        anyFishFound += invEntry.getValue();
+                    }
+                }
+                if (anyFishFound < anyFishRequired) {
+                    return "Kamu kekurangan bahan: " + anyFishRequired + " Any Fish (kamu punya " + anyFishFound + ").";
+                }
+                // Validasi untuk "Any Fish" selesai di sini untuk tahap pengecekan
+            } else {
+                Item ingredient = itemRegistry.get(ingredientName);
+                if (ingredient == null) {
+                    return "Bahan '" + ingredientName + "' tidak dikenal dalam sistem.";
+                }
+                if (!inventory.hasItem(ingredient, requiredQty)) {
+                    return "Kamu kekurangan bahan: " + requiredQty + " " + ingredientName + ".";
+                }
             }
         }
 
+        // Jika semua valid, kurangi bahan bakar dan bahan-bahan dari inventory
         inventory.removeItem(fuelItem, 1);
+
         for (Map.Entry<String, Integer> entry : recipe.getIngredients().entrySet()) {
-            inventory.removeItem(itemRegistry.get(entry.getKey()), entry.getValue());
+            String ingredientName = entry.getKey();
+            int requiredQty = entry.getValue();
+
+            if (ingredientName.equals("Any Fish")) {
+                int fishRemovedCount = 0;
+                // Iterasi ulang untuk mengumpulkan dan menghapus ikan
+                // Membuat salinan keyset untuk menghindari ConcurrentModificationException
+                List<Item> currentInventoryKeys = new ArrayList<>(inventory.getItems().keySet());
+                for (Item invItem : currentInventoryKeys) {
+                    if (invItem instanceof Fish) {
+                        int countInStack = inventory.getItemCount(invItem);
+                        int canRemoveFromStack = Math.min(countInStack, requiredQty - fishRemovedCount);
+                        
+                        inventory.removeItem(invItem, canRemoveFromStack);
+                        fishRemovedCount += canRemoveFromStack;
+                        
+                        if (fishRemovedCount >= requiredQty) {
+                            break; 
+                        }
+                    }
+                }
+            } else {
+                Item ingredient = itemRegistry.get(ingredientName);
+                // Kita sudah validasi ingredient != null sebelumnya, jadi aman
+                inventory.removeItem(ingredient, entry.getValue());
+            }
         }
 
-        System.out.println("Kamu mulai memasak " + recipe.getResultItemName() + "...");
-        changeEnergy(-10); // hanya untuk testing
+        // System.out.println("Kamu mulai memasak " + recipe.getResultItemName() + "...");
+        // Pengurangan energi (-10) akan dihandle oleh Controller
+        // Penambahan item hasil dan advance time 1 jam juga akan dihandle Controller
 
-        return true;
+        return recipe.getResultItemName(); // Kembalikan nama item hasil jika persiapan sukses
     }
 
     /**
@@ -808,7 +875,7 @@ public class Player {
 
         // Pengecekan minimal 1 hari setelah tunangan
         if (this.engagementDay < 0 || currentTotalDaysPlayed <= this.engagementDay) {
-            return "Kamu harus menunggu setidaknya satu hari setelah bertunangan untuk menikah.";
+            return "Kamu harus menunggu setidaknya satu hari setelah bertunangan untuk menikah. ";
         }
         
         // Pernikahan berhasil

@@ -53,9 +53,8 @@ public class Recipe {
      * @param player     Objek Player (opsional, untuk cek inventory jika ada kondisi "punya item X saat ini").
      * @return true jika resep sudah terbuka, false jika belum.
      */
-    public boolean isUnlocked(EndGameStatistics statistics, Player player) { // Player ditambahkan untuk kondisi tertentu
+     public boolean isUnlocked(EndGameStatistics statistics, Player player) { // Player ditambahkan
         if (statistics == null) {
-            // Jika tidak ada statistik, mungkin hanya resep default yang bisa terbuka
             return this.unlockConditionKey.equals("DEFAULT") || this.unlockConditionKey.equals("BAWAAN");
         }
 
@@ -64,49 +63,34 @@ public class Recipe {
             case "BAWAAN":
                 return true;
 
-            // Kondisi dari spesifikasi Halaman 31-32:
             case "BELI_DI_STORE":
-                // Pelacakan resep yang dibeli sebaiknya ada di Player atau daftar resep yang diketahui.
-                // Untuk sekarang, kita bisa asumsikan jika resep ini ada di daftar resep game,
-                // dan unlock condition-nya "BELI_DI_STORE", maka pemain harus membelinya.
-                // Atau, EndGameStatistics bisa punya Set<String> purchasedRecipeNames.
-                // Untuk implementasi sederhana:
-                return statistics.hasAchieved("BOUGHT_RECIPE_" + this.name.toUpperCase().replace(" ", "_"));
-                // Anda perlu memanggil statistics.recordKeyEventOrItem("BOUGHT_RECIPE_NAMA_RESEP") saat pemain membeli.
+                // Ini perlu mekanisme di mana saat pemain membeli resep dari toko,
+                // sebuah event dicatat di EndGameStatistics.
+                // Misalnya: statistics.recordKeyEventOrItem("BOUGHT_RECIPE_" + this.name.toUpperCase().replace(" ", "_"));
+                return statistics.hasAchieved("BOUGHT_RECIPE_" + this.getName().toUpperCase().replace(" ", "_"));
 
             case "FISH_10": // recipe_3 Sashimi
                 return statistics.getTotalFishCaughtCount() >= 10;
 
-            case "FISH_PUFFERFISH": // recipe_4 Fugu
-                // Menggunakan event key yang dicatat oleh EndGameStatistics.recordFishCatch
+            case "PUFFERFISH": // recipe_4 Fugu (Kunci sudah di-uppercase oleh konstruktor)
+                               // Event yang dicatat di statistics tetap "FISH_PUFFERFISH" untuk konsistensi internal statistics
                 return statistics.hasAchieved("FISH_PUFFERFISH");
 
             case "FIRST_HARVEST": // recipe_7 Veggie Soup
                 return statistics.hasHarvestedAnyCrop();
 
-            case "OBTAINED_HOT_PEPPER": // recipe_8 Fish Stew (Dapatkan "Hot Pepper" terlebih dahulu)
-                // Menggunakan event key yang dicatat oleh EndGameStatistics.recordHarvest
-                // atau EndGameStatistics.recordKeyEventOrItem("OBTAINED_HOT_PEPPER") jika didapat dari cara lain.
+            case "OBTAINED_HOT_PEPPER": // recipe_8 Fish Stew
+                // Diasumsikan EndGameStatistics mencatat event "OBTAINED_HOT_PEPPER"
+                // saat pemain memanen atau mendapatkan Hot Pepper.
                 return statistics.hasAchieved("OBTAINED_HOT_PEPPER");
-                // Alternatif jika ingin cek inventory saat ini (membutuhkan parameter Player):
-                // if (player != null && player.getInventory().hasItemByName("Hot Pepper")) { // Perlu hasItemByName di Inventory
-                //     return true;
-                // }
-                // return false;
 
             case "FISH_LEGEND": // recipe_11 The Legends of Spakbor
+                // Diasumsikan EndGameStatistics mencatat event "FISH_LEGEND" saat Legend ditangkap.
                 return statistics.hasAchieved("FISH_LEGEND");
 
-            // Tambahkan case lain jika ada kondisi unlock baru
-            // case "HARVEST_PARSNIP": // Contoh jika ada resep yang butuh panen parsnip
-            //     return statistics.hasAchieved("HARVEST_PARSNIP");
-
             default:
-                // Jika kondisi unlock tidak dikenali, anggap belum terbuka
-                // atau bisa juga mengandalkan statistics.hasAchieved(this.unlockConditionKey)
-                // jika semua kondisi adalah event yang dicatat.
-                System.err.println("Peringatan: Kunci kondisi unlock tidak dikenal untuk resep '" + name + "': " + unlockConditionKey);
-                return false;
+                System.err.println("Peringatan: Kunci kondisi unlock tidak dikenal untuk resep '" + getName() + "': " + getUnlockConditionKey());
+                return false; // Defaultnya tidak terbuka jika kunci tidak dikenal
         }
     }
 

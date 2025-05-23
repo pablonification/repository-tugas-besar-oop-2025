@@ -452,6 +452,12 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     actionTaken = true;
                 }
                 break;
+            case KeyEvent.VK_K: //cooking
+                if(gameController != null){
+                    gameController.handleCookRequest();
+                    actionTaken = true;
+                }
+                break;
         }
 
         if (actionTaken) {

@@ -173,7 +173,8 @@ public class EndGameStatistics {
      */
     public void recordKeyEventOrItem(String eventKey) {
         if (eventKey != null && !eventKey.isBlank()) {
-            this.keyEventsOrItemsObtained.add(eventKey);
+            this.keyEventsOrItemsObtained.add(eventKey.toUpperCase()); // Simpan dalam uppercase untuk konsistensi
+            System.out.println("Event/Item Tercatat di Statistik: " + eventKey.toUpperCase());
         }
     }
 
