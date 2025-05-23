@@ -208,11 +208,27 @@ public class FarmMap implements MapArea{
         if (!isWithinBounds(x, y)) {
             return true; // Di luar batas dianggap ditempati/tidak bisa diakses
         }
-        // Cek langsung dari tile jika sudah ditandai sebagai DEPLOYED_OBJECT
-        if (tiles[y][x].getType() == TileType.DEPLOYED_OBJECT) {
+        // Cek dulu tipe tile dasarnya, apakah memang tidak bisa dilewati (misal Tembok, Air)
+        Tile currentTile = tiles[y][x];
+        if (currentTile.getType() == TileType.WALL || 
+            currentTile.getType() == TileType.WATER) { // WATER is generally impassable
+            // Tambahkan TileType lain yang tidak bisa dilewati di sini jika ada (misal, MOUNTAIN)
             return true;
         }
-        return getObjectAt(x, y) != null;
+
+        // Kemudian cek apakah ada DeployedObject di lokasi tersebut
+        DeployedObject obj = getObjectAt(x, y);
+        if (obj != null) {
+            // Jika objeknya adalah House, maka tile TIDAK dianggap occupied (bisa dilewati)
+            if (obj instanceof House) {
+                return false; 
+            }
+            // Untuk objek lain, anggap tile occupied (tidak bisa dilewati)
+            return true; 
+        }
+        
+        // Jika tidak ada objek dan tipe tile-nya sendiri tidak menghalangi, maka tidak occupied
+        return false;
     }
 
     /**

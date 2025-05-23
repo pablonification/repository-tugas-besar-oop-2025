@@ -32,6 +32,7 @@ import com.spakborhills.model.Util.EndGameStatistics;
 import com.spakborhills.model.Util.PriceList;
 import com.spakborhills.model.Enum.Gender;
 import com.spakborhills.controller.GameController; // Ensure this import is present
+import javax.swing.JOptionPane; // Added for main menu dialog
 
 /**
  * Main class untuk testing Spakbor Hills.
@@ -74,6 +75,62 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        // Main Menu Logic
+        String[] menuOptions = {"New Game", "Help", "Credits", "Exit"};
+        boolean startGame = false;
+
+        while (!startGame) {
+            int choice = JOptionPane.showOptionDialog(
+                    null,
+                    "Welcome to Spakbor Hills!",
+                    "Main Menu",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE,
+                    null,
+                    menuOptions,
+                    menuOptions[0]
+            );
+
+            switch (choice) {
+                case 0: // New Game
+                    startGame = true; // Signal to exit the loop and start the game
+                    break;
+                case 1: // Help
+                    JOptionPane.showMessageDialog(null,
+                            "Spakbor Hills - A Farming Adventure Game!\n\n" +
+                            "Objective: Become a successful farmer and achieve milestones!\n\n" +
+                            "Controls:\n" +
+                            "• WASD/Arrows: Move\n" +
+                            "• E: Interact/Use Tool/Harvest\n" +
+                            "• F: Eat Selected Item\n" +
+                            "• T: Open Store\n" +
+                            "• B: Open Shipping Bin\n" +
+                            "• 1, 2: Cycle Inventory\n" +
+                            "• X: Chat with NPC\n" +
+                            "• G: Gift to NPC\n" +
+                            "• L: Sleep\n" +
+                            "• K: Cook\n" +
+                            "• V: Watch TV\n" +
+                            "• I: View Player Info\n" +
+                            "• O: View Current Progress\n" +
+                            "• C: Open Cheat Menu\n\n",
+                            "Help", JOptionPane.INFORMATION_MESSAGE);
+                    break; // Stay in the menu loop
+                case 2: // Credits
+                    JOptionPane.showMessageDialog(null,
+                            "Spakbor Hills - Game created by Kelompok Kito", // Placeholder for actual team name
+                            "Credits", JOptionPane.INFORMATION_MESSAGE);
+                    break; // Stay in the menu loop
+                case 3: // Exit
+                case JOptionPane.CLOSED_OPTION: // Handle dialog close
+                default:
+                    System.out.println("Exiting Spakbor Hills.");
+                    System.exit(0); // Terminate the application
+                    return; // Exit main method
+            }
+        }
+
+        // If startGame is true, proceed to initialize and launch the game
         // printSectionHeader("MEMULAI COMPREHENSIVE TESTING SPAKBOR HILLS");
 
         Map<String, Item> itemRegistry = setupItemRegistry();
@@ -81,7 +138,6 @@ public class Main {
             System.err.println("ERROR: Gagal setup Item Registry. GUI tidak dapat dimulai.");
             return;
         }
-        // System.out.println("Item Registry berhasil dibuat dengan " + itemRegistry.size() + " item.");
 
         FarmMap farmMap = new FarmMap();
         GameTime gameTime = new GameTime();
@@ -92,17 +148,44 @@ public class Main {
         List<Recipe> recipeList = setupRecipes();
         PriceList priceList = setupPriceList();
 
-        Player player = new Player("Hero", Gender.MALE, "My Farm", farmMap, 5, 5, itemRegistry);
+        // Prompt for player name and gender
+        String playerName = JOptionPane.showInputDialog(null, "Enter your name:", "Player Setup", JOptionPane.PLAIN_MESSAGE);
+        if (playerName == null || playerName.trim().isEmpty()) {
+            playerName = "Hero"; // Default name if empty or cancelled
+        }
+
+        Object[] genderOptions = {Gender.MALE, Gender.FEMALE};
+        Gender playerGender = (Gender) JOptionPane.showInputDialog(
+                null,
+                "Select your gender:",
+                "Player Setup",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                genderOptions,
+                Gender.MALE
+        );
+        if (playerGender == null) {
+            playerGender = Gender.MALE; // Default gender if cancelled
+        }
+        
+        String farmName = JOptionPane.showInputDialog(null, "Enter your farm's name:", "Farm Setup", JOptionPane.PLAIN_MESSAGE);
+        if (farmName == null || farmName.trim().isEmpty()) {
+            farmName = playerName + "'s Farm"; // Default farm name
+        }
+
+
+        Player player = new Player(playerName, playerGender, farmName, farmMap, 5, 5, itemRegistry);
         EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), player);
 
         Farm farm = new Farm(
-            player.getFarmName(), player, farmMap, worldMap, store,
+            farmName, player, farmMap, worldMap, store,
             npcList, recipeList, gameTime, shippingBin, statistics, priceList,
             itemRegistry
         );
 
         // Create GameController instance
         GameController gameController = new GameController(farm);
+        // farm.setGameController(gameController); // Link controller back to farm if needed for GamePanel timer checks -> Removed this line
 
         // Launch the GUI
         SwingUtilities.invokeLater(new Runnable() {

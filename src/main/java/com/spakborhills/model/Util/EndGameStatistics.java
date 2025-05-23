@@ -215,26 +215,25 @@ public class EndGameStatistics {
 
     public String getSummary() {
         StringBuilder sb = new StringBuilder();
-        sb.append("--- Statistik Akhir Permainan ---\n");
-        sb.append("Total Hari Dimainkan: ").append(totalDaysPlayed).append("\n");
-        sb.append("Total Pendapatan: ").append(totalIncome).append("g\n");
-        sb.append("Total Pengeluaran: ").append(totalExpenditure).append("g\n");
+        sb.append("=== Game Statistics Summary ===\n\n");
+        sb.append("Total Days Played: ").append(totalDaysPlayed).append("\n");
+        sb.append("Total Income: ").append(totalIncome).append("g\n");
+        sb.append("Total Expenses: ").append(totalExpenditure).append("g\n");
 
-        sb.append("\nPendapatan per Musim (Rata-rata per hari di musim itu):\n");
+        sb.append("\nIncome by Season (Average per day):\n");
         for (Season s : Season.values()) {
             if (s != Season.ANY && daysPlayedInSeason.getOrDefault(s, 0) > 0) {
-                sb.append(String.format("  - %s: %dg (Rata-rata: %.2fg)\n",
-                                        s,
-                                        seasonalIncome.getOrDefault(s, 0),
-                                        getAverageSeasonalIncome(s)));
+                sb.append(String.format("  • %s: %dg (Avg: %.2fg)\n",
+                                    s,
+                                    seasonalIncome.getOrDefault(s, 0),
+                                    getAverageSeasonalIncome(s)));
             }
         }
-        // Tambahkan pengeluaran per musim jika perlu dengan format serupa
 
-        sb.append("\nStatus NPC:\n");
+        sb.append("\nNPC Relationships:\n");
         for (Map.Entry<String, RelationshipStatus> entry : npcFriendshipStatus.entrySet()) {
             String npcName = entry.getKey();
-            sb.append("  - ").append(npcName).append(": ")
+            sb.append("  • ").append(npcName).append(": ")
               .append(entry.getValue())
               .append(" (Hearts: ").append(npcHeartPoints.getOrDefault(npcName, 0)).append(")")
               .append(" | Chat: ").append(chatFrequency.getOrDefault(npcName, 0))
@@ -243,18 +242,18 @@ public class EndGameStatistics {
               .append("\n");
         }
 
-        sb.append("\nTanaman Dipanen (Total):\n");
-        if (cropsHarvestedCount.isEmpty()) sb.append("  Belum ada tanaman yang dipanen.\n");
+        sb.append("\nCrops Harvested (Total):\n");
+        if (cropsHarvestedCount.isEmpty()) sb.append("  No crops harvested yet.\n");
         for (Map.Entry<String, Integer> entry : cropsHarvestedCount.entrySet()) {
-            sb.append("  - ").append(entry.getKey()).append(": ").append(entry.getValue()).append(" buah\n");
+            sb.append("  • ").append(entry.getKey()).append(": ").append(entry.getValue()).append(" units\n");
         }
 
-        sb.append("\nIkan Ditangkap (Total per Jenis & Rarity):\n");
-        if (fishCaught.isEmpty()) sb.append("  Belum ada ikan yang ditangkap.\n");
+        sb.append("\nFish Caught (Total by Type & Rarity):\n");
+        if (fishCaught.isEmpty()) sb.append("  No fish caught yet.\n");
         for (Map.Entry<String, Map<FishRarity, Integer>> entry : fishCaught.entrySet()) {
-            sb.append("  - ").append(entry.getKey()).append(":\n");
+            sb.append("  • ").append(entry.getKey()).append(":\n");
             for (Map.Entry<FishRarity, Integer> rarityEntry : entry.getValue().entrySet()) {
-                sb.append("    - ").append(rarityEntry.getKey()).append(": ").append(rarityEntry.getValue()).append(" ekor\n");
+                sb.append("    - ").append(rarityEntry.getKey()).append(": ").append(rarityEntry.getValue()).append(" fish\n");
             }
         }
         return sb.toString();

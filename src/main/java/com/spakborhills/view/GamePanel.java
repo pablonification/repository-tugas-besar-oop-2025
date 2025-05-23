@@ -28,6 +28,8 @@ import com.spakborhills.model.NPC.NPC; // Make sure NPC is imported
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent; // Added for Timer
+import java.awt.event.ActionListener; // Added for Timer
 import java.awt.event.KeyEvent; // Import KeyEvent
 import java.awt.event.KeyListener; // Import KeyListener
 import java.util.List;
@@ -43,6 +45,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final Font DIALOG_FONT = new Font("Arial", Font.PLAIN, 20); // Updated font size to 20
     private static final Font NPC_DIALOG_FONT = new Font("Arial", Font.PLAIN, 16); // Font for NPC dialogues
 
+    private javax.swing.Timer gameTimer;
+    private boolean statisticsShown = false; // Flag to ensure stats are shown only once
+
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
         this.gameController = gameController;
@@ -52,6 +57,30 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         setBackground(Color.GRAY);
         addKeyListener(this);
         setFocusable(true); // Important to receive key events
+
+        // Initialize and start the game timer
+        // 1 real second = 5 game minutes
+        gameTimer = new javax.swing.Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (farmModel != null && farmModel.getCurrentTime() != null && gameController != null) {
+                    // Check for end game conditions FIRST
+                    if (!statisticsShown && farmModel.checkEndConditions()) {
+                        System.out.println("GAME PANEL: End game condition met! Requesting stats display.");
+                        gameController.requestShowStatistics(); // This will also stop the timer
+                        statisticsShown = true; // Set flag so it doesn't trigger repeatedly
+                        return; // Crucial: Do not advance time or repaint if stats are shown
+                    }
+
+                    // If timer is still running (i.e., stats not shown and timer not stopped by stats display)
+                    if (gameTimer.isRunning()) { 
+                        farmModel.getCurrentTime().advance(5); // Advance 5 game minutes
+                        repaint(); // Redraw the panel to update time, etc.
+                    }
+                }
+            }
+        });
+        gameTimer.start();
 
         // Set default font for JOptionPane dialogs
         UIManager.put("OptionPane.messageFont", DIALOG_FONT);
@@ -434,8 +463,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 actionTaken = true; // An attempt to chat was made
                 break;
             case KeyEvent.VK_G: // Gift to NPC
-                gameController.handleGiftRequest(); // Returns void, handles its own feedback
-                actionTaken = true; // An attempt to gift was made
+                System.out.println("G key pressed - Attempting Gift");
+                gameController.handleGiftRequest();
+                actionTaken = true;
                 break;
             case KeyEvent.VK_L: // Sleep (Lodge/Lie down)
                 gameController.requestNormalSleep(); // This will handle location check & next day
@@ -458,6 +488,21 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     gameController.handleCookRequest();
                     actionTaken = true;
                 }
+                break;
+            case KeyEvent.VK_V: // Added for Watching TV
+                System.out.println("V key pressed - Attempting to Watch TV");
+                gameController.requestWatchTV();
+                actionTaken = true;
+                break;
+            case KeyEvent.VK_I: // Added for View Player Info
+                System.out.println("I key pressed - Viewing Player Info");
+                gameController.requestViewPlayerInfo();
+                actionTaken = true; // Technically not an action that changes game state, but good to acknowledge
+                break;
+            case KeyEvent.VK_O: // Added for View Statistics
+                System.out.println("O key pressed - Viewing Statistics");
+                gameController.requestShowStatistics();
+                actionTaken = true; // This action does stop the timer
                 break;
         }
 
@@ -1019,29 +1064,56 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
      * @return The index of the chosen option, or JOptionPane.CLOSED_OPTION if the dialog was closed.
      */
     public int showOptionDialog(String message, String title, String[] options) {
-        // Store original fonts
-        Object originalMessageFont = UIManager.get("OptionPane.messageFont");
-        Object originalButtonFont = UIManager.get("OptionPane.buttonFont");
+        return JOptionPane.showOptionDialog(this, message, title,
+                                            JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE,
+                                            null, options, options[0]);
+    }
 
-        // Set custom font for this dialog
-        UIManager.put("OptionPane.messageFont", DIALOG_FONT);
-        UIManager.put("OptionPane.buttonFont", DIALOG_FONT);
+    /**
+     * Displays the end-game statistics summary in a dialog.
+     * @param statisticsSummary The formatted string of statistics.
+     */
+    public void showStatisticsDialog(String statisticsSummary) {
+        // For better readability in JOptionPane, we can wrap the text in a JTextArea inside a JScrollPane.
+        JTextArea textArea = new JTextArea(statisticsSummary);
+        textArea.setEditable(false);
+        textArea.setFont(NPC_DIALOG_FONT); // Use a readable font
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
 
-        int choice = JOptionPane.showOptionDialog(
-            this,
-            message,
-            title,
-            JOptionPane.DEFAULT_OPTION,
-            JOptionPane.PLAIN_MESSAGE,
-            null, // no custom icon
-            options,
-            options[0] // default selection
-        );
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(600, 400)); // Adjust size as needed
 
-        // Restore original fonts
-        UIManager.put("OptionPane.messageFont", originalMessageFont);
-        UIManager.put("OptionPane.buttonFont", originalButtonFont);
-        
-        return choice;
+        JOptionPane.showMessageDialog(this, scrollPane, "Current Progress", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Stops the main game timer.
+     */
+    public void stopGameTimer() {
+        if (gameTimer != null && gameTimer.isRunning()) {
+            gameTimer.stop();
+            System.out.println("Game Timer stopped.");
+        }
+    }
+
+    /**
+     * Displays the player's information in a dialog.
+     * @param playerInfoSummary The formatted string of player information.
+     */
+    public void showPlayerInfoDialog(String playerInfoSummary) {
+        JTextArea textArea = new JTextArea(playerInfoSummary);
+        textArea.setEditable(false);
+        textArea.setFont(NPC_DIALOG_FONT); // Use a readable font, similar to NPC dialog
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(400, 250)); // Adjust size as needed
+
+        JOptionPane.showMessageDialog(this,
+                scrollPane,
+                "Player Information",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 }

@@ -42,7 +42,6 @@ import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.NPC.NPC;
 import com.spakborhills.model.Map.FarmMap;
 import com.spakborhills.model.Map.MapArea;
-import com.spakborhills.model.Map.PlayerHouseInterior;
 import com.spakborhills.model.Map.WorldMap;
 import com.spakborhills.model.Store;
 import com.spakborhills.model.Util.GameTime;
@@ -57,7 +56,6 @@ public class Farm {
     private Player player;
     private FarmMap farmMap;
     private WorldMap worldMap;
-    private PlayerHouseInterior playerHouseInteriorMap;
     private Store store;
     private List<NPC> npcs;
     private List<Recipe> recipes;
@@ -88,7 +86,6 @@ public class Farm {
       this.player = player;
       this.farmMap = farmMap;
       this.worldMap = worldMap;
-      this.playerHouseInteriorMap = new PlayerHouseInterior();
       this.store = store;
       this.npcs = List.copyOf(npcs); // immutable
       this.recipes = List.copyOf(recipes); // immutable
@@ -260,8 +257,6 @@ public class Farm {
       switch (type) {
           case FARM:
               return this.farmMap;
-          case PLAYER_HOUSE_INTERIOR:
-              return this.playerHouseInteriorMap;
           case STORE:
               return this.worldMap.getSpecificArea(LocationType.STORE);
           case FOREST_RIVER:

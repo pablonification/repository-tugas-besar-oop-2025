@@ -99,8 +99,8 @@ Proposing & Marrying:
 [IMPLEMENTED] Feedback dan perubahan status.
 [IMPLEMENTED] Efek Marry (time skip, dll.).
 Cooking (Memasak):
-[SEBAGIAN SUDAH] Kondisi Memasak: Pemain di House (atau dekat Stove jika ada bonus furnitur). [KALO GA SAMA BONUS DAH KELAR]
-[UNTUK DILAKUKAN] GUI Memasak:
+[SELESAI] Kondisi Memasak: Pemain di tile House object di FarmMap (passable). (Bonus: dekat Stove di interior rumah jika diimplementasikan nanti).
+[IMPLEMENTED] GUI Memasak:
 Menampilkan daftar resep yang diketahui/bisa dibuat.
 Menunjukkan bahan yang dibutuhkan vs. yang dimiliki.
 Memilih bahan bakar (Coal, Firewood).
@@ -108,32 +108,35 @@ Memilih bahan bakar (Coal, Firewood).
 [IMPLEMENTED] Mengurangi bahan, bahan bakar, energi.
 [IMPLEMENTED] Penanganan aksi pasif (1 jam) -> makanan muncul di inventory setelahnya. (Ini perlu mekanisme timer/event).
 Sleeping (Tidur Normal):
-[IMPLEMENTED] Interaksi dengan Tempat Tidur di Rumah: Aksi umum di House (PlayerHouseInterior) via tombol 'L'. (Interaksi dengan objek Bed spesifik adalah BONUS - UNTUK DILAKUKAN).
+[IMPLEMENTED] Interaksi dengan Tempat Tidur di Rumah: Aksi umum via tombol 'L' jika pemain berada di tile House object di FarmMap. (Interaksi dengan objek Bed spesifik adalah BONUS - UNTUK DILAKUKAN, begitu juga dengan interior rumah terpisah untuk furniture).
 [IMPLEMENTED] Input Pemain -> GameController.requestSleep():
   [IMPLEMENTED] Memanggil player.sleep().
   [IMPLEMENTED] Memanggil farmModel.nextDay().
   [IMPLEMENTED] Memulihkan energi penuh (atau setengah jika ada penalti energi rendah sebelum tidur, berbeda dari pass-out).
 Fase 4: Waktu, Cuaca, dan Sistem Lainnya
 Sistem Waktu & Pergantian Hari/Musim:
-[SEBAGIAN SUDAH] GameTime menghitung waktu, hari, musim. Farm.nextDay() memproses pergantian.
-[CHEAT DITAMBAHKAN] Cheat untuk mengubah Musim (spring, summer, fall, winter) via input dialog (tombol C).
+[IMPLEMENTED] GameTime menghitung waktu, hari, musim. Farm.nextDay() memproses pergantian.
+[IMPLEMENTED] Cheat untuk mengubah Musim (spring, summer, fall, winter) via input dialog (tombol C).
 [UNTUK DILAKUKAN] Efek visual/audio untuk pergantian waktu (misal, warna langit meredup di malam hari di GamePanel).
-[UNTUK DILAKUKAN] Sinkronisasi Waktu Nyata vs Game: (Spesifikasi: "1 detik di dunia nyata = 5 menit di dunia permainan"). Ini perlu game loop utama yang meng-tick GameTime.advance() secara berkala. Saat ini, waktu hanya maju signifikan saat nextDay atau aksi tertentu.
+[IMPLEMENTED] Sinkronisasi Waktu Nyata vs Game: (Spesifikasi: "1 detik di dunia nyata = 5 menit di dunia permainan"). GamePanel Timer meng-tick GameTime.advance(5) setiap 1 detik.
 Cuaca:
-[SEBAGIAN SUDAH] GameTime punya currentWeather. Tile.updateDaily() menggunakan info hujan.
-[CHEAT DITAMBAHKAN] Cheat untuk mengubah Cuaca (sunny, rainy) via input dialog (tombol C).
+[IMPLEMENTED] GameTime punya currentWeather. Tile.updateDaily() menggunakan info hujan.
+[IMPLEMENTED] Cheat untuk mengubah Cuaca (sunny, rainy) via input dialog (tombol C).
 [UNTUK DILAKUKAN] Efek Visual Cuaca: Partikel hujan di GamePanel.
-[UNTUK DILAKUKAN] Watching TV: Aksi untuk mengetahui cuaca besok (perlu GUI interaksi dengan TV jika ada).
+[IMPLEMENTED] Watching TV: Aksi via tombol 'V' jika di dalam rumah untuk mengetahui cuaca HARI INI (GameTime.getCurrentWeather(), GameController.requestWatchTV()). Waktu maju 15 menit, energi berkurang 5.
 End Game Statistics:
-[UNTUK DILAKUKAN] Pemicu Tampilan Statistik: Mencapai salah satu milestone (gold atau menikah).
-[UNTUK DILAKUKAN] GUI untuk Menampilkan Statistik: Mengambil data dari EndGameStatistics.
+[IMPLEMENTED] Pemicu Tampilan Statistik: Mencapai salah satu milestone (gold >= 17209 atau menikah). Timer di GamePanel cek Farm.checkEndConditions(), panggil GameController.requestShowStatistics() sekali.
+[IMPLEMENTED] GUI untuk Menampilkan Statistik: GamePanel.showStatisticsDialog() menampilkan EndGameStatistics.getSummary() via JOptionPane dengan JTextArea. Timer game dihentikan.
 Fase 5: Menu dan Fitur Tambahan (Sesuai Spesifikasi Bonus)
 Menu Game Utama (CLI atau GUI Awal):
-[UNTUK DILAKUKAN] New Game, Load Game (Bonus), Help, View Player Info, Statistics, Credits, Exit.
-View Player Info bisa berupa dialog yang menampilkan atribut pemain.
-Statistics bisa memicu tampilan statistik jika sudah ada.
+[IMPLEMENTED] Main Menu on Startup (JOptionPane in Main.java): New Game, Help, Credits, Exit.
+[UNTUK DILAKUKAN] Load Game (Bonus).
+[IMPLEMENTED] Help Dialog: Basic game description and controls.
+[IMPLEMENTED] Credits Dialog: Placeholder for team name.
+[IMPLEMENTED] View Player Info (In-Game via 'I' key): GamePanel.showPlayerInfoDialog() displays Name, Gender, Energy, Gold, Partner.
+[IMPLEMENTED] Statistics (In-Game via 'O' key): Calls existing GameController.requestShowStatistics().
 Implementasi Bonus (jika dikerjakan):
-Furnitures, Keyboard/Mouse Input (sudah sebagian), Free Market, Gambling, Save/Load, NPC Easter Egg. Masing-masing akan punya sub-task sendiri.
+Furnitures (Termasuk interior rumah yang lebih besar dan detail seperti Stove, Bed), Keyboard/Mouse Input (sudah sebagian), Free Market, Gambling, Save/Load, NPC Easter Egg. Masing-masing akan punya sub-task sendiri.
 
 
 
@@ -147,6 +150,9 @@ M: Marry
 K: Cooking
 L: Sleeping
 X: Chat
+V: Watch TV (Today's Weather)
++I: View Player Info
++O: View Statistics
 1, 2: Swap Tools
 C: Cheat weather dan season
 X: Chat dengan NPC terdekat
@@ -157,3 +163,5 @@ Question:
 Store bukannya di WorldMap ya?
 
 HOUSE HARUS PASSABLE, DIA BISA DILALUI DAN MASAK TUH BUKAN DI SEKITAR TAPI EMG DIDALEM HOUSENYA
+
+[IMPLEMENTED] HOUSE PASSABLE: Player bisa masuk ke area 6x6 House di FarmMap. Cooking dan Sleeping dilakukan di tile House tersebut. Interior rumah yang lebih besar untuk furniture adalah fitur bonus dan ditunda.

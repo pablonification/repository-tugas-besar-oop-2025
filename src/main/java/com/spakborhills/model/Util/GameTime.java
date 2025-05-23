@@ -241,4 +241,9 @@ public class GameTime {
         }
     }
 
+    /**
+     * Memprediksi cuaca untuk hari berikutnya tanpa mengubah state saat ini.
+     * Berguna untuk fitur seperti ramalan cuaca di TV.
+     * @return Weather yang diprediksi untuk besok.
+     */
 }

@@ -734,10 +734,10 @@ public class Player {
             } else {
                 Item ingredient = itemRegistry.get(ingredientName);
                 if (ingredient == null) {
-                    return "Bahan '" + ingredientName + "' tidak dikenal dalam sistem.";
-                }
-                if (!inventory.hasItem(ingredient, requiredQty)) {
-                    return "Kamu kekurangan bahan: " + requiredQty + " " + ingredientName + ".";
+                return "Bahan '" + ingredientName + "' tidak dikenal dalam sistem.";
+            }
+            if (!inventory.hasItem(ingredient, requiredQty)) {
+                return "Kamu kekurangan bahan: " + requiredQty + " " + ingredientName + ".";
                 }
             }
         }
@@ -770,7 +770,7 @@ public class Player {
             } else {
                 Item ingredient = itemRegistry.get(ingredientName);
                 // Kita sudah validasi ingredient != null sebelumnya, jadi aman
-                inventory.removeItem(ingredient, entry.getValue());
+            inventory.removeItem(ingredient, entry.getValue());
             }
         }
 

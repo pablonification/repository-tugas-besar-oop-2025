@@ -7,7 +7,6 @@ import java.util.List; // For returning list of items
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import java.awt.Point; // Added for Point
 
 import javax.swing.JOptionPane;
 
@@ -31,7 +30,6 @@ import com.spakborhills.model.NPC.NPC;
 import com.spakborhills.model.Util.*;
 // GamePanel might be needed later for more complex interactions or direct view updates
 import com.spakborhills.view.GamePanel;
-import com.spakborhills.model.Object.DeployedObject; // Added import
 import com.spakborhills.model.Object.House; // Added import
 
 public class GameController {
@@ -1155,20 +1153,17 @@ public class GameController {
         // --- KONDISI LOKASI MEMASAK (Spesifikasi hal 29) ---
         // Player must be in the PlayerHouseInterior map OR on FarmMap adjacent to a House object
         boolean canCookLocation = false;
-        if (player.getCurrentMap() instanceof com.spakborhills.model.Map.PlayerHouseInterior) {
-            canCookLocation = true;
-        } else if (player.getCurrentMap() instanceof FarmMap) {
+        if (player.getCurrentMap() instanceof FarmMap) {
             FarmMap farmMap = (FarmMap) player.getCurrentMap();
-            if (findAdjacentHouse(player, farmMap) != null) {
+            if (farmMap.getObjectAt(player.getCurrentTileX(), player.getCurrentTileY()) instanceof House) {
                 canCookLocation = true;
             }
         }
 
         if (!canCookLocation) {
-            gamePanel.displayMessage("Kamu hanya bisa memasak di dalam rumah atau di dekat rumah (di kebun).");
+            gamePanel.displayMessage("Kamu hanya bisa memasak di dalam rumahmu.");
             return;
         }
-        // TODO: Jika ada bonus Stove, tambahkan pengecekan isNearStove di PlayerHouseInterior.
 
         if (availableRecipes.isEmpty()) {
             gamePanel.displayMessage("Tidak ada resep yang tersedia saat ini.");
@@ -1683,89 +1678,6 @@ public class GameController {
         checkPassOut();
     }    
 
-    /**
-     * Handles the player's request to enter their house.
-     */
-    public void handleEnterHouseRequest() {
-        if (farmModel == null || gamePanel == null) {
-            System.err.println("GameController: Farm model or GamePanel is null. Cannot handle enter house request.");
-            return;
-        }
-        Player player = farmModel.getPlayer();
-        if (player == null) {
-            System.err.println("GameController: Player is null. Cannot handle enter house request.");
-            return;
-        }
-
-        // Check 1: Player must be on the FarmMap
-        if (!(player.getCurrentMap() instanceof FarmMap)) {
-            // gamePanel.displayMessage("Kamu tidak bisa masuk rumah dari sini."); // Optional message
-            return; // Silently fail or provide feedback
-        }
-        FarmMap farmMap = (FarmMap) player.getCurrentMap();
-
-        // Check 2: Player must be adjacent to the House object
-        DeployedObject houseObject = findAdjacentHouse(player, farmMap);
-        if (houseObject == null) {
-            // gamePanel.displayMessage("Tidak ada rumah di dekatmu untuk dimasuki."); // Optional message
-            return; // Silently fail or provide feedback
-        }
-
-        // Transition to PlayerHouseInterior map
-        MapArea houseInteriorMap = farmModel.getMapArea(LocationType.PLAYER_HOUSE_INTERIOR);
-        if (houseInteriorMap == null) {
-            System.err.println("GameController: PlayerHouseInterior map not found in Farm model.");
-            gamePanel.displayMessage("Error: Interior rumah tidak ditemukan.");
-            return;
-        }
-
-        List<Point> entryPoints = houseInteriorMap.getEntryPoints();
-        if (entryPoints.isEmpty()) {
-            System.err.println("GameController: PlayerHouseInterior map has no entry points defined.");
-            gamePanel.displayMessage("Error: Tidak ada titik masuk ke interior rumah.");
-            return;
-        }
-        Point entryPoint = entryPoints.get(0); // Use the first defined entry point
-
-        if (player.visit(houseInteriorMap, entryPoint.x, entryPoint.y)) {
-            System.out.println("Player entered house. Now on map: " + player.getCurrentMap().getName());
-            // No energy or time cost for entering house specified, can be added here if needed.
-            if (gamePanel != null) {
-                gamePanel.repaint(); // Update view to show house interior
-            }
-        } else {
-            gamePanel.displayMessage("Gagal masuk rumah.");
-        }
-    }
-
-    /**
-     * Helper method to find a House object adjacent to the player on the FarmMap.
-     * @param player The player.
-     * @param farmMap The FarmMap.
-     * @return The House object if found and adjacent, null otherwise.
-     */
-    private DeployedObject findAdjacentHouse(Player player, FarmMap farmMap) {
-        int playerX = player.getCurrentTileX();
-        int playerY = player.getCurrentTileY();
-        int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}; // N, S, W, E
-
-        for (int[] dir : directions) {
-            int checkX = playerX + dir[0];
-            int checkY = playerY + dir[1];
-
-            if (farmMap.isWithinBounds(checkX, checkY)) {
-                DeployedObject obj = farmMap.getObjectAt(checkX, checkY);
-                if (obj instanceof House) {
-                    return obj; // Found adjacent House
-                }
-            }
-        }
-        return null; // No adjacent House found
-    }
-
-    /**
-     * Handles the player's request to sleep normally in their house.
-     */
     public void requestNormalSleep() {
         if (farmModel == null || gamePanel == null) {
             System.err.println("GameController: Critical component null, cannot process normal sleep.");
@@ -1778,7 +1690,13 @@ public class GameController {
         }
 
         // Condition: Player must be in their house interior
-        if (!(player.getCurrentMap() instanceof com.spakborhills.model.Map.PlayerHouseInterior)) {
+        if (!(player.getCurrentMap() instanceof FarmMap)) {
+            gamePanel.displayMessage("Kamu hanya bisa tidur di dalam rumahmu.");
+            return;
+        }
+
+        FarmMap farmMap = (FarmMap) player.getCurrentMap();
+        if (!(farmMap.getObjectAt(player.getCurrentTileX(), player.getCurrentTileY()) instanceof House)) {
             gamePanel.displayMessage("Kamu hanya bisa tidur di dalam rumahmu.");
             return;
         }
@@ -1799,5 +1717,100 @@ public class GameController {
         gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
         // No checkPassOut() needed here as sleep PREVENTS pass out by ending the day.
         // GamePanel updates should be handled by showEndOfDayMessage or by Farm.nextDay() if it triggers repaints.
+    }
+
+    /**
+     * Handles the player's request to watch TV to see tomorrow's weather forecast.
+     * Player must be in their house.
+     */
+    public void requestWatchTV() {
+        if (farmModel == null || gamePanel == null) {
+            System.err.println("GameController: Critical component null, cannot process watch TV request.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        GameTime gameTime = farmModel.getCurrentTime();
+
+        if (player == null || gameTime == null) {
+            System.err.println("GameController: Player or GameTime is null for watching TV.");
+            return;
+        }
+
+        // Condition 1: Player must be in their house on the FarmMap
+        boolean isInHouse = false;
+        if (player.getCurrentMap() instanceof FarmMap) {
+            FarmMap farmMap = (FarmMap) player.getCurrentMap();
+            if (farmMap.getObjectAt(player.getCurrentTileX(), player.getCurrentTileY()) instanceof House) {
+                isInHouse = true;
+            }
+        }
+
+        if (!isInHouse) {
+            gamePanel.displayMessage("You can only watch TV inside your house.");
+            return;
+        }
+
+        // Get current day's weather
+        Weather currentDayWeather = gameTime.getCurrentWeather();
+        String weatherMessage = "Today's weather: " + currentDayWeather.toString();
+        gamePanel.displayMessage(weatherMessage);
+        System.out.println("TV: " + weatherMessage);
+
+        // Advance game time by 5 minutes for watching TV (Specification for Action #12 is -15 minutes, but notes said 5)
+        // Correcting to -15 minutes from specification.
+        gameTime.advance(15); // Specification: -15 menit dalam game
+        player.changeEnergy(-5); // Specification: -5 energi
+
+        if (gamePanel != null) {
+            gamePanel.updatePlayerInfoPanel(); // Update time and energy display
+            gamePanel.updateGameRender(); // Redraw if needed
+        }
+        checkPassOut(); // Check if player passes out due to energy loss
+    }
+
+    /**
+     * Requests the display of end-game statistics.
+     * This will fetch the summary from EndGameStatistics and tell GamePanel to show it.
+     * It will also stop the game timer in GamePanel.
+     */
+    public void requestShowStatistics() {
+        if (farmModel == null || gamePanel == null || farmModel.getStatistics() == null) {
+            System.err.println("GameController: Cannot show statistics due to null components.");
+            return;
+        }
+        String summary = farmModel.getStatistics().getSummary();
+        gamePanel.showStatisticsDialog(summary);
+        gamePanel.stopGameTimer(); // Stop the main game timer
+        System.out.println("Game Over - Statistics Displayed.");
+    }
+
+    /**
+     * Gathers player information and requests GamePanel to display it.
+     */
+    public void requestViewPlayerInfo() {
+        if (farmModel == null || gamePanel == null || farmModel.getPlayer() == null) {
+            System.err.println("GameController: Cannot view player info due to null components.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+
+        StringBuilder infoBuilder = new StringBuilder();
+        infoBuilder.append("=== Player Information ===\n\n");
+        infoBuilder.append("Name: ").append(player.getName()).append("\n");
+        infoBuilder.append("Gender: ").append(player.getGender().toString()).append("\n");
+        infoBuilder.append("Energy: ").append(player.getEnergy()).append("/100\n");
+        infoBuilder.append("Gold: ").append(player.getGold()).append("g\n");
+        
+        String partnerName = "None";
+        NPC partner = player.getPartner();
+        if (partner != null) {
+            partnerName = partner.getName() + " (" + partner.getRelationshipStatus().toString() + ")";
+        }
+        infoBuilder.append("Partner: ").append(partnerName).append("\n");
+
+        // Favorite Item is not a standard Player attribute per Player.java/Specification
+        // infoBuilder.append("Favorite Item: ").append("TODO").append("\n"); 
+
+        gamePanel.showPlayerInfoDialog(infoBuilder.toString());
     }
 }
