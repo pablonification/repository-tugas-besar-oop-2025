@@ -645,29 +645,39 @@ public class Player {
      */
     public void sleep(int energyBeforeSleep, boolean usedBonusBed) {
         int targetEnergy;
-        boolean applyPenalty = energyBeforeSleep <= 0;
+        // Penalty condition: energy < 10% * MAX_ENERGY (which is LOW_ENERGY_THRESHOLD)
+        boolean applyPenalty = energyBeforeSleep < LOW_ENERGY_THRESHOLD;
 
         if (applyPenalty) {
             targetEnergy = MAX_ENERGY / 2;
-            System.out.println("Kamu tidur kelelahan... Energi pulih setengah.");
+            System.out.println("Kamu tidur dengan energi rendah... Energi hanya pulih setengah.");
         } else {
             targetEnergy = MAX_ENERGY;
             System.out.println("Kamu tidur nyenyak. Energi pulih sepenuhnya.");
         }
 
-        if (energyBeforeSleep == 0) {
-            targetEnergy += 10;
-             System.out.println("Bonus energi +10!");
+        // Bonus bed logic (currently 'usedBonusBed' will be false for normal sleep)
+        // The specification for Action #7 (Sleeping) does not mention how a bonus bed affects
+        // the standard sleep energy recovery. This section can be expanded if bonus beds
+        // have a defined interaction with normal sleep beyond just being a different action trigger.
+        if (usedBonusBed) {
+            // Example: If a bonus bed doubled recovery and was used with low energy:
+            // if (applyPenalty) { targetEnergy = MAX_ENERGY; } // Full recovery instead of half
+            // else { targetEnergy = MAX_ENERGY + 20; } // Or some other bonus
+            System.out.println("Menggunakan tempat tidur bonus! (Logika spesifik akan diimplementasikan dengan fitur furnitur)");
+            // For now, no change to targetEnergy from usedBonusBed for Action #7 to stick to spec.
+            // The original code had: if (usedBonusBed && energyBeforeSleep < LOW_ENERGY_THRESHOLD) targetEnergy *= 2;
+            // This could be re-added if that's the desired interaction.
         }
 
-        if (usedBonusBed && energyBeforeSleep < LOW_ENERGY_THRESHOLD) {
-            targetEnergy *= 2;
-            System.out.println("Bonus tempat tidur aktif! Pemulihan energi digandakan.");
+        // Clamp energy to MAX_ENERGY
+        if (targetEnergy > MAX_ENERGY) {
+            targetEnergy = MAX_ENERGY;
         }
-
-        if (targetEnergy > MAX_ENERGY) targetEnergy = MAX_ENERGY;
-        if (targetEnergy < MIN_ENERGY) targetEnergy = MIN_ENERGY;
-
+        // It's unlikely to go below MIN_ENERGY with sleep, but good to keep clamp.
+        if (targetEnergy < MIN_ENERGY) { // Should not be reachable with sleep logic
+            targetEnergy = MIN_ENERGY;
+        }
         this.energy = targetEnergy;
     }
 

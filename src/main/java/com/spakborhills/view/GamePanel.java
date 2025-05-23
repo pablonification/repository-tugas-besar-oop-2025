@@ -417,9 +417,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             case KeyEvent.VK_B: // Shipping Bin
                  actionTaken = tryOpenShippingBinDialog();
                 break;
-            case KeyEvent.VK_C: // Cheat
-                handleCheatInput();
-                actionTaken = true; // Assume cheat input dialog is an action
+            case KeyEvent.VK_C:
+                handleCheatInput(); // Cheat input is an action itself
+                actionTaken = true;
                 break;
             case KeyEvent.VK_1:
                 gameController.selectPreviousItem();
@@ -429,16 +429,17 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 gameController.selectNextItem();
                 actionTaken = true;
                 break;
-            case KeyEvent.VK_X: // Chat
-                if (gameController != null) {
-                    gameController.handleChatRequest();
-                }
+            case KeyEvent.VK_X: // Chat with NPC
+                gameController.handleChatRequest(); // Returns void, handles its own feedback
+                actionTaken = true; // An attempt to chat was made
                 break;
-            case KeyEvent.VK_G: // Gift
-                if (gameController != null) {
-                    gameController.handleGiftRequest();
-                    actionTaken = true; // Assuming gift request is an action
-                }
+            case KeyEvent.VK_G: // Gift to NPC
+                gameController.handleGiftRequest(); // Returns void, handles its own feedback
+                actionTaken = true; // An attempt to gift was made
+                break;
+            case KeyEvent.VK_L: // Sleep (Lodge/Lie down)
+                gameController.requestNormalSleep(); // This will handle location check & next day
+                actionTaken = true; // Assuming sleep always initiates a process
                 break;
             case KeyEvent.VK_P: // Propose
                 if (gameController != null) {

@@ -1762,4 +1762,42 @@ public class GameController {
         }
         return null; // No adjacent House found
     }
+
+    /**
+     * Handles the player's request to sleep normally in their house.
+     */
+    public void requestNormalSleep() {
+        if (farmModel == null || gamePanel == null) {
+            System.err.println("GameController: Critical component null, cannot process normal sleep.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        if (player == null) {
+            System.err.println("GameController: Player is null, cannot process normal sleep.");
+            return;
+        }
+
+        // Condition: Player must be in their house interior
+        if (!(player.getCurrentMap() instanceof com.spakborhills.model.Map.PlayerHouseInterior)) {
+            gamePanel.displayMessage("Kamu hanya bisa tidur di dalam rumahmu.");
+            return;
+        }
+
+        int energyBeforeSleep = player.getEnergy();
+        player.sleep(energyBeforeSleep, false); // false for usedBonusBed for now
+
+        // forceSleepAndProcessNextDay will advance time, update crops, calculate income, etc.
+        int incomeFromSales = farmModel.forceSleepAndProcessNextDay(); 
+
+        String eventMessage = player.getName() + " tidur nyenyak."; // Or a different message if energy was low
+        // Could refine message based on energyBeforeSleep if desired:
+        if (energyBeforeSleep < Player.LOW_ENERGY_THRESHOLD) {
+            eventMessage = player.getName() + " tidur dengan energi rendah, tapi berhasil memulihkan diri.";
+        }
+        String newDayInfo = generateNewDayInfoString(); // Re-use existing helper
+        
+        gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
+        // No checkPassOut() needed here as sleep PREVENTS pass out by ending the day.
+        // GamePanel updates should be handled by showEndOfDayMessage or by Farm.nextDay() if it triggers repaints.
+    }
 }

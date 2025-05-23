@@ -108,11 +108,11 @@ Memilih bahan bakar (Coal, Firewood).
 [IMPLEMENTED] Mengurangi bahan, bahan bakar, energi.
 [IMPLEMENTED] Penanganan aksi pasif (1 jam) -> makanan muncul di inventory setelahnya. (Ini perlu mekanisme timer/event).
 Sleeping (Tidur Normal):
-[UNTUK DILAKUKAN] Interaksi dengan Tempat Tidur di Rumah: (Perlu House Map jika ada bonus furnitur, atau aksi umum jika di House).
-[UNTUK DILAKUKAN] Input Pemain -> GameController.requestSleep():
-Memanggil player.sleep().
-Memanggil farmModel.nextDay().
-Memulihkan energi penuh (atau setengah jika ada penalti energi rendah sebelum tidur, berbeda dari pass-out).
+[IMPLEMENTED] Interaksi dengan Tempat Tidur di Rumah: Aksi umum di House (PlayerHouseInterior) via tombol 'L'. (Interaksi dengan objek Bed spesifik adalah BONUS - UNTUK DILAKUKAN).
+[IMPLEMENTED] Input Pemain -> GameController.requestSleep():
+  [IMPLEMENTED] Memanggil player.sleep().
+  [IMPLEMENTED] Memanggil farmModel.nextDay().
+  [IMPLEMENTED] Memulihkan energi penuh (atau setengah jika ada penalti energi rendah sebelum tidur, berbeda dari pass-out).
 Fase 4: Waktu, Cuaca, dan Sistem Lainnya
 Sistem Waktu & Pergantian Hari/Musim:
 [SEBAGIAN SUDAH] GameTime menghitung waktu, hari, musim. Farm.nextDay() memproses pergantian.
@@ -142,11 +142,16 @@ T: Toko/Store
 E: Action seperti Cangkul, nanam, siram, harvest
 F: Makan
 B: ShippingBin (Jual)
-P: Proposal dan Marry
+P: Proposal
+M: Marry
+K: Cooking
+L: Sleeping
+X: Chat
 1, 2: Swap Tools
 C: Cheat weather dan season
 X: Chat dengan NPC terdekat
 G: Gifting ke NPC
+
 
 Question:
 Store bukannya di WorldMap ya?
