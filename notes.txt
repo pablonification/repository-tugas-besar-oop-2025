@@ -118,6 +118,11 @@ Sistem Waktu & Pergantian Hari/Musim:
 [IMPLEMENTED] GameTime menghitung waktu, hari, musim. Farm.nextDay() memproses pergantian.
 [IMPLEMENTED] Cheat untuk mengubah Musim (spring, summer, fall, winter) via input dialog (tombol C).
 [UNTUK DILAKUKAN] Efek visual/audio untuk pergantian waktu (misal, warna langit meredup di malam hari di GamePanel).
+    Detail Tint Waktu (Sebelumnya Pernah Diimplementasi):
+    - Night (22:00 - 04:59): Dark blue/purple tint (new Color(0, 0, 70, 100))
+    - Dusk (18:00 - 21:59): Orange-ish tint (new Color(200, 100, 0, 70))
+    - Dawn (05:00 - 06:59): Light orange/peach tint (new Color(255, 204, 153, 60))
+    - Daytime (07:00 - 17:59): No tint
 [IMPLEMENTED] Sinkronisasi Waktu Nyata vs Game: (Spesifikasi: "1 detik di dunia nyata = 5 menit di dunia permainan"). GamePanel Timer meng-tick GameTime.advance(5) setiap 1 detik.
 Cuaca:
 [IMPLEMENTED] GameTime punya currentWeather. Tile.updateDaily() menggunakan info hujan.
