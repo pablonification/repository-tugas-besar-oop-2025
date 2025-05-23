@@ -418,7 +418,9 @@ public class GameController {
             String newDayInfo = generateNewDayInfoString();
             
             if (gamePanel != null) {
+                gamePanel.stopGameTimer(); // Stop timer before modal dialog
                 gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
+                gamePanel.startGameTimer(); // Restart timer after modal dialog
             } else {
                 System.out.println(eventMessage + " " + newDayInfo + " Pendapatan: " + incomeFromSales + "G (GamePanel belum siap untuk dialog)");
             }
@@ -1714,7 +1716,11 @@ public class GameController {
         }
         String newDayInfo = generateNewDayInfoString(); // Re-use existing helper
         
-        gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
+        if (gamePanel != null) { // Added null check for safety, though it should be set
+            gamePanel.stopGameTimer(); // Stop timer before modal dialog
+            gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
+            gamePanel.startGameTimer(); // Restart timer after modal dialog
+        }
         // No checkPassOut() needed here as sleep PREVENTS pass out by ending the day.
         // GamePanel updates should be handled by showEndOfDayMessage or by Farm.nextDay() if it triggers repaints.
     }
@@ -1795,22 +1801,46 @@ public class GameController {
         Player player = farmModel.getPlayer();
 
         StringBuilder infoBuilder = new StringBuilder();
-        infoBuilder.append("=== Player Information ===\n\n");
-        infoBuilder.append("Name: ").append(player.getName()).append("\n");
-        infoBuilder.append("Gender: ").append(player.getGender().toString()).append("\n");
-        infoBuilder.append("Energy: ").append(player.getEnergy()).append("/100\n");
-        infoBuilder.append("Gold: ").append(player.getGold()).append("g\n");
+        infoBuilder.append("=== Player Information ===\\n\\n");
+        infoBuilder.append("Name: ").append(player.getName()).append("\\n");
+        infoBuilder.append("Gender: ").append(player.getGender().toString()).append("\\n");
+        infoBuilder.append("Energy: ").append(player.getEnergy()).append("/").append(Player.MAX_ENERGY).append("\\n");
+        infoBuilder.append("Gold: ").append(player.getGold()).append("g\\n");
         
         String partnerName = "None";
         NPC partner = player.getPartner();
         if (partner != null) {
             partnerName = partner.getName() + " (" + partner.getRelationshipStatus().toString() + ")";
         }
-        infoBuilder.append("Partner: ").append(partnerName).append("\n");
+        infoBuilder.append("Partner: ").append(partnerName).append("\\n");
 
         // Favorite Item is not a standard Player attribute per Player.java/Specification
-        // infoBuilder.append("Favorite Item: ").append("TODO").append("\n"); 
+        // infoBuilder.append("Favorite Item: ").append("TODO").append("\\n"); 
 
-        gamePanel.showPlayerInfoDialog(infoBuilder.toString());
-    }    
-}
+        if (gamePanel != null) {
+            gamePanel.showPlayerInfoDialog(infoBuilder.toString());
+        }
+    }
+
+    /**
+     * Handles a cheat request to set the game time.
+     * @param hour The hour to set (0-23).
+     * @param minute The minute to set (0-59).
+     * @return true if the time was successfully set, false otherwise.
+     */
+    public boolean requestSetTime(int hour, int minute) {
+        if (farmModel != null && farmModel.getCurrentTime() != null) {
+            GameTime gameTime = farmModel.getCurrentTime();
+            // Basic validation, GameTime.setTime will also validate
+            if (hour >= 0 && hour < GameTime.HOURS_IN_DAY && minute >= 0 && minute < GameTime.MINUTES_IN_HOUR) {
+                gameTime.setTime(hour, minute);
+                if (gamePanel != null) {
+                    gamePanel.updateGameRender(); // Ensure the display updates immediately
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+} // End of GameController class

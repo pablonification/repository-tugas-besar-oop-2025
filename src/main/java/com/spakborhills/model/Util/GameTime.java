@@ -132,6 +132,21 @@ public class GameTime {
     }
 
     /**
+     * Sets the game time directly (for cheats).
+     * @param newHour The hour to set (0-23).
+     * @param newMinute The minute to set (0-59).
+     */
+    public void setTime(int newHour, int newMinute) {
+        if (newHour >= 0 && newHour < HOURS_IN_DAY && newMinute >= 0 && newMinute < MINUTES_IN_HOUR) {
+            this.hour = newHour;
+            this.minute = newMinute;
+            System.out.println("CHEAT: Waktu diubah menjadi: " + getTimeString());
+        } else {
+            System.err.println("CHEAT: Gagal mengubah waktu ke nilai yang tidak valid: " + newHour + ":" + newMinute);
+        }
+    }
+
+    /**
      * Memajukan waktu game sebanyak menit tertentu.
      * Akan menangani pergantian jam dan hari jika diperlukan.
      * Sesuai spesifikasi Halaman 33: "1 detik di dunia nyata = 5 menit di dunia permainan".

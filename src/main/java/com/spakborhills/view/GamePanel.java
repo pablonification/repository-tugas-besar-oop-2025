@@ -114,9 +114,43 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         drawCurrentMap(g);
         drawNPCs(g);
         drawPlayer(g);
+        drawDayNightTint(g); // Draw tint over the game world
 
         // Restore original clip
         g.setClip(originalClip);
+    }
+
+    private void drawDayNightTint(Graphics g) {
+        if (farmModel == null || farmModel.getCurrentTime() == null) {
+            return;
+        }
+
+        int currentHour = farmModel.getCurrentTime().getHour();
+        Color tintColor = null;
+
+        // Define tint colors and alpha based on the hour
+        if (currentHour >= 22 || currentHour < 5) { // Night (10 PM - 4:59 AM)
+            tintColor = new Color(0, 0, 70, 100); 
+        } else if (currentHour >= 18) { // Dusk (6 PM - 9:59 PM)
+            tintColor = new Color(200, 100, 0, 70);
+        } else if (currentHour >= 5 && currentHour < 7) { // Dawn (5 AM - 6:59 AM)
+            tintColor = new Color(255, 204, 153, 60);
+        } else { // Daytime (7 AM - 5:59 PM)
+            // No tint, or a very transparent one if desired
+            // tintColor = new Color(0, 0, 0, 0); // Example: completely transparent
+        }
+
+        if (tintColor != null) {
+            g.setColor(tintColor);
+            // The tint should cover the game world area, which is already clipped
+            // So, drawing from (0,0) within the current clip will cover the correct area.
+            // The clip is (0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT)
+            // So relative to this clip, we draw at (0,0) with size (getWidth(), getHeight() - INFO_PANEL_HEIGHT)
+            // However, Graphics g is already translated if setClip was used correctly.
+            // The coordinates for fillRect should be relative to the component's coordinate system.
+            // The current clip starts at y = INFO_PANEL_HEIGHT.
+            g.fillRect(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
+        }
     }
 
     private void drawPlayerInfo(Graphics g) {
@@ -777,6 +811,26 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             } else {
                 JOptionPane.showMessageDialog(this, "Usage: season [SPRING|SUMMER|FALL|WINTER]", "Cheat Error", JOptionPane.ERROR_MESSAGE);
             }
+        } else if (command.equals("time")) { // Added time cheat
+            if (parts.length == 3) {
+                try {
+                    int hour = Integer.parseInt(parts[1]);
+                    int minute = Integer.parseInt(parts[2]);
+                    if (gameController != null) {
+                        boolean success = gameController.requestSetTime(hour, minute);
+                        if (success) {
+                            JOptionPane.showMessageDialog(this, "Time changed to " + String.format("%02d:%02d", hour, minute), "Cheat Activated", JOptionPane.INFORMATION_MESSAGE);
+                            repaint(); // Update display
+                        } else {
+                            JOptionPane.showMessageDialog(this, "Invalid time values. Hour (0-23), Minute (0-59).", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(this, "Invalid number format for time. Usage: time HH MM", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Usage: time HH MM (e.g., time 8 0 for 8:00 AM, time 22 30 for 10:30 PM)", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+            }
         } else if (command.equals("fishdebug")) {
             StringBuilder debugMessage = new StringBuilder("<html><body>"); // Use HTML for better formatting
             GameTime currentTime = farmModel.getCurrentTime();
@@ -858,6 +912,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         helpText.append("• season SUMMER - Changes to Summer<br>");
         helpText.append("• season FALL - Changes to Fall<br>");
         helpText.append("• season WINTER - Changes to Winter</p>");
+
+        helpText.append("<p><b>Time Control:</b><br>"); // Added Time Control
+        helpText.append("• time HH MM - Sets time (e.g., time 8 0 for 8:00 AM, time 22 30 for 10:30 PM)</p>");
 
         helpText.append("<p><b>Gold Control:</b><br>");
         helpText.append("• gold 1000 - Adds 1000 gold to player<br>");
@@ -1106,6 +1163,16 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (gameTimer != null && gameTimer.isRunning()) {
             gameTimer.stop();
             System.out.println("Game Timer stopped.");
+        }
+    }
+
+    /**
+     * Starts or restarts the main game timer if it's not already running.
+     */
+    public void startGameTimer() {
+        if (gameTimer != null && !gameTimer.isRunning()) {
+            gameTimer.start();
+            System.out.println("Game Timer started.");
         }
     }
 
