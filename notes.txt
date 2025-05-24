@@ -41,7 +41,7 @@ Toko (Store):
     - Navigasi: Keyboard (Up/Down pilih item, E/Enter pilih/konfirmasi, Esc/T tutup).
     - Tampilan: Daftar item & harga, gold pemain.
     - Pembelian: Input kuantitas (Up/Down/Angka), konfirmasi pembelian.
-    - Feedback: [IMPLEMENTED] Pesan sukses/gagal beli, gold tidak cukup, dll. ditampilkan di UI Toko (menggantikan JOptionPane).
+    - Feedback: [SEBAGIAN SUDAH] Pesan sukses/gagal beli sudah in-UI via setStoreFeedback. Pesan pra-pembukaan toko (misal, "belum di lokasi", "toko kosong") masih via JOptionPane (GamePanel.displayMessage).
 [IMPLEMENTED] Menampilkan harga beli dari PriceList.
 [IMPLEMENTED] Pembelian Item (via GUI Toko):
     - Input jumlah dari pemain (via in-game UI).
@@ -52,7 +52,7 @@ Toko (Store):
 [IMPLEMENTED] Item yang dijual sesuai spesifikasi (Seeds, beberapa Food, Crops tertentu, Koran).
 [IMPLEMENTED] Harga item sesuai PriceList.csv.
 Shipping Bin:
-[IMPLEMENTED] GUI Shipping Bin: Dialog untuk memilih item dari inventory pemain yang bisa dijual (Crop, Fish, Food, MiscItem) via tombol 'B'.
+[IMPLEMENTED] GUI Shipping Bin: Panel in-game dasar via tombol 'B' sudah berfungsi. Menampilkan item dari inventory pemain yang bisa dijual (Crop, Fish, Food, MiscItem). Menggantikan JOptionPane.
 [IMPLEMENTED] Penjualan Item:
 Input jumlah.
 Memindahkan item dari inventory ke "bin" (logika di ShippingBin.java).
@@ -62,7 +62,7 @@ Penjualan hanya sekali sehari.
 Menghitung total penjualan dari ShippingBin berdasarkan PriceList.
 Menambahkan gold ke pemain.
 Mengosongkan ShippingBin.
-[SELESAI] Feedback yang Jelas: Pesan bahwa gold akan diterima besok (saat item ditaruh) dan dialog JOptionPane di awal hari berikutnya (via GamePanel.showEndOfDayMessage) jika ada penjualan atau kejadian pingsan.
+[SELESAI] Feedback yang Jelas: Pesan bahwa gold akan diterima besok (saat item ditaruh) dan dialog JOptionPane di awal hari berikutnya (via GamePanel.showEndOfDayMessage) jika ada penjualan atau kejadian pingsan. (Catatan: Feedback saat item ditaruh kini via in-game UI, bukan JOptionPane).
 Gold & Inventory Display:
 [SELESAI] Sudah ditampilkan di Info Panel, pastikan selalu update setelah transaksi.
 Visiting (Pindah Map):
@@ -156,11 +156,14 @@ Fase 6: Penyempurnaan GUI & Audio (Harvest Moon Style)
 GUI Enhancements:
 [SEBAGIAN SUDAH] Penghilangan Seluruh Window/Dialog Eksternal:
     - Semua interaksi (toko, shipping bin, dialog NPC, konfirmasi, input, dsb) akan digantikan dengan panel/jendela in-game yang terintegrasi di dalam tampilan utama game (tidak ada lagi JOptionPane atau window terpisah).
-      - Dialog NPC utama sudah in-game.
-      - Toko (Store) sekarang menggunakan panel in-game dasar (navigasi keyboard, pemilihan item, input kuantitas dasar). 
-      - [UNTUK DILAKUKAN] Feedback Toko (sukses/gagal beli, dll.) masih menggunakan GamePanel.displayMessage() -> JOptionPane. Perlu diganti ke in-UI.
-      - [UNTUK DILAKUKAN] Shipping Bin masih menggunakan JOptionPane.
-      - [UNTUK DILAKUKAN] Dialog konfirmasi (Ya/Tidak), pesan info umum lainnya perlu diganti ke in-UI.
+      - [IMPLEMENTED] Dialog NPC utama sudah in-game.
+      - [IMPLEMENTED] Toko (Store) sekarang menggunakan panel in-game dasar (navigasi keyboard, pemilihan item, input kuantitas dasar).
+      - [IMPLEMENTED] Feedback Toko: Semua pesan terkait toko (pra-pembukaan dan sukses/gagal beli) kini sepenuhnya in-UI.
+      - [IMPLEMENTED] Shipping Bin sekarang menggunakan panel in-game dasar (termasuk feedback interaktifnya).
+      - [IMPLEMENTED] Dialog konfirmasi (Ya/Tidak), pesan info umum lainnya perlu diganti ke in-UI.
+        - [IMPLEMENTED] Cheat input (via 'C') kini menggunakan panel in-game.
+        - [IMPLEMENTED] End of Day Summary (tidur/pingsan) kini menggunakan panel in-game.
+        - [UNTUK DILAKUKAN] World Map selection dialog (saat di entry point).
     - Navigasi dan interaksi dilakukan sepenuhnya dengan keyboard/controller/mouse di dalam game window, mirip main menu.
     - Tampilan panel-panel ini akan konsisten dengan style main menu (warna, font, animasi, dsb).
 [UNTUK DILAKUKAN] Main Menu In-Game (Lanjutan):

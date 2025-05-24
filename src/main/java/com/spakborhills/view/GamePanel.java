@@ -26,6 +26,7 @@ import com.spakborhills.model.Enum.LocationType; // Added for fishdebug
 import com.spakborhills.model.Enum.FishRarity; // Added for fishdebug
 import com.spakborhills.model.NPC.NPC; // Make sure NPC is imported
 import com.spakborhills.model.Enum.GameState; // Added import for GameState
+import com.spakborhills.model.Util.ShippingBin; // Corrected import path
 
 import javax.imageio.ImageIO; // For loading placeholder image
 import javax.swing.*;
@@ -41,6 +42,8 @@ import java.util.ArrayList; // For creating list of sellable items
 import java.util.Map; // For iterating inventory
 
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
+
+    // GamePanel class: Handles all visual rendering and user input for the game.
 
     private static final int TILE_SIZE = 96;
     private static final int VIEWPORT_WIDTH_IN_TILES = 20;
@@ -94,6 +97,52 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private Color storeFeedbackColor = STORE_TEXT_COLOR; 
     private Timer storeFeedbackTimer;
 
+    // Shipping Bin UI State
+    private List<Item> playerSellableItems; // Items from player inventory that can be sold
+    private List<Item> itemsInBinSession; // Items added to bin in current session
+    private int currentPlayerItemSelectionIndex = 0;
+    private int currentBinItemSelectionIndex = 0; // If we allow selecting/managing items in bin UI
+    private String shippingBinInputMode = "selecting_player_item"; // "selecting_player_item", "inputting_quantity"
+    private String shippingBinQuantityInputString = "";
+    private Item currentShippingBinItemForQuantity;
+    private Rectangle shippingBinPanelRect;
+    private Rectangle playerItemsListRect;
+    private Rectangle binItemsListRect;
+    private Rectangle shippingBinQuantityRect;
+    private Rectangle shippingBinConfirmButtonRect; // Could be implicit with Enter
+    private Rectangle shippingBinCloseButtonRect;
+    private static final Font SHIPPING_BIN_FONT = new Font("Arial", Font.PLAIN, 18);
+    private static final Font SHIPPING_BIN_ITEM_FONT = new Font("Monospaced", Font.PLAIN, 16);
+    private static final Color SHIPPING_BIN_BG_COLOR = new Color(30, 30, 70, 220); // Darker blue
+    private static final Color SHIPPING_BIN_TEXT_COLOR = Color.WHITE;
+    private static final Color SHIPPING_BIN_HIGHLIGHT_COLOR = Color.CYAN;
+    private String shippingBinFeedbackMessage = "";
+    private Color shippingBinFeedbackColor = SHIPPING_BIN_TEXT_COLOR;
+    private Timer shippingBinFeedbackTimer;
+
+    // General In-Game Message State (for non-modal feedback)
+    private String generalGameMessage = "";
+    private Color generalGameMessageColor = Color.WHITE;
+    private Timer generalGameMessageTimer;
+    private static final Font GENERAL_MESSAGE_FONT = new Font("Arial", Font.BOLD, 22);
+
+    // Cheat Input UI State
+    private String cheatInputString = "";
+    private Rectangle cheatInputPanelRect;
+    private static final Font CHEAT_INPUT_FONT = new Font("Monospaced", Font.PLAIN, 20);
+    private static final Color CHEAT_INPUT_BG_COLOR = new Color(20, 20, 20, 230); // Very dark semi-transparent
+    private static final Color CHEAT_INPUT_TEXT_COLOR = Color.GREEN;
+
+    // End of Day Summary UI State
+    private String endOfDayEventMessage = "";
+    private int endOfDayIncome = 0;
+    private String endOfDayNewDayInfo = "";
+    private Rectangle endOfDayPanelRect;
+    private static final Font END_OF_DAY_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
+    private static final Font END_OF_DAY_FONT_TEXT = new Font("Arial", Font.PLAIN, 20);
+    private static final Color END_OF_DAY_BG_COLOR = new Color(50, 50, 70, 230); // Dark blueish-purple
+    private static final Color END_OF_DAY_TEXT_COLOR = Color.WHITE;
+
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
         this.gameController = gameController;
@@ -123,6 +172,10 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                         // If timer is still running (i.e., stats not shown and timer not stopped by stats display)
                         if (gameTimer.isRunning()) { 
                             farmModel.getCurrentTime().advance(5); // Advance 5 game minutes
+                            // Check for time-based pass-out AFTER time has advanced
+                            if (gameController != null) {
+                                gameController.checkTimeBasedPassOut(); 
+                            }
                             repaint(); // Redraw the panel to update time, etc.
                         }
                     } else if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
@@ -197,6 +250,62 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             }
         });
         storeFeedbackTimer.setRepeats(false); // Hanya berjalan sekali per trigger
+
+        // Initialize Shipping Bin UI Rectangles & Timer
+        int shippingBinPanelWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE * 5 / 6; // Slightly wider
+        int shippingBinPanelHeight = VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE * 5 / 6; // Slightly shorter, more centered
+        int shippingBinPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - shippingBinPanelWidth) / 2;
+        int shippingBinPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE - shippingBinPanelHeight) / 2 + INFO_PANEL_HEIGHT / 2; // Shift down a bit due to info panel
+        shippingBinPanelRect = new Rectangle(shippingBinPanelX, shippingBinPanelY, shippingBinPanelWidth, shippingBinPanelHeight);
+
+        int listWidth = shippingBinPanelWidth / 2 - 30;
+        int listHeight = shippingBinPanelHeight - 120; // Space for title, buttons, quantity input
+
+        playerItemsListRect = new Rectangle(shippingBinPanelX + 20, shippingBinPanelY + 60, listWidth, listHeight);
+        binItemsListRect = new Rectangle(shippingBinPanelX + shippingBinPanelWidth / 2 + 10, shippingBinPanelY + 60, listWidth, listHeight);
+        
+        shippingBinQuantityRect = new Rectangle(shippingBinPanelX + 20, shippingBinPanelY + shippingBinPanelHeight - 50, listWidth, 30); // For quantity input
+        // Confirm button might be implicit (Enter), Close button for explicit exit
+        shippingBinCloseButtonRect = new Rectangle(shippingBinPanelX + shippingBinPanelWidth - 120, shippingBinPanelY + 20, 100, 30);
+
+        shippingBinFeedbackTimer = new Timer(3000, e -> {
+            shippingBinFeedbackMessage = "";
+            repaint();
+        });
+        shippingBinFeedbackTimer.setRepeats(false);
+
+        // Initialize Timer for general game messages
+        generalGameMessageTimer = new Timer(3500, e -> { // Message disappears after 3.5 seconds
+            generalGameMessage = "";
+            repaint();
+        });
+        generalGameMessageTimer.setRepeats(false);
+
+        // Initialize Cheat Input UI Rectangles
+        int cheatPanelWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE / 2; // Half viewport width
+        int cheatPanelHeight = 80; // Fixed height for a single input line
+        int cheatPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - cheatPanelWidth) / 2;
+        // Position it a bit above the center vertically
+        int cheatPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT) / 2 - cheatPanelHeight - 20;
+        cheatInputPanelRect = new Rectangle(cheatPanelX, cheatPanelY, cheatPanelWidth, cheatPanelHeight);
+
+        // Initialize End of Day Summary Panel Rect
+        int eodPanelWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE * 2 / 3;
+        int eodPanelHeight = VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE / 2;
+        int eodPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - eodPanelWidth) / 2;
+        int eodPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - eodPanelHeight) / 2; // Centered
+        endOfDayPanelRect = new Rectangle(eodPanelX, eodPanelY, eodPanelWidth, eodPanelHeight);
+    }
+
+    private void setGeneralGameMessage(String message, boolean isError) {
+        this.generalGameMessage = message;
+        this.generalGameMessageColor = isError ? new Color(255, 80, 80) : new Color(144, 238, 144); // Red for error, light green for info
+        if (generalGameMessageTimer.isRunning()) {
+            generalGameMessageTimer.restart();
+        } else {
+            generalGameMessageTimer.start();
+        }
+        repaint(); // Immediately repaint to show the message
     }
 
     @Override
@@ -247,7 +356,101 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             if (isStoreUiActive) {
                 drawStoreUI((Graphics2D) g); // Explicitly cast here
             }
+            // Draw General Game Message if active (on top of IN_GAME elements, but below modal UIs like Store/ShippingBin)
+            if (!generalGameMessage.isEmpty() && farmModel.getCurrentGameState() == GameState.IN_GAME) {
+                 drawGeneralGameMessage((Graphics2D) g);
+            }
+        } else if (farmModel.getCurrentGameState() == GameState.SHIPPING_BIN) {
+            // Need to ensure game world is drawn underneath if desired, or just the UI
+            // For now, let's draw the game world then the UI on top
+            if (farmModel.getPlayer() != null && farmModel.getPlayer().getCurrentMap() != null) {
+                drawPlayerInfo(g);
+                Shape originalClip = g.getClip();
+                g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
+                drawCurrentMap(g);
+                drawNPCs(g);
+                drawPlayer(g);
+                g.setClip(originalClip);
+            } else { // Fallback if player/map somehow null during this state
+                g.setColor(Color.DARK_GRAY);
+                g.fillRect(0,0, getWidth(), getHeight());
+            }
+            drawShippingBinUI((Graphics2D) g);
+        } else if (farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
+            // Draw game world underneath as a backdrop
+            if (farmModel.getPlayer() != null && farmModel.getPlayer().getCurrentMap() != null) {
+                drawPlayerInfo(g);
+                Shape originalClip = g.getClip();
+                g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
+                drawCurrentMap(g);
+                drawNPCs(g);
+                drawPlayer(g);
+                g.setClip(originalClip);
+            }
+            drawCheatInputUI((Graphics2D) g);
+        } else if (farmModel.getCurrentGameState() == GameState.END_OF_DAY_SUMMARY) {
+            // Optionally draw the game world faintly in the background
+            // if (farmModel.getPlayer() != null && farmModel.getPlayer().getCurrentMap() != null) {
+            //     drawPlayerInfo(g); // Could be distracting
+            //     Shape originalClip = g.getClip();
+            //     g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
+            //     drawCurrentMap(g); // Faded or normal
+            //     g.setClip(originalClip);
+            // }
+            drawEndOfDaySummaryUI((Graphics2D) g);
         }
+    }
+
+    private void drawGeneralGameMessage(Graphics2D g2d) {
+        if (generalGameMessage.isEmpty()) {
+            return;
+        }
+
+        FontMetrics fm = g2d.getFontMetrics(GENERAL_MESSAGE_FONT);
+        int messageWidth = fm.stringWidth(generalGameMessage);
+        int messageHeight = fm.getHeight();
+
+        // Position it near the top-center of the game viewport (below info panel)
+        int x = (getWidth() - messageWidth) / 2;
+        int y = INFO_PANEL_HEIGHT + messageHeight + 15; // 15px padding below info panel
+
+        // Draw a semi-transparent background for the message for better readability
+        g2d.setColor(new Color(0, 0, 0, 180)); // Semi-transparent black
+        g2d.fillRect(x - 10, y - messageHeight, messageWidth + 20, messageHeight + 10); // Padding around text
+
+        g2d.setFont(GENERAL_MESSAGE_FONT);
+        g2d.setColor(generalGameMessageColor);
+        g2d.drawString(generalGameMessage, x, y);
+    }
+
+    private void drawCheatInputUI(Graphics2D g2d) {
+        if (farmModel.getCurrentGameState() != GameState.CHEAT_INPUT) {
+            return;
+        }
+
+        // Panel Background
+        g2d.setColor(CHEAT_INPUT_BG_COLOR);
+        g2d.fill(cheatInputPanelRect);
+        g2d.setColor(CHEAT_INPUT_TEXT_COLOR.brighter());
+        g2d.draw(cheatInputPanelRect);
+
+        // Prompt Text
+        g2d.setFont(CHEAT_INPUT_FONT.deriveFont(Font.ITALIC));
+        g2d.setColor(CHEAT_INPUT_TEXT_COLOR.darker()); // Slightly dimmer for prompt
+        String promptText = "Enter Cheat Code (Esc to Cancel):";
+        FontMetrics fmPrompt = g2d.getFontMetrics();
+        int promptX = cheatInputPanelRect.x + 10;
+        int promptY = cheatInputPanelRect.y + fmPrompt.getAscent() + 5;
+        g2d.drawString(promptText, promptX, promptY);
+
+        // Input String
+        g2d.setFont(CHEAT_INPUT_FONT);
+        g2d.setColor(CHEAT_INPUT_TEXT_COLOR);
+        // Show a blinking cursor (simple underscore)
+        String displayInput = cheatInputString + (System.currentTimeMillis() / 500 % 2 == 0 ? "_" : "");
+        int inputX = cheatInputPanelRect.x + 10;
+        int inputY = cheatInputPanelRect.y + cheatInputPanelRect.height - fmPrompt.getDescent() - 10; // Position towards bottom
+        g2d.drawString("> " + displayInput, inputX, inputY);
     }
 
     private void drawMainMenu(Graphics g) {
@@ -623,31 +826,56 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (gameController == null || farmModel == null) return; // Added farmModel check
+        if (gameController == null || farmModel == null) return;
 
         int keyCode = e.getKeyCode();
 
         if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
             handleMainMenuInput(keyCode);
-            return; // Don't process further input if in main menu
+            repaint();
+            return;
         }
-        
-        // If NPC dialogue is active, it takes precedence
+
         if (isNpcDialogueActive) {
             if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_X || keyCode == KeyEvent.VK_E) {
                 isNpcDialogueActive = false;
-                // Potentially trigger next part of dialogue or close if it's the end
                 repaint();
             }
-            return; // Consume the input, don't process other game actions
+            return;
         }
 
-        if (isStoreUiActive) {
+        if (isStoreUiActive) { 
             handleStoreInput(keyCode);
             repaint();
             return; 
         }
 
+        if (farmModel.getCurrentGameState() == GameState.SHIPPING_BIN) {
+            handleShippingBinInput(keyCode);
+            repaint(); 
+            return;     
+        }
+
+        if (farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
+            handleCheatTyping(e); // Pass the full KeyEvent
+            repaint();
+            return;
+        }
+
+        if (farmModel.getCurrentGameState() == GameState.END_OF_DAY_SUMMARY) {
+            if (keyCode == KeyEvent.VK_ENTER) {
+                farmModel.setCurrentGameState(GameState.IN_GAME);
+                // The game logic for advancing to the new day (time, weather, etc.)
+                // should have already been completed by GameController before setting this state.
+                // This UI is purely for display and acknowledgement.
+                // Ensure game timer is running if it was stopped for this screen (though it usually isn't for EOD)
+                startGameTimer(); 
+            }
+            repaint(); // Repaint to clear the summary screen or update if needed
+            return;
+        }
+
+        // IN_GAME actions below
         boolean actionTaken = false;
 
         switch (keyCode) {
@@ -663,22 +891,29 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
                 actionTaken = gameController.requestPlayerMove(Direction.EAST);
                 break;
-            case KeyEvent.VK_E: // General Action Key
+            case KeyEvent.VK_E: 
                 actionTaken = tryGeneralAction();
                 break;
-            case KeyEvent.VK_F: // Eat
+            case KeyEvent.VK_F: 
                 actionTaken = gameController.requestEatSelectedItem();
                 break;
-            case KeyEvent.VK_T: // Store
-                openStoreDialog(); // This is a view-specific action opening a dialog
-                actionTaken = true; // Assume dialog opening is an action
+            case KeyEvent.VK_T: 
+                openStoreDialog(); 
+                actionTaken = true; 
                 break;
-            case KeyEvent.VK_B: // Shipping Bin
+            case KeyEvent.VK_B: 
                  actionTaken = tryOpenShippingBinDialog();
                 break;
-            case KeyEvent.VK_C:
-                handleCheatInput(); // Cheat input is an action itself
-                actionTaken = true;
+            case KeyEvent.VK_C: // Changed to activate CHEAT_INPUT state
+                if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+                    farmModel.setCurrentGameState(GameState.CHEAT_INPUT);
+                    cheatInputString = ""; // Clear previous input
+                    setGeneralGameMessage("Cheat mode activated. Enter code.", false);
+                    actionTaken = true;
+                } else if (farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
+                    // If already in cheat input, C could alternatively close it or be ignored
+                    // For now, let C while in cheat input do nothing or be handled by handleCheatTyping
+                }
                 break;
             case KeyEvent.VK_1:
                 gameController.selectPreviousItem();
@@ -741,315 +976,135 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
     }
 
-    private boolean tryGeneralAction() {
-        Player player = farmModel.getPlayer();
-        if (player == null) return false;
-        Item currentItem = player.getSelectedItem();
-        boolean actionProcessed = false;
+    private void handleCheatTyping(KeyEvent e) { // Changed parameter to KeyEvent e
+        if (farmModel.getCurrentGameState() != GameState.CHEAT_INPUT) return;
+        int keyCode = e.getKeyCode(); // Get keyCode from e
 
-        if (currentItem == null) {
-            // If no item is selected, try harvesting as a default action.
-            return gameController.requestHarvestAtPlayerPosition();
-        }
-
-        if (currentItem instanceof Equipment) {
-            String itemName = currentItem.getName();
-            if (itemName.equals("Hoe")) {
-                actionProcessed = gameController.requestTillLandAtPlayerPosition();
-                // dia cuman bisa dipake di farm
-                
-            } else if (itemName.equals("Watering Can")) {
-                actionProcessed = gameController.requestWaterTileAtPlayerPosition();
-            } else if (itemName.equals("Pickaxe")) {
-                actionProcessed = gameController.requestRecoverLandAtPlayerPosition();
-            } else if (itemName.equals("Fishing Rod")) {
-                // TODO: Implement fishing logic trigger here or in a dedicated fishing spot interaction
-                // System.out.println("Fishing Rod selected. Implement fishing action or interaction with water tile.");
-                actionProcessed = gameController.requestFish(); // Call the actual fishing method
-            }
-        } else if (currentItem instanceof Seed) {
-            actionProcessed = gameController.requestPlantSeedAtPlayerPosition();
-        } else if (currentItem instanceof Food) { // Assuming Food is an EdibleItem
-            // TODO: Implement eating logic. Maybe a different key for eating like 'F'.
-            // For now, 'E' won't trigger eating if it's food.
-            // actionProcessed = gameController.requestEatSelectedItem();
-            System.out.println("Food item selected: " + currentItem.getName() + ". Press a dedicated key (e.g., F) to eat.");
-        }
-        // Add other item type checks if necessary (e.g., for EdibleItem that is not Food)
-
-        if (actionProcessed) {
-            return true;
+        if (keyCode == KeyEvent.VK_ENTER) {
+            if (!cheatInputString.trim().isEmpty()) {
+                processCheatCode(cheatInputString.trim());
         } else {
-            // Fallback: if no specific item action was processed OR currentItem was not actionable with 'E',
-            // try harvesting. This makes 'E' also a harvest key if standing on a harvestable plant.
-            return gameController.requestHarvestAtPlayerPosition();
-        }
-    }
-    
-    public void openStoreDialog() {
-        if (gameController == null || farmModel == null || farmModel.getPlayer() == null) {
-            // JOptionPane.showMessageDialog(this, "Sistem toko belum siap.", "Error", JOptionPane.ERROR_MESSAGE);
-            displayMessage("Sistem toko belum siap."); // Use in-game message
-            return;
-        }
-
-        Player player = farmModel.getPlayer();
-        MapArea currentMap = player.getCurrentMap();
-
-        // Check if player is in the store location
-        boolean isInStoreLocation = false;
-        if (currentMap != null) {
-            // Primary check: if the current map is an instance of the Store class
-            if (currentMap instanceof com.spakborhills.model.Store) {
-                isInStoreLocation = true;
-            } 
-            // Fallback or alternative: check if map name is "STORE" (less robust)
-            // else if (currentMap.getName().equalsIgnoreCase(LocationType.STORE.toString())) {
-            //     isInStoreLocation = true;
-            // }
-        }
-
-        if (!isInStoreLocation) {
-            displayMessage("Kamu harus berada di Toko untuk mengaksesnya.");
-            return;
-        }
-
-        // ---- NEW In-Game UI Logic ----
-        this.storeItemsForDisplay = gameController.getStoreItemsForDisplay();
-        if (this.storeItemsForDisplay == null || this.storeItemsForDisplay.isEmpty()) {
-            displayMessage("Toko sedang kosong saat ini.");
-            return;
-        }
-        this.currentStoreItemSelectionIndex = 0;
-        this.currentBuyQuantity = 1;
-        this.storeInputMode = "selecting_item";
-        this.isStoreUiActive = true;
-        repaint();
-
-
-        // ---- OLD JOptionPane Logic ----
-        // Frame parentFrame = JOptionPane.getFrameForComponent(this);
-        // StoreDialog storeDialog = new StoreDialog(parentFrame, gameController, farmModel);
-        // storeDialog.setVisible(true); // This will block until the dialog is closed
-        // repaint(); // Repaint after dialog closes
-    }
-
-    /**
-     * Attempts to open the shipping bin dialog if the player is adjacent to the bin.
-     * @return true if an interaction occurred (dialog shown, sale attempted), false otherwise.
-     */
-    private boolean tryOpenShippingBinDialog() {
-        if (farmModel == null || gameController == null) {
-            System.err.println("GamePanel: FarmModel or GameController is null in tryOpenShippingBinDialog.");
-            return false;
-        }
-        Player player = farmModel.getPlayer();
-        FarmMap farmMap = farmModel.getFarmMap();
-        if (player == null || farmMap == null) {
-            System.err.println("GamePanel: Player or FarmMap is null in tryOpenShippingBinDialog.");
-            return false;
-        }
-
-        int playerX = player.getCurrentTileX();
-        int playerY = player.getCurrentTileY();
-        boolean nearBin = false;
-
-        // Define offsets for N, S, W, E, and also NE, NW, SE, SW for more generous interaction
-        // Order: N, S, W, E (Primary cardinal directions)
-        int[][] neighbors = {
-            {0, -1}, {0, 1}, {-1, 0}, {1, 0},  // N, S, W, E
-            // Optional: Add diagonals if you want interaction from corners
-            // {-1, -1}, {1, -1}, {-1, 1}, {1, 1} // NW, NE, SW, SE
-        };
-
-        for (int[] offset : neighbors) {
-            int checkX = playerX + offset[0];
-            int checkY = playerY + offset[1];
-
-            if (farmMap.isWithinBounds(checkX, checkY)) {
-                Tile adjacentTile = farmMap.getTile(checkX, checkY);
-                // Assuming Tile has getAssociatedObject() that returns DeployedObject or null
-                if (adjacentTile != null && adjacentTile.getAssociatedObject() instanceof ShippingBinObject) {
-                    nearBin = true;
-                    break; 
-                }
+                setGeneralGameMessage("No cheat code entered.", true);
             }
-        }
-
-        if (nearBin) {
-            System.out.println("Player is near the Shipping Bin. Opening sell dialog...");
-            return showSellDialog(); // showSellDialog will handle repaint and return true if action taken
+            farmModel.setCurrentGameState(GameState.IN_GAME); // Return to game
+            cheatInputString = ""; // Clear for next time
+        } else if (keyCode == KeyEvent.VK_ESCAPE) {
+            farmModel.setCurrentGameState(GameState.IN_GAME);
+            setGeneralGameMessage("Cheat input cancelled.", false);
+            cheatInputString = "";
+        } else if (keyCode == KeyEvent.VK_BACK_SPACE) {
+            if (!cheatInputString.isEmpty()) {
+                cheatInputString = cheatInputString.substring(0, cheatInputString.length() - 1);
+            }
         } else {
-            System.out.println("Player is not near the Shipping Bin.");
-            // JOptionPane.showMessageDialog(this, "You are not close enough to the Shipping Bin.", "Shipping Bin", JOptionPane.INFORMATION_MESSAGE);
-            return false; // No interaction occurred
-        }
-    }
-
-    /**
-     * Shows a dialog for the player to select items from their inventory to sell.
-     * Handles the interaction for choosing an item and quantity, then calls the controller.
-     * @return true if a sale was successfully made and game state changed (time advanced), false otherwise.
-     */
-    private boolean showSellDialog() {
-        if (farmModel == null || gameController == null || farmModel.getPlayer() == null) {
-            System.err.println("GamePanel: Critical model component null in showSellDialog.");
-            return false;
-        }
-        Player player = farmModel.getPlayer();
-        Inventory inventory = player.getInventory();
-        if (inventory == null || inventory.getItems().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Your inventory is empty.", "Shipping Bin", JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-
-        List<Item> sellableItems = new ArrayList<>();
-        StringBuilder sellListText = new StringBuilder("Select an item to sell (or Cancel):\n-------------------------------------\n");
-        int itemNumber = 1;
-
-        // Populate list of sellable items
-        for (Map.Entry<Item, Integer> entry : inventory.getItems().entrySet()) {
-            Item item = entry.getKey();
-            // Filter: Only allow Crop, Fish, Food, MiscItem to be sold
-            if (item instanceof Crop || item instanceof Fish || item instanceof Food || item instanceof MiscItem) {
-                if (entry.getValue() > 0) { // Only list items player actually has
-                    sellableItems.add(item);
-                    sellListText.append(String.format("%d. %s (Qty: %d)\n", itemNumber++, item.getName(), entry.getValue()));
-                }
-            }
-        }
-
-        if (sellableItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "You have no items that can be sold to the Shipping Bin.", "Shipping Bin", JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-        sellListText.append("-------------------------------------\nEnter item number to sell:");
-
-        String itemChoiceStr = JOptionPane.showInputDialog(this, sellListText.toString(), "Sell to Shipping Bin", JOptionPane.PLAIN_MESSAGE);
-        if (itemChoiceStr == null) { // User pressed Cancel or closed dialog
-            return false; 
-        }
-
-        try {
-            int selectedIdx = Integer.parseInt(itemChoiceStr.trim()) - 1;
-            if (selectedIdx < 0 || selectedIdx >= sellableItems.size()) {
-                JOptionPane.showMessageDialog(this, "Invalid item number selected.", "Error", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-            Item selectedItem = sellableItems.get(selectedIdx);
-            int maxQuantity = inventory.getItemCount(selectedItem);
-
-            String quantityStr = JOptionPane.showInputDialog(this, "Enter quantity of '" + selectedItem.getName() + "' to sell (Max: " + maxQuantity + "):", "Sell Quantity", JOptionPane.PLAIN_MESSAGE);
-            if (quantityStr == null) { // User cancelled
-                return false; 
-            }
-
-            int quantityToSell = Integer.parseInt(quantityStr.trim());
-            if (quantityToSell <= 0) {
-                JOptionPane.showMessageDialog(this, "Quantity must be positive.", "Error", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-            if (quantityToSell > maxQuantity) {
-                JOptionPane.showMessageDialog(this, "You don't have that many " + selectedItem.getName() + " to sell.", "Error", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-
-            // Attempt to sell through controller
-            boolean success = gameController.requestSellItemToBin(selectedItem.getName(), quantityToSell);
+            char typedChar = e.getKeyChar(); // Use e.getKeyChar() directly
             
-            if (success) {
-                JOptionPane.showMessageDialog(this, "Successfully placed " + quantityToSell + " " + selectedItem.getName() + " in the Shipping Bin!\nGold will be received overnight.", "Sale Successful", JOptionPane.INFORMATION_MESSAGE);
-                farmModel.getCurrentTime().advance(15); // Advance time by 15 minutes as per spec
-                return true; // Indicate that an action leading to state change occurred
-            } else {
-                // Controller or Player model should have printed specific error to console
-                // e.g., if already sold today or bin has too many unique items.
-                JOptionPane.showMessageDialog(this, "Could not place item in Shipping Bin.\n(Have you already sold today, or is the bin full of unique items?)", "Sale Failed", JOptionPane.WARNING_MESSAGE);
-                return false; // No successful sale, no time advance, but dialog was shown
+            if (Character.isLetterOrDigit(typedChar) || typedChar == ' ') {
+                 if (cheatInputString.length() < 50) { // Limit length
+                    cheatInputString += Character.toLowerCase(typedChar); // Store as lowercase
+                }
             }
-
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid number entered. Please enter a valid number.", "Input Error", JOptionPane.ERROR_MESSAGE);
-            return false;
+             // If using VK_ codes for letters/numbers (more verbose but explicit)
+            // Example: if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) cheatInputString += Character.toLowerCase((char)keyCode);
+            // else if (keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9) cheatInputString += (char)keyCode;
+            // else if (keyCode == KeyEvent.VK_SPACE) cheatInputString += ' ';
         }
     }
 
-    private void handleCheatInput() {
-        String cheat = JOptionPane.showInputDialog(this, "Enter cheat code (type 'help' for list of cheats):");
-        if (cheat == null || cheat.trim().isEmpty()) {
-            return;
-        }
+    // Renamed and modified from handleCheatInput to processCheatCode
+    private void processCheatCode(String cheatCode) {
+        // String cheat = JOptionPane.showInputDialog(this, "Enter cheat code (type 'help' for list of cheats):");
+        // if (cheat == null || cheat.trim().isEmpty()) {
+        //     return;
+        // }
+        // String[] parts = cheat.trim().toLowerCase().split("\\s+");
 
-        String[] parts = cheat.trim().toLowerCase().split("\\s+");
+        String[] parts = cheatCode.toLowerCase().split("\\s+"); // Already lowercase from input
         String command = parts[0];
 
-        if (command.equals("help")) {
-            showCheatsHelp();
-            return;
-        }
+        boolean success = false;
+        String feedbackMessage = "";
 
-        if (command.equals("weather")) {
+        if (command.equals("help")) {
+            showCheatsHelp(); // This still uses JOptionPane, will need to be converted later
+            feedbackMessage = "Help dialog displayed."; // Placeholder feedback
+            // Success isn't really applicable here in the same way
+        } else if (command.equals("weather")) {
             if (parts.length > 1) {
                 String weatherType = parts[1];
                 Weather newWeather = null;
-                if (weatherType.equals("sunny")) {
-                    newWeather = Weather.SUNNY;
-                } else if (weatherType.equals("rainy")) {
-                    newWeather = Weather.RAINY;
-                }
+                if (weatherType.equals("sunny")) newWeather = Weather.SUNNY;
+                else if (weatherType.equals("rainy")) newWeather = Weather.RAINY;
 
                 if (newWeather != null) {
                     farmModel.getCurrentTime().setWeather(newWeather);
-                    JOptionPane.showMessageDialog(this, "Weather changed to " + newWeather.toString(), "Cheat Activated", JOptionPane.INFORMATION_MESSAGE);
-                    repaint(); // Update display
+                    feedbackMessage = "Weather changed to " + newWeather.toString();
+                    success = true;
                 } else {
-                    JOptionPane.showMessageDialog(this, "Invalid weather type. Use 'sunny' or 'rainy'.", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                    feedbackMessage = "Invalid weather type. Use 'sunny' or 'rainy'.";
                 }
             } else {
-                JOptionPane.showMessageDialog(this, "Usage: weather [sunny|rainy]", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                feedbackMessage = "Usage: weather [sunny|rainy]";
             }
         } else if (command.equals("season")) {
             if (parts.length > 1) {
-                String seasonType = parts[1].toUpperCase(); // Match enum names
+                String seasonType = parts[1].toUpperCase();
                 Season newSeason = null;
-                try {
-                    newSeason = Season.valueOf(seasonType);
-                } catch (IllegalArgumentException e) {
-                    // Invalid season name
-                }
-
-                if (newSeason != null && newSeason != Season.ANY) { // ANY is not a settable season
+                try { newSeason = Season.valueOf(seasonType); } catch (IllegalArgumentException ex) {}
+                if (newSeason != null && newSeason != Season.ANY) {
                     farmModel.getCurrentTime().setSeason(newSeason);
-                    JOptionPane.showMessageDialog(this, "Season changed to " + newSeason.toString(), "Cheat Activated", JOptionPane.INFORMATION_MESSAGE);
-                    repaint(); // Update display
+                    feedbackMessage = "Season changed to " + newSeason.toString();
+                    success = true;
                 } else {
-                    JOptionPane.showMessageDialog(this, "Invalid season. Use SPRING, SUMMER, FALL, or WINTER.", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                    feedbackMessage = "Invalid season. Use SPRING, SUMMER, FALL, or WINTER.";
                 }
             } else {
-                JOptionPane.showMessageDialog(this, "Usage: season [SPRING|SUMMER|FALL|WINTER]", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                feedbackMessage = "Usage: season [SPRING|SUMMER|FALL|WINTER]";
             }
-        } else if (command.equals("time")) { // Added time cheat
+        } else if (command.equals("time")) {
             if (parts.length == 3) {
                 try {
                     int hour = Integer.parseInt(parts[1]);
                     int minute = Integer.parseInt(parts[2]);
-                    if (gameController != null) {
-                        boolean success = gameController.requestSetTime(hour, minute);
-                        if (success) {
-                            JOptionPane.showMessageDialog(this, "Time changed to " + String.format("%02d:%02d", hour, minute), "Cheat Activated", JOptionPane.INFORMATION_MESSAGE);
-                            repaint(); // Update display
-                        } else {
-                            JOptionPane.showMessageDialog(this, "Invalid time values. Hour (0-23), Minute (0-59).", "Cheat Error", JOptionPane.ERROR_MESSAGE);
-                        }
+                    if (gameController.requestSetTime(hour, minute)) {
+                        feedbackMessage = "Time changed to " + String.format("%02d:%02d", hour, minute);
+                        success = true;
+                    } else {
+                        feedbackMessage = "Invalid time values. Hour (0-23), Minute (0-59).";
                     }
-                } catch (NumberFormatException e) {
-                    JOptionPane.showMessageDialog(this, "Invalid number format for time. Usage: time HH MM", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                } catch (NumberFormatException ex) {
+                    feedbackMessage = "Invalid number format for time. Usage: time HH MM";
                 }
             } else {
-                JOptionPane.showMessageDialog(this, "Usage: time HH MM (e.g., time 8 0 for 8:00 AM, time 22 30 for 10:30 PM)", "Cheat Error", JOptionPane.ERROR_MESSAGE);
+                feedbackMessage = "Usage: time HH MM (e.g., time 8 0 for 8:00 AM, time 22 30 for 10:30 PM)";
             }
         } else if (command.equals("fishdebug")) {
-            StringBuilder debugMessage = new StringBuilder("<html><body>"); // Use HTML for better formatting
+            // ... (fishdebug logic still uses JOptionPane, needs conversion later)
+            showFishDebugDialog(); // Assuming this method encapsulates the JOptionPane for fishdebug
+            feedbackMessage = "Fish debug info displayed.";
+        } else if (command.equals("gold")) {
+            if (parts.length > 1) {
+                try {
+                    int amount = Integer.parseInt(parts[1]);
+                    farmModel.getPlayer().addGold(amount); // addGold handles positive/negative
+                    feedbackMessage = (amount >= 0 ? "Added " : "Removed ") + Math.abs(amount) + " gold. New total: " + farmModel.getPlayer().getGold() + "G";
+                    success = true;
+                } catch (NumberFormatException ex) {
+                    feedbackMessage = "Invalid gold amount.";
+                }
+            } else {
+                 feedbackMessage = "Usage: gold [amount]";
+            }
+        } else {
+            feedbackMessage = "Unknown cheat code: " + cheatCode;
+        }
+
+        setGeneralGameMessage(feedbackMessage, !success && !command.equals("help") && !command.equals("fishdebug"));
+        if (success) repaint(); // Repaint if a game state affecting visual changed (weather, season, time, gold in HUD)
+    }
+
+    private void showFishDebugDialog() { // Extracted for clarity, still uses JOptionPane
+        StringBuilder debugMessage = new StringBuilder("<html><body>");
             GameTime currentTime = farmModel.getCurrentTime();
             Season currentSeason = currentTime.getCurrentSeason();
             Weather currentWeather = currentTime.getCurrentWeather();
@@ -1089,23 +1144,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             }
             debugMessage.append("</body></html>");
 
-            // Use JEditorPane for HTML rendering in JOptionPane
             JEditorPane editorPane = new JEditorPane("text/html", debugMessage.toString());
             editorPane.setEditable(false);
             JScrollPane scrollPane = new JScrollPane(editorPane);
-            scrollPane.setPreferredSize(new Dimension(600, 400)); // Adjust size as needed
+        scrollPane.setPreferredSize(new Dimension(600, 400)); 
             JOptionPane.showMessageDialog(this, scrollPane, "Fish Debug Information", JOptionPane.INFORMATION_MESSAGE);
-
-        } else if (command.equals("gold")) {
-            if (parts.length > 1) {
-                int newGold = Integer.parseInt(parts[1]);
-                farmModel.getPlayer().addGold(newGold);
-                JOptionPane.showMessageDialog(this, "Gold changed to " + newGold, "Cheat Activated", JOptionPane.INFORMATION_MESSAGE);
-                repaint(); // Update display
-            }
-        } else {
-            JOptionPane.showMessageDialog(this, "Unknown cheat code: " + cheat, "Cheat Error", JOptionPane.ERROR_MESSAGE);
-        }
     }
 
     /**
@@ -1193,25 +1236,28 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
     /**
      * Menampilkan dialog informasi akhir hari (misalnya, karena pingsan atau tidur normal).
+     * Kini menggunakan panel in-game.
      * @param eventMessage Pesan utama kejadian (misal, "Kamu pingsan!" atau "Kamu tidur nyenyak.").
      * @param income Pendapatan dari penjualan di hari sebelumnya.
      * @param newDayInfo Informasi tentang hari baru (Tanggal, Musim, Cuaca).
      */
     public void showEndOfDayMessage(String eventMessage, int income, String newDayInfo) {
-        StringBuilder message = new StringBuilder();
-        message.append(eventMessage).append("\n\n");
-        if (income > 0) {
-            message.append("Kamu mendapatkan ").append(income).append("G dari penjualan kemarin.\n");
+        this.endOfDayEventMessage = eventMessage;
+        this.endOfDayIncome = income;
+        this.endOfDayNewDayInfo = newDayInfo;
+        
+        if (farmModel != null) {
+            farmModel.setCurrentGameState(GameState.END_OF_DAY_SUMMARY);
+            // Consider stopping game timer here if it's not already stopped by controller logic for EOD
+            // stopGameTimer(); // Usually GameController handles stopping timer before calling this for sleep/passout
         } else {
-            message.append("Tidak ada pendapatan dari penjualan kemarin.\n");
+            // Fallback or error handling if farmModel is null
+            System.err.println("GamePanel: farmModel is null, cannot show EndOfDaySummaryUI properly.");
+            // As a last resort, could show JOptionPane here, but indicates a deeper issue.
+            // JOptionPane.showMessageDialog(this, eventMessage + "\nIncome: " + income + "\n" + newDayInfo, "Akhir Hari", JOptionPane.INFORMATION_MESSAGE);
+            return;
         }
-        message.append("\n").append(newDayInfo);
-
-        JOptionPane.showMessageDialog(this, 
-                                      message.toString(), 
-                                      "Akhir Hari", 
-                                      JOptionPane.INFORMATION_MESSAGE);
-        repaint(); // Pastikan UI di-update setelah dialog ditutup
+        repaint(); 
     }
 
     /**
@@ -1850,5 +1896,442 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             storeFeedbackTimer.start();
         }
         repaint(); // Langsung repaint untuk menampilkan feedback
+    }
+
+    private void handleShippingBinInput(int keyCode) {
+        if (farmModel.getCurrentGameState() != GameState.SHIPPING_BIN) return;
+
+        if (shippingBinInputMode.equals("inputting_quantity")) {
+            if (keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9) {
+                if (shippingBinQuantityInputString.length() < 3) { // Max 3 digits for quantity
+                    shippingBinQuantityInputString += (char) keyCode;
+                }
+            } else if (keyCode == KeyEvent.VK_BACK_SPACE) {
+                if (!shippingBinQuantityInputString.isEmpty()) {
+                    shippingBinQuantityInputString = shippingBinQuantityInputString.substring(0, shippingBinQuantityInputString.length() - 1);
+                }
+            } else if (keyCode == KeyEvent.VK_ENTER) {
+                if (!shippingBinQuantityInputString.isEmpty() && currentShippingBinItemForQuantity != null) {
+                    try {
+                        int quantity = Integer.parseInt(shippingBinQuantityInputString);
+                        if (quantity > 0) {
+                            gameController.requestAddItemToShippingBin(currentShippingBinItemForQuantity, quantity);
+                            // Feedback will be set by controller or this method after controller call
+                        }
+                    } catch (NumberFormatException nfe) {
+                        setShippingBinFeedback("Invalid quantity.", true);
+                    }
+                }
+                shippingBinInputMode = "selecting_player_item"; // Go back to item selection
+                shippingBinQuantityInputString = "";
+                currentShippingBinItemForQuantity = null;
+            } else if (keyCode == KeyEvent.VK_ESCAPE) {
+                shippingBinInputMode = "selecting_player_item";
+                shippingBinQuantityInputString = "";
+                currentShippingBinItemForQuantity = null;
+                setShippingBinFeedback("Quantity input cancelled.", false);
+            }
+        } else { // "selecting_player_item"
+            switch (keyCode) {
+                case KeyEvent.VK_UP:
+                    if (currentPlayerItemSelectionIndex > 0) {
+                        currentPlayerItemSelectionIndex--;
+                    }
+                    break;
+                case KeyEvent.VK_DOWN:
+                    if (playerSellableItems != null && currentPlayerItemSelectionIndex < playerSellableItems.size() - 1) {
+                        currentPlayerItemSelectionIndex++;
+                    }
+                    break;
+                case KeyEvent.VK_ENTER:
+                    if (playerSellableItems != null && !playerSellableItems.isEmpty() && currentPlayerItemSelectionIndex < playerSellableItems.size()) {
+                        currentShippingBinItemForQuantity = playerSellableItems.get(currentPlayerItemSelectionIndex);
+                        shippingBinInputMode = "inputting_quantity";
+                        shippingBinQuantityInputString = "";
+                        setShippingBinFeedback("Enter quantity for " + currentShippingBinItemForQuantity.getName(), false);
+                    }
+                    break;
+                case KeyEvent.VK_ESCAPE:
+                    gameController.requestCloseShippingBin();
+                    break;
+                 // Optional: Add keys to switch focus between player inventory and bin items if managing bin items is implemented
+            }
+        }
+        repaint();
+    }
+
+    private void drawShippingBinUI(Graphics2D g2d) {
+        if (farmModel.getCurrentGameState() != GameState.SHIPPING_BIN) return;
+
+        // Panel Background
+        g2d.setColor(SHIPPING_BIN_BG_COLOR);
+        g2d.fillRect(shippingBinPanelRect.x, shippingBinPanelRect.y, shippingBinPanelRect.width, shippingBinPanelRect.height);
+        g2d.setColor(SHIPPING_BIN_TEXT_COLOR);
+        g2d.drawRect(shippingBinPanelRect.x, shippingBinPanelRect.y, shippingBinPanelRect.width, shippingBinPanelRect.height);
+
+        // Title
+        g2d.setFont(DIALOG_FONT); // Re-use dialog font for title
+        String title = "Shipping Bin";
+        FontMetrics fmTitle = g2d.getFontMetrics();
+        int titleWidth = fmTitle.stringWidth(title);
+        g2d.drawString(title, shippingBinPanelRect.x + (shippingBinPanelRect.width - titleWidth) / 2, shippingBinPanelRect.y + 30);
+
+        // Close Button (simple text for now)
+        g2d.setFont(SHIPPING_BIN_FONT);
+        g2d.drawString("[Esc] Close", shippingBinCloseButtonRect.x + 5, shippingBinCloseButtonRect.y + 20);
+
+        // Player Inventory List (Left Side)
+        g2d.setFont(SHIPPING_BIN_FONT);
+        g2d.drawString("Your Items:", playerItemsListRect.x, playerItemsListRect.y - 5);
+        g2d.drawRect(playerItemsListRect.x, playerItemsListRect.y, playerItemsListRect.width, playerItemsListRect.height);
+
+        g2d.setFont(SHIPPING_BIN_ITEM_FONT);
+        if (playerSellableItems != null && !playerSellableItems.isEmpty()) {
+            for (int i = 0; i < playerSellableItems.size(); i++) {
+                Item item = playerSellableItems.get(i);
+                String itemName = item.getName();
+                int quantity = farmModel.getPlayer().getInventory().getItemCount(item); // Corrected to getItemCount(item)
+                String displayText = String.format("%-15s x%d", itemName, quantity);
+                if (i == currentPlayerItemSelectionIndex) {
+                    g2d.setColor(SHIPPING_BIN_HIGHLIGHT_COLOR);
+                    g2d.fillRect(playerItemsListRect.x + 1, playerItemsListRect.y + 1 + (i * 20), playerItemsListRect.width - 2, 20);
+                    g2d.setColor(Color.BLACK); // Text color on highlight
+                } else {
+                    g2d.setColor(SHIPPING_BIN_TEXT_COLOR);
+                }
+                g2d.drawString(displayText, playerItemsListRect.x + 5, playerItemsListRect.y + 15 + (i * 20));
+            }
+        } else {
+            g2d.setColor(SHIPPING_BIN_TEXT_COLOR);
+            g2d.drawString("No sellable items.", playerItemsListRect.x + 5, playerItemsListRect.y + 20);
+        }
+
+        // Items in Bin List (Right Side)
+        g2d.setColor(SHIPPING_BIN_TEXT_COLOR); // Reset color
+        g2d.setFont(SHIPPING_BIN_FONT);
+        // int slotsUsed = (itemsInBinSession != null) ? itemsInBinSession.size() : 0; // OLD BUGGY WAY
+        int slotsUsed = 0;
+        if (farmModel != null && farmModel.getShippingBin() != null) {
+            slotsUsed = farmModel.getShippingBin().getItems().size(); // CORRECT WAY
+        }
+        g2d.drawString(String.format("In Bin (Slots: %d/%d):", slotsUsed, ShippingBin.MAX_UNIQUE_SLOTS), binItemsListRect.x, binItemsListRect.y - 5);
+        g2d.drawRect(binItemsListRect.x, binItemsListRect.y, binItemsListRect.width, binItemsListRect.height);
+
+        g2d.setFont(SHIPPING_BIN_ITEM_FONT);
+        if (farmModel.getShippingBin() != null && !farmModel.getShippingBin().getItems().isEmpty()) { // Check farmModel's bin
+            int i = 0;
+            for (Map.Entry<Item, Integer> entry : farmModel.getShippingBin().getItems().entrySet()) {
+                Item item = entry.getKey();
+                int quantityInBin = entry.getValue();
+                String displayText = String.format("%-15s x%d", item.getName(), quantityInBin);
+                g2d.setColor(SHIPPING_BIN_TEXT_COLOR);
+                // Highlighting for items in bin is not implemented here, could be added if needed
+                g2d.drawString(displayText, binItemsListRect.x + 5, binItemsListRect.y + 15 + (i * 20));
+                i++;
+            }
+        } else {
+            g2d.setColor(SHIPPING_BIN_TEXT_COLOR);
+            g2d.drawString("Bin is empty.", binItemsListRect.x + 5, binItemsListRect.y + 20);
+        }
+        
+        // Quantity Input Mode
+        if (shippingBinInputMode.equals("inputting_quantity") && currentShippingBinItemForQuantity != null) {
+            g2d.setColor(SHIPPING_BIN_TEXT_COLOR);
+            g2d.setFont(SHIPPING_BIN_FONT);
+            String prompt = "Qty for " + currentShippingBinItemForQuantity.getName() + ": " + shippingBinQuantityInputString + "_";
+            g2d.fillRect(shippingBinQuantityRect.x, shippingBinQuantityRect.y, shippingBinQuantityRect.width, shippingBinQuantityRect.height); // Background for input
+            g2d.setColor(Color.BLACK);
+            g2d.drawString(prompt, shippingBinQuantityRect.x + 5, shippingBinQuantityRect.y + 20);
+        }
+
+        // Feedback Message
+        if (shippingBinFeedbackMessage != null && !shippingBinFeedbackMessage.isEmpty()) {
+            g2d.setFont(SHIPPING_BIN_FONT);
+            g2d.setColor(shippingBinFeedbackColor);
+            FontMetrics fmFeedback = g2d.getFontMetrics();
+            int msgWidth = fmFeedback.stringWidth(shippingBinFeedbackMessage);
+            g2d.drawString(shippingBinFeedbackMessage, shippingBinPanelRect.x + (shippingBinPanelRect.width - msgWidth) / 2, shippingBinPanelRect.y + shippingBinPanelRect.height - 10);
+        }
+    }
+
+    private void setShippingBinFeedback(String message, boolean isError) {
+        shippingBinFeedbackMessage = message;
+        shippingBinFeedbackColor = isError ? Color.RED : SHIPPING_BIN_TEXT_COLOR;
+        shippingBinFeedbackTimer.restart();
+        repaint();
+    }
+
+    // Method to be called by GameController to open the UI
+    public void openShippingBinUI() {
+        if (farmModel.getShippingBin() == null) {
+            System.err.println("GamePanel: ShippingBin model is null. Cannot open UI.");
+            return;
+        }
+        playerSellableItems = getSellableItemsFromInventory();
+        // itemsInBinSession is not strictly needed if we draw directly from shippingBin.getItems()
+        // For now, let's keep it simple and draw directly in drawShippingBinUI.
+        // If itemsInBinSession was for modification, then it's different.
+        // The current draw logic iterates farmModel.getShippingBin().getItems().entrySet()
+        // So, itemsInBinSession variable in GamePanel might be redundant for display if always a fresh copy.
+
+        currentPlayerItemSelectionIndex = 0;
+        shippingBinInputMode = "selecting_player_item";
+        shippingBinQuantityInputString = "";
+        currentShippingBinItemForQuantity = null;
+        setShippingBinFeedback("Select an item to add to the bin. [Enter] to set quantity.", false);
+        // farmModel.setCurrentGameState(GameState.SHIPPING_BIN); // Controller should set this
+        repaint();
+    }
+
+    // Method to be called by GameController to close the UI
+    public void closeShippingBinUI() {
+        // farmModel.setCurrentGameState(GameState.IN_GAME); // Controller should set this
+        shippingBinFeedbackMessage = ""; // Clear any lingering messages
+        // Player items and bin items will be naturally cleared or reloaded on next open
+        repaint();
+    }
+
+    // Helper to get sellable items from player's inventory
+    private List<Item> getSellableItemsFromInventory() {
+        List<Item> sellable = new ArrayList<>();
+        if (farmModel.getPlayer() != null && farmModel.getPlayer().getInventory() != null) {
+            for (Map.Entry<Item, Integer> entry : farmModel.getPlayer().getInventory().getItems().entrySet()) {
+                Item item = entry.getKey();
+                // Filter out non-sellable types like Equipment
+                if (item instanceof Crop || item instanceof Fish || item instanceof Food || item instanceof MiscItem) {
+                    if (entry.getValue() > 0) { // Only if player has some
+                        // We add a representation of the item type, actual quantity is fetched during display
+                        // Or, create new Item objects with full details if needed for other logic
+                        sellable.add(item); 
+                    }
+                }
+            }
+        }
+        // Sort alphabetically for easier navigation
+        sellable.sort((i1, i2) -> i1.getName().compareToIgnoreCase(i2.getName()));
+        return sellable;
+    }
+
+    // Call this when GameController confirms an item was added to bin
+    public void itemAddedToBinSuccessfully(Item item, int quantityAdded) {
+        // Refresh itemsInBinSession from the model - NO LONGER NEEDED if drawing direct
+        // itemsInBinSession = new ArrayList<>(farmModel.getShippingBin().getItems().entrySet());
+        // Refresh player's sellable items as quantity might have changed
+        playerSellableItems = getSellableItemsFromInventory();
+        
+        // Reset selection and quantity input
+        shippingBinInputMode = "selecting_player_item";
+        shippingBinQuantityInputString = "";
+        currentShippingBinItemForQuantity = null;
+        
+        setShippingBinFeedback(quantityAdded + " " + item.getName() + " added to bin.", false);
+        
+        // Adjust selection if the list size changed and selection is now out of bounds
+        if (currentPlayerItemSelectionIndex >= playerSellableItems.size() && !playerSellableItems.isEmpty()) {
+            currentPlayerItemSelectionIndex = playerSellableItems.size() - 1;
+        } else if (playerSellableItems.isEmpty()){
+            currentPlayerItemSelectionIndex = 0;
+        }
+        repaint();
+    }
+
+    public void shippingBinActionFailed(String errorMessage) {
+        setShippingBinFeedback(errorMessage, true);
+        // Potentially revert quantity input mode if error occurred there
+        shippingBinInputMode = "selecting_player_item";
+        shippingBinQuantityInputString = "";
+        currentShippingBinItemForQuantity = null;
+        repaint();
+    }
+
+    private boolean tryGeneralAction() {
+        Player player = farmModel.getPlayer();
+        if (player == null) return false;
+        Item currentItem = player.getSelectedItem();
+        boolean actionProcessed = false;
+
+        if (currentItem == null) {
+            // If no item is selected, try harvesting as a default action.
+            return gameController.requestHarvestAtPlayerPosition();
+        }
+
+        if (currentItem instanceof Equipment) {
+            String itemName = currentItem.getName();
+            if (itemName.equals("Hoe")) {
+                actionProcessed = gameController.requestTillLandAtPlayerPosition();
+            } else if (itemName.equals("Watering Can")) {
+                actionProcessed = gameController.requestWaterTileAtPlayerPosition();
+            } else if (itemName.equals("Pickaxe")) {
+                actionProcessed = gameController.requestRecoverLandAtPlayerPosition();
+            } else if (itemName.equals("Fishing Rod")) {
+                actionProcessed = gameController.requestFish();
+            }
+        } else if (currentItem instanceof Seed) {
+            actionProcessed = gameController.requestPlantSeedAtPlayerPosition();
+        } else if (currentItem instanceof Food) {
+            // Eating is handled by 'F' key now, 'E' won't trigger eating for Food.
+            // System.out.println("Food item selected: " + currentItem.getName() + ". Press 'F' to eat.");
+        }
+
+        if (actionProcessed) {
+            return true;
+        } else {
+            // Fallback: if no specific item action was processed OR currentItem was not actionable with 'E',
+            // try harvesting. This makes 'E' also a harvest key if standing on a harvestable plant.
+            return gameController.requestHarvestAtPlayerPosition();
+        }
+    }
+    
+    public void openStoreDialog() {
+        if (gameController == null || farmModel == null || farmModel.getPlayer() == null) {
+            setGeneralGameMessage("Store system not ready.", true);
+            return;
+        }
+
+        Player player = farmModel.getPlayer();
+        MapArea currentMap = player.getCurrentMap();
+
+        boolean isInStoreLocation = false;
+        if (currentMap != null) {
+            if (currentMap instanceof com.spakborhills.model.Store) { // Assuming Store is a MapArea type
+                isInStoreLocation = true;
+            } 
+        }
+
+        if (!isInStoreLocation) {
+            setGeneralGameMessage("You must be in the Store to access it.", true);
+            return;
+        }
+
+        this.storeItemsForDisplay = gameController.getStoreItemsForDisplay();
+        if (this.storeItemsForDisplay == null || this.storeItemsForDisplay.isEmpty()) {
+            setGeneralGameMessage("The store is currently empty.", false);
+            return;
+        }
+        this.currentStoreItemSelectionIndex = 0;
+        this.currentBuyQuantity = 1;
+        this.storeInputMode = "selecting_item";
+        // farmModel.setCurrentGameState(GameState.STORE_UI); // This should be done by controller or here
+        this.isStoreUiActive = true; // This flag should be linked to GameState.STORE_UI
+        farmModel.setCurrentGameState(GameState.STORE_UI); // Explicitly set game state
+        repaint();
+    }
+
+    private boolean tryOpenShippingBinDialog() {
+        Player player = farmModel.getPlayer();
+        if (!(player.getCurrentMap() instanceof FarmMap)) {
+            return false; // Can only use shipping bin from FarmMap
+        }
+
+        FarmMap farmMap = (FarmMap) player.getCurrentMap();
+        int playerX = player.getCurrentTileX();
+        int playerY = player.getCurrentTileY();
+
+        int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}; // N, S, W, E
+        boolean adjacentToBin = false;
+        for (int[] dir : directions) {
+            Tile adjacentTile = farmMap.getTile(playerX + dir[0], playerY + dir[1]);
+            if (adjacentTile != null && adjacentTile.getAssociatedObject() instanceof ShippingBinObject) {
+                adjacentToBin = true;
+                break;
+            }
+        }
+
+        if (adjacentToBin) {
+            if (farmModel.getShippingBin().canSellToday()) {
+                gameController.requestOpenShippingBin(); // This will set GameState to SHIPPING_BIN
+                return true;
+            } else {
+                setGeneralGameMessage("You have already used the shipping bin today.", false);
+                return false; 
+            }
+        } else {
+            // Optional: setGeneralGameMessage("You need to be next to the Shipping Bin to use it.", true);
+            return false;
+        }
+    }
+
+    private void drawEndOfDaySummaryUI(Graphics2D g2d) {
+        if (farmModel.getCurrentGameState() != GameState.END_OF_DAY_SUMMARY) {
+            return;
+        }
+
+        // Panel Background
+        g2d.setColor(END_OF_DAY_BG_COLOR);
+        g2d.fill(endOfDayPanelRect);
+        g2d.setColor(END_OF_DAY_TEXT_COLOR.brighter());
+        g2d.draw(endOfDayPanelRect);
+
+        int currentY = endOfDayPanelRect.y + 40;
+        int textX = endOfDayPanelRect.x + 30;
+        int textWidth = endOfDayPanelRect.width - 60;
+
+        // Title
+        g2d.setFont(END_OF_DAY_FONT_TITLE);
+        g2d.setColor(END_OF_DAY_TEXT_COLOR);
+        String title = "End of Day";
+        FontMetrics fmTitle = g2d.getFontMetrics();
+        int titleWidth = fmTitle.stringWidth(title);
+        g2d.drawString(title, endOfDayPanelRect.x + (endOfDayPanelRect.width - titleWidth) / 2, currentY);
+        currentY += fmTitle.getHeight() + 20;
+
+        // Event Message
+        g2d.setFont(END_OF_DAY_FONT_TEXT);
+        List<String> eventLines = getWrappedText(endOfDayEventMessage, textWidth, g2d.getFontMetrics());
+        for (String line : eventLines) {
+            g2d.drawString(line, textX, currentY);
+            currentY += g2d.getFontMetrics().getHeight();
+        }
+        currentY += 10; // Spacing
+
+        // Income
+        String incomeText;
+        if (endOfDayIncome > 0) {
+            incomeText = "You earned " + endOfDayIncome + " G from sales.";
+        } else {
+            incomeText = "No income from sales today.";
+        }
+        List<String> incomeLines = getWrappedText(incomeText, textWidth, g2d.getFontMetrics());
+        for (String line : incomeLines) {
+            g2d.drawString(line, textX, currentY);
+            currentY += g2d.getFontMetrics().getHeight();
+        }
+        currentY += 20; // More spacing
+
+        // New Day Info
+        List<String> newDayLines = getWrappedText(endOfDayNewDayInfo, textWidth, g2d.getFontMetrics());
+        for (String line : newDayLines) {
+            g2d.drawString(line, textX, currentY);
+            currentY += g2d.getFontMetrics().getHeight();
+        }
+        currentY += 30; // Spacing before prompt
+
+        // Prompt to continue
+        g2d.setFont(END_OF_DAY_FONT_TEXT.deriveFont(Font.ITALIC));
+        String continuePrompt = "Press Enter to start the new day...";
+        FontMetrics fmPrompt = g2d.getFontMetrics();
+        int promptWidth = fmPrompt.stringWidth(continuePrompt);
+        g2d.drawString(continuePrompt, endOfDayPanelRect.x + (endOfDayPanelRect.width - promptWidth) / 2, endOfDayPanelRect.y + endOfDayPanelRect.height - 30);
+    }
+
+    // Helper for basic word wrapping (can be more sophisticated)
+    private List<String> getWrappedText(String text, int maxWidth, FontMetrics fm) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.isEmpty() || fm == null) return lines;
+
+        String[] words = text.split(" ");
+        StringBuilder currentLine = new StringBuilder();
+        for (String word : words) {
+            if (fm.stringWidth(currentLine.toString() + word) < maxWidth) {
+                currentLine.append(word).append(" ");
+            } else {
+                lines.add(currentLine.toString().trim());
+                currentLine = new StringBuilder(word + " ");
+            }
+        }
+        if (currentLine.length() > 0) {
+            lines.add(currentLine.toString().trim());
+        }
+        return lines;
     }
 }

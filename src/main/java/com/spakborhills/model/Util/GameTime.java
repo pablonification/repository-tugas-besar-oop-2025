@@ -28,6 +28,7 @@ public class GameTime {
 
     private int rainyDaysThisSeason;
     private final Random randomGenerator;
+    private boolean isPaused; // New field for pausing time
 
     /**
      * Konstruktor untuk GameTime.
@@ -43,6 +44,7 @@ public class GameTime {
         this.totalDaysPlayed = 1; // Mulai dari hari pertama
         this.randomGenerator = new Random();
         this.rainyDaysThisSeason = 0;
+        this.isPaused = false; // Initialize to not paused
         determineInitialWeather();
         System.out.println("GameTime diinisialisasi: Hari " + dayOfMonth + " " + currentSeason +
                            ", " + String.format("%02d:%02d", hour, minute) + ", Cuaca: " + currentWeather);
@@ -156,7 +158,7 @@ public class GameTime {
      * @return true jika penambahan menit ini menyebabkan pergantian hari, false jika tidak.
      */
     public void advance(int minutesToAdd) {
-        if (minutesToAdd <= 0) return;
+        if (isPaused || minutesToAdd <= 0) return; // Check pause status here
 
         this.minute += minutesToAdd;
         // boolean dayChanged = false;
@@ -170,6 +172,20 @@ public class GameTime {
         }
         // System.out.println("Waktu maju ke: " + getTimeString()); // Feedback
         // return dayChanged;
+    }
+
+    /**
+     * Sets the pause state of the game time.
+     * When paused, the advance() method will not progress time.
+     * @param paused true to pause time, false to resume.
+     */
+    public void setPaused(boolean paused) {
+        this.isPaused = paused;
+        if (isPaused) {
+            System.out.println("GameTime Paused");
+        } else {
+            System.out.println("GameTime Resumed");
+        }
     }
 
     /**

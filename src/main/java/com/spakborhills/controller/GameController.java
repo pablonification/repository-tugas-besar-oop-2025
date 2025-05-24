@@ -31,6 +31,8 @@ import com.spakborhills.model.Util.*;
 // GamePanel might be needed later for more complex interactions or direct view updates
 import com.spakborhills.view.GamePanel;
 import com.spakborhills.model.Object.House; // Added import
+import com.spakborhills.model.Util.ShippingBin; // Import ShippingBin
+import com.spakborhills.model.Enum.GameState; // Import GameState
 
 public class GameController {
 
@@ -80,6 +82,54 @@ public class GameController {
             }
         }
         return moved;
+    }
+
+    /**
+     * Checks if the player should pass out due to late time and processes it.
+     * This method is intended to be called periodically by the game loop/timer.
+     */
+    public void checkTimeBasedPassOut() {
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getCurrentTime() == null || gamePanel == null) {
+            // Avoid critical errors if components aren't ready, though this check should ideally only run when in_game
+            return; 
+        }
+
+        // Only check if in game and not already in a state that prevents pass out (like EOD summary)
+        if (farmModel.getCurrentGameState() != GameState.IN_GAME) {
+            return;
+        }
+
+        if (farmModel.getCurrentTime().isPastBedtime()) {
+            System.out.println("GameController: Player is past bedtime. Initiating pass out.");
+            Player player = farmModel.getPlayer();
+            GameTime currentTime = farmModel.getCurrentTime();
+            EndGameStatistics statistics = farmModel.getStatistics(); // Assuming Farm has getStatistics()
+            PriceList priceList = farmModel.getPriceList(); // Assuming Farm has getPriceList()
+
+            String eventMessage = "You stayed up too late and passed out!";
+            
+            // Process sales before advancing to next day and changing player state
+            int income = farmModel.getShippingBin().processSales(statistics, priceList, currentTime.getCurrentDay(), currentTime.getCurrentSeason());
+            
+            // Player.passOut() now returns the energy penalty, but we might not need it here directly
+            // if the EndOfDayMessage just needs the event and income.
+            // Farm farm = farmModel; // Pass the farmModel instance itself
+            player.passOut(farmModel); // Pass the farm model instance
+            
+            // farmModel.getCurrentTime().nextDay(); // Player.passOut should handle calling farm.nextDayLogic() or similar
+            // player.passOut() should set location to home and reset energy.
+            // The nextDay logic is now expected to be handled within Farm model when passOut is called on player, 
+            // or GameController's passOut should call farmModel.nextDayLogic() if player.passOut doesn't trigger it.
+            // For now, assume player.passOut handles becoming the new day via farmModel reference.
+            // If not, farmModel.nextDayLogic() or similar should be called here AFTER player.passOut() and BEFORE showEndOfDayMessage.
+            // Let's assume player.passOut(farmModel) correctly triggers the day change logic via the farmModel reference.
+
+            if (gamePanel != null) {
+                // generateNewDayInfoString() might need to be called *after* the day has officially ticked over.
+                // If player.passOut(farmModel) ensures the new day's state is set in currentTime, this is fine.
+                gamePanel.showEndOfDayMessage(eventMessage, income, generateNewDayInfoString());
+            }
+        }
     }
 
     /**
@@ -563,7 +613,7 @@ public class GameController {
             System.err.println("GameController: Quantity must be positive.");
             return false;
         }
-        
+
         Store store = farmModel.getStore();
         Player player = farmModel.getPlayer();
         PriceList priceList = farmModel.getPriceList();
@@ -1935,6 +1985,99 @@ public class GameController {
             }
         }
         return false;
+    }
+
+    // --- Shipping Bin UI Interaction --- 
+
+    public void requestOpenShippingBin() {
+        if (farmModel == null || gamePanel == null || farmModel.getPlayer() == null) {
+            System.err.println("GameController: Critical model/view component missing for opening shipping bin.");
+            return;
+        }
+
+        ShippingBin shippingBin = farmModel.getShippingBin();
+        if (shippingBin == null) {
+            System.err.println("GameController: ShippingBin model is null.");
+            return;
+        }
+
+        if (!shippingBin.canSellToday()) {
+            // This check is also in GamePanel.tryOpenShippingBinDialog, but good to have a safeguard
+            gamePanel.shippingBinActionFailed("You have already used the shipping bin today.");
+            return;
+        }
+
+        farmModel.getCurrentTime().setPaused(true);
+        farmModel.setCurrentGameState(GameState.SHIPPING_BIN);
+        gamePanel.openShippingBinUI();
+        // gamePanel.setShippingBinFeedback("Select item, [Enter] for quantity, [Esc] to close.", false);
+    }
+
+    public void requestAddItemToShippingBin(Item item, int quantity) {
+        if (farmModel == null || gamePanel == null || farmModel.getPlayer() == null) {
+            System.err.println("GameController: Critical model/view component missing for adding to shipping bin.");
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        ShippingBin shippingBin = farmModel.getShippingBin();
+        Inventory inventory = player.getInventory();
+
+        if (item == null || shippingBin == null || inventory == null) {
+            gamePanel.shippingBinActionFailed("Error: System components missing.");
+            return;
+        }
+
+        if (quantity <= 0) {
+            gamePanel.shippingBinActionFailed("Quantity must be positive.");
+            return;
+        }
+
+        if (!inventory.hasItem(item, quantity)) {
+            gamePanel.shippingBinActionFailed("Not enough " + item.getName() + " in inventory.");
+            return;
+        }
+
+        // Check if adding this item would exceed the 16 unique slots IF it's a new unique item
+        if (!shippingBin.getItems().containsKey(item) && shippingBin.getItems().size() >= ShippingBin.MAX_UNIQUE_SLOTS) {
+             gamePanel.shippingBinActionFailed("Shipping Bin full (max 16 unique item types).");
+             return;
+        }
+
+        // Attempt to remove from player and add to bin
+        if (inventory.removeItem(item, quantity)) {
+            if (shippingBin.addItem(item, quantity)) {
+                // Success
+                gamePanel.itemAddedToBinSuccessfully(item, quantity);
+            } else {
+                // Failed to add to bin (should be rare if pre-checks are done, but good to handle)
+                // Re-add to player inventory as a rollback
+                inventory.addItem(item, quantity);
+                gamePanel.shippingBinActionFailed("Could not add " + item.getName() + " to bin. Bin might be full.");
+            }
+        } else {
+            // Should not happen if hasItem check passed, but as a fallback
+            gamePanel.shippingBinActionFailed("Failed to remove " + item.getName() + " from inventory.");
+        }
+    }
+
+    public void requestCloseShippingBin() {
+        if (farmModel == null || gamePanel == null) {
+            System.err.println("GameController: Critical model/view component missing for closing shipping bin.");
+            return;
+        }
+        // Finalize sale session logic (e.g. marking bin as used for the day)
+        // is done within ShippingBin.addItem() or when canSellToday() is checked.
+        // ShippingBin.processSales() will handle the money and clearing at day end.
+        
+        farmModel.getCurrentTime().advance(15); // Changed from advanceTime(15)
+        farmModel.getCurrentTime().setPaused(false);
+        farmModel.setCurrentGameState(GameState.IN_GAME);
+        gamePanel.closeShippingBinUI();
+        if (farmModel.getShippingBin() != null && !farmModel.getShippingBin().getItems().isEmpty()){    
+            gamePanel.displayMessage("Items in bin will be sold overnight.");
+        } else {
+            gamePanel.displayMessage("Shipping bin closed.");
+        }
     }
 
 } // End of GameController class

@@ -15,7 +15,7 @@ import java.util.Map;
 public class ShippingBin {
 
     private final Map<Item, Integer> itemsToSell;
-    private static final int MAX_UNIQUE_SLOTS = 16; // hal 23
+    public static final int MAX_UNIQUE_SLOTS = 16; // hal 23 - Made public
 
     // private int lastSellDay; // Replaced by hasSoldToday for immediate effect
     private boolean hasSoldToday;
