@@ -242,50 +242,50 @@ HOUSE HARUS PASSABLE, DIA BISA DILALUI DAN MASAK TUH BUKAN DI SEKITAR TAPI EMG D
 Asset Wishlist for Harvest Moon Style GUI (Based on Itch.io search)
 
 I. World & Environment Assets:
-    1.  Tilesets (Top-Down):
-        *   Farm Tiles: Grass, tillable soil, tilled soil, watered soil, crop growth stages, paths.
-        *   Seasonal Variations: Spring, Summer, Fall, Winter versions.
-        *   Farm Structures: Player's House (exterior), Shipping Bin, Barn, Coop, Fences.
-        *   Exterior Environment Tiles: Forest, River/Pond/Lake, Ocean/Beach, Mountain, Town/Village.
-        *   Interior Tiles: Floors, walls, furniture (Bed, Stove, TV, tables, chairs, decorations).
-    2.  Animated Tiles:
-        *   Water (flowing, sparkling).
-        *   Fire (fireplace, stove).
+    [ ] Tilesets (Top-Down):
+        [ ] Farm Tiles: Grass, tillable soil, tilled soil, watered soil, crop growth stages, paths.
+        [ ] Seasonal Variations: Spring, Summer, Fall, Winter versions.
+        [ ] Farm Structures: Player's House (exterior), Shipping Bin, Barn, Coop, Fences.
+        [ ] Exterior Environment Tiles: Forest, River/Pond/Lake, Ocean/Beach, Mountain, Town/Village.
+        [ ] Interior Tiles: Floors, walls, furniture (Bed, Stove, TV, tables, chairs, decorations).
+    [ ] Animated Tiles:
+        [ ] Water (flowing, sparkling).
+        [ ] Fire (fireplace, stove).
 
 II. Character & Object Assets:
-    1.  Player Character Sprites (Top-Down):
-        *   Walking animations (4/8-directional).
-        *   Action animations (tools, planting, eating, gifting).
-        *   Idle animations.
-    2.  NPC Sprites (Top-Down):
-        *   Walking animations.
-        *   Idle animations.
-        *   Unique designs.
-    3.  Character Portraits/Busts:
-        *   For dialogue (player & NPCs).
-        *   Multiple expressions.
-    4.  Item Sprites/Icons:
-        *   Crops, seeds, tools, cooked food, fish, forageables, crafted items, gold.
-    5.  Animals (Optional, for later):
-        *   Farm animals, wild animals.
+    [ ] Player Character Sprites (Top-Down):
+        [ ] Walking animations (4/8-directional).
+        [ ] Action animations (tools, planting, eating, gifting).
+        [ ] Idle animations.
+    [ ] NPC Sprites (Top-Down):
+        [ ] Walking animations.
+        [ ] Idle animations.
+        [ ] Unique designs.
+    [ ] Character Portraits/Busts:
+        [ ] For dialogue (player & NPCs).
+        [ ] Multiple expressions.
+    [ ] Item Sprites/Icons:
+        [ ] Crops, seeds, tools, cooked food, fish, forageables, crafted items, gold.
+    [ ] Animals (Optional, for later):
+        [ ] Farm animals, wild animals.
 
 III. User Interface (UI) Assets:
-    1.  UI Frames & Borders:
-        *   For dialogue boxes, menus, HUD.
-    2.  Buttons & Icons:
-        *   Navigation, menu options, HUD icons (energy, time, season, weather).
-    3.  Fonts:
-        *   Pixel-art friendly, readable.
-    4.  HUD Elements:
-        *   Graphical energy bar, time/clock, calendar, weather icons.
-    5.  Cursors:
-        *   Hand icon or similar for selection.
+    [ ] UI Frames & Borders:
+        [ ] For dialogue boxes, menus, HUD.
+    [ ] Buttons & Icons:
+        [ ] Navigation, menu options, HUD icons (energy, time, season, weather).
+    [ ] Fonts:
+        [ ] Pixel-art friendly, readable.
+    [ ] HUD Elements:
+        [ ] Graphical energy bar, time/clock, calendar, weather icons.
+    [ ] Cursors:
+        [ ] Hand icon or similar for selection.
 
 IV. Effects & Miscellaneous:
-    1.  Visual Effects (VFX):
-        *   Tool use, weather particles, level up/achievement indicators, cooking effects.
-    2.  Backgrounds:
-        *   Main Menu, event cutscenes.
+    [ ] Visual Effects (VFX):
+        [ ] Tool use, weather particles, level up/achievement indicators, cooking effects.
+    [ ] Backgrounds:
+        [ ] Main Menu, event cutscenes.
 
 Tips for Itch.io Search:
 *   Keywords: "pixel art", "top-down", "RPG", "farming", "tileset", "sprites", "UI pack", "16x16", "32x32".
