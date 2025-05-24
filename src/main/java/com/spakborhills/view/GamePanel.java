@@ -27,12 +27,15 @@ import com.spakborhills.model.Enum.FishRarity; // Added for fishdebug
 import com.spakborhills.model.NPC.NPC; // Make sure NPC is imported
 import com.spakborhills.model.Enum.GameState; // Added import for GameState
 
+import javax.imageio.ImageIO; // For loading placeholder image
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent; // Added for Timer
 import java.awt.event.ActionListener; // Added for Timer
 import java.awt.event.KeyEvent; // Import KeyEvent
 import java.awt.event.KeyListener; // Import KeyListener
+import java.awt.image.BufferedImage; // For placeholder image
+import java.io.IOException; // For image loading
 import java.util.List;
 import java.util.ArrayList; // For creating list of sellable items
 import java.util.Map; // For iterating inventory
@@ -59,6 +62,17 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final Color MENU_BACKGROUND_COLOR = new Color(50, 50, 100); // Dark blue
     private static final Color MENU_TEXT_COLOR = Color.WHITE;
     private static final Color MENU_SELECTED_TEXT_COLOR = Color.YELLOW;
+
+    // NPC Dialogue State
+    private boolean isNpcDialogueActive = false;
+    private String currentNpcName;
+    private String currentNpcDialogue;
+    private Rectangle npcDialogueBox;
+    private Image npcPortraitPlaceholder;
+    private static final int PORTRAIT_SIZE = 80;
+    private static final int DIALOGUE_PADDING = 20;
+    private static final Font DIALOGUE_TEXT_FONT = new Font("Arial", Font.PLAIN, 18);
+    private static final Font DIALOGUE_NAME_FONT = new Font("Arial", Font.BOLD, 20);
 
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
@@ -104,6 +118,27 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         UIManager.put("OptionPane.buttonFont", DIALOG_FONT);
         UIManager.put("TextField.font", DIALOG_FONT);
         // UIManager.put("Label.font", DIALOG_FONT); // If needed for labels within JOptionPane
+
+        // Initialize NPC Dialogue Box based on preferred size
+        // These are initial values; they will be updated if the panel is resized and showNPCDialogue is called.
+        int preferredWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE;
+        int preferredHeightTotal = VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT;
+
+        int dialogueBoxWidth = preferredWidth * 3 / 4;
+        int dialogueBoxHeight = preferredHeightTotal / 3;
+        int dialogueBoxX = (preferredWidth - dialogueBoxWidth) / 2;
+        int dialogueBoxY = preferredHeightTotal - dialogueBoxHeight - 20; // 20px from bottom of the entire panel
+        npcDialogueBox = new Rectangle(dialogueBoxX, dialogueBoxY, dialogueBoxWidth, dialogueBoxHeight);
+
+        // Create a placeholder portrait
+        BufferedImage placeholder = new BufferedImage(PORTRAIT_SIZE, PORTRAIT_SIZE, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = placeholder.createGraphics();
+        g2d.setColor(Color.DARK_GRAY);
+        g2d.fillRect(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
+        g2d.setColor(Color.LIGHT_GRAY);
+        g2d.drawString("NPC", 10, PORTRAIT_SIZE / 2);
+        g2d.dispose();
+        npcPortraitPlaceholder = placeholder;
     }
 
     @Override
@@ -146,6 +181,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
             // Restore original clip
             g.setClip(originalClip);
+
+            // Draw NPC Dialogue if active (on top of everything else in game world)
+            if (isNpcDialogueActive) {
+                drawNpcDialogue(g);
+            }
         }
     }
 
@@ -525,97 +565,108 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (gameController == null || farmModel == null) return; // Added farmModel check
 
         int keyCode = e.getKeyCode();
-        boolean actionTaken = false;
 
         if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
             handleMainMenuInput(keyCode);
-            actionTaken = true; // Input was processed by menu
-        } else if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
-            switch (keyCode) {
-                case KeyEvent.VK_W: case KeyEvent.VK_UP:
-                    actionTaken = gameController.requestPlayerMove(Direction.NORTH);
-                    break;
-                case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
-                    actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
-                    break;
-                case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
-                    actionTaken = gameController.requestPlayerMove(Direction.WEST);
-                    break;
-                case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
-                    actionTaken = gameController.requestPlayerMove(Direction.EAST);
-                    break;
-                case KeyEvent.VK_E: // General Action Key
-                    actionTaken = tryGeneralAction();
-                    break;
-                case KeyEvent.VK_F: // Eat
-                    actionTaken = gameController.requestEatSelectedItem();
-                    break;
-                case KeyEvent.VK_T: // Store
-                    openStoreDialog(); // This is a view-specific action opening a dialog
-                    actionTaken = true; // Assume dialog opening is an action
-                    break;
-                case KeyEvent.VK_B: // Shipping Bin
-                     actionTaken = tryOpenShippingBinDialog();
-                    break;
-                case KeyEvent.VK_C:
-                    handleCheatInput(); // Cheat input is an action itself
-                    actionTaken = true;
-                    break;
-                case KeyEvent.VK_1:
-                    gameController.selectPreviousItem();
-                    actionTaken = true;
-                    break;
-                case KeyEvent.VK_2:
-                    gameController.selectNextItem();
-                    actionTaken = true;
-                    break;
-                case KeyEvent.VK_X: // Chat with NPC
-                    gameController.handleChatRequest(); // Returns void, handles its own feedback
-                    actionTaken = true; // An attempt to chat was made
-                    break;
-                case KeyEvent.VK_G: // Gift to NPC
-                    System.out.println("G key pressed - Attempting Gift");
-                        gameController.handleGiftRequest();
-                    actionTaken = true;
-                    break;
-                case KeyEvent.VK_L: // Sleep (Lodge/Lie down)
-                    gameController.requestNormalSleep(); // This will handle location check & next day
-                    actionTaken = true; // Assuming sleep always initiates a process
-                    break;
-                case KeyEvent.VK_P: // Propose
-                    if (gameController != null) {
-                        gameController.handleProposeRequest();
-                        actionTaken = true; // Assuming propose request is an action
-                    }
-                    break;
-                case KeyEvent.VK_M:
-                    if(gameController != null){
-                        gameController.handleMarryRequest();
-                        actionTaken = true;
-                    }
-                    break;
-                case KeyEvent.VK_K: //cooking
-                    if(gameController != null){
-                        gameController.handleCookRequest();
-                        actionTaken = true;
-                    }
-                    break;
-                case KeyEvent.VK_V: // Added for Watching TV
-                    System.out.println("V key pressed - Attempting to Watch TV");
-                    gameController.requestWatchTV();
-                    actionTaken = true;
-                    break;
-                case KeyEvent.VK_I: // Added for View Player Info
-                    System.out.println("I key pressed - Viewing Player Info");
-                    gameController.requestViewPlayerInfo();
-                    actionTaken = true; // Technically not an action that changes game state, but good to acknowledge
-                    break;
-                case KeyEvent.VK_O: // Added for View Statistics
-                    System.out.println("O key pressed - Viewing Statistics");
-                    gameController.requestShowStatistics();
-                    actionTaken = true; // This action does stop the timer
-                    break;
+            return; // Don't process further input if in main menu
+        }
+        
+        // If NPC dialogue is active, it takes precedence
+        if (isNpcDialogueActive) {
+            if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_X || keyCode == KeyEvent.VK_E) {
+                isNpcDialogueActive = false;
+                // Potentially trigger next part of dialogue or close if it's the end
+                repaint();
             }
+            return; // Consume the input, don't process other game actions
+        }
+
+        boolean actionTaken = false;
+
+        switch (keyCode) {
+            case KeyEvent.VK_W: case KeyEvent.VK_UP:
+                actionTaken = gameController.requestPlayerMove(Direction.NORTH);
+                break;
+            case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
+                actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
+                break;
+            case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
+                actionTaken = gameController.requestPlayerMove(Direction.WEST);
+                break;
+            case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
+                actionTaken = gameController.requestPlayerMove(Direction.EAST);
+                break;
+            case KeyEvent.VK_E: // General Action Key
+                actionTaken = tryGeneralAction();
+                break;
+            case KeyEvent.VK_F: // Eat
+                actionTaken = gameController.requestEatSelectedItem();
+                break;
+            case KeyEvent.VK_T: // Store
+                openStoreDialog(); // This is a view-specific action opening a dialog
+                actionTaken = true; // Assume dialog opening is an action
+                break;
+            case KeyEvent.VK_B: // Shipping Bin
+                 actionTaken = tryOpenShippingBinDialog();
+                break;
+            case KeyEvent.VK_C:
+                handleCheatInput(); // Cheat input is an action itself
+                actionTaken = true;
+                break;
+            case KeyEvent.VK_1:
+                gameController.selectPreviousItem();
+                actionTaken = true;
+                break;
+            case KeyEvent.VK_2:
+                gameController.selectNextItem();
+                actionTaken = true;
+                break;
+            case KeyEvent.VK_X: // Chat with NPC
+                gameController.handleChatRequest(); // Returns void, handles its own feedback
+                actionTaken = true; // An attempt to chat was made
+                break;
+            case KeyEvent.VK_G: // Gift to NPC
+                System.out.println("G key pressed - Attempting Gift");
+                    gameController.handleGiftRequest();
+                actionTaken = true;
+                break;
+            case KeyEvent.VK_L: // Sleep (Lodge/Lie down)
+                gameController.requestNormalSleep(); // This will handle location check & next day
+                actionTaken = true; // Assuming sleep always initiates a process
+                break;
+            case KeyEvent.VK_P: // Propose
+                if (gameController != null) {
+                    gameController.handleProposeRequest();
+                    actionTaken = true; // Assuming propose request is an action
+                }
+                break;
+            case KeyEvent.VK_M:
+                if(gameController != null){
+                    gameController.handleMarryRequest();
+                    actionTaken = true;
+                }
+                break;
+            case KeyEvent.VK_K: //cooking
+                if(gameController != null){
+                    gameController.handleCookRequest();
+                    actionTaken = true;
+                }
+                break;
+            case KeyEvent.VK_V: // Added for Watching TV
+                System.out.println("V key pressed - Attempting to Watch TV");
+                gameController.requestWatchTV();
+                actionTaken = true;
+                break;
+            case KeyEvent.VK_I: // Added for View Player Info
+                System.out.println("I key pressed - Viewing Player Info");
+                gameController.requestViewPlayerInfo();
+                actionTaken = true; // Technically not an action that changes game state, but good to acknowledge
+                break;
+            case KeyEvent.VK_O: // Added for View Statistics
+                System.out.println("O key pressed - Viewing Statistics");
+                gameController.requestShowStatistics();
+                actionTaken = true; // This action does stop the timer
+                break;
         }
 
         if (actionTaken) {
@@ -1001,12 +1052,20 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         helpText.append("<p><b>Actions:</b><br>");
         helpText.append("• E - Use tool/Harvest<br>");
         helpText.append("• F - Eat selected item<br>");
-        helpText.append("• T - Open Store/Trade<br>");
-        helpText.append("• B - Open Shipping Bin (when near)<br>");
-        helpText.append("• 1 - Select previous item<br>");
-        helpText.append("• 2 - Select next item<br>");
-        helpText.append("• C - Open Cheat Console</p>");
-
+        helpText.append("• T - Open Store\n" +
+                        "• B - Open Shipping Bin\n" +
+                        "• 1, 2: Cycle Inventory\n" +
+                        "• X: Chat with NPC\n" +
+                        "• G: Gift to NPC\n" +
+                        "• L: Sleep\n" +
+                        "• K: Cook\n" +
+                        "• V: Watch TV\n" +
+                        "• I: View Player Info\n" +
+                        "• O: View Current Progress\n" +
+                        "• C: Open Cheat Menu\n\n" +
+                        "Menu Controls:\n" +
+                        "• UP/DOWN Arrows: Navigate\n" +
+                        "• ENTER: Select");
         helpText.append("</body></html>");
 
         // Create a JEditorPane for HTML rendering
@@ -1176,19 +1235,29 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
      * @param dialogue The dialogue text.
      */
     public void showNPCDialogue(String npcName, String dialogue) {
-        // Store original fonts
-        Object originalMessageFont = UIManager.get("OptionPane.messageFont");
-        Object originalButtonFont = UIManager.get("OptionPane.buttonFont");
+        // JOptionPane.showMessageDialog(this, dialogue, npcName + " says:", JOptionPane.PLAIN_MESSAGE);
+        this.currentNpcName = npcName;
+        this.currentNpcDialogue = dialogue;
+        this.isNpcDialogueActive = true;
 
-        // Set custom font for this dialog
-        UIManager.put("OptionPane.messageFont", NPC_DIALOG_FONT);
-        UIManager.put("OptionPane.buttonFont", NPC_DIALOG_FONT);
+        // Update dialogue box dimensions based on current panel size
+        int panelWidth = getWidth();
+        int panelHeight = getHeight();
 
-        JOptionPane.showMessageDialog(this, dialogue, npcName + " says:", JOptionPane.PLAIN_MESSAGE);
+        if (panelWidth == 0 || panelHeight == 0) { // If panel not yet laid out, use preferred size
+            panelWidth = getPreferredSize().width;
+            panelHeight = getPreferredSize().height;
+        }
 
-        // Restore original fonts
-        UIManager.put("OptionPane.messageFont", originalMessageFont);
-        UIManager.put("OptionPane.buttonFont", originalButtonFont);
+        int dialogueBoxWidth = panelWidth * 3 / 4;
+        int dialogueBoxHeight = panelHeight / 3;
+        int dialogueBoxX = (panelWidth - dialogueBoxWidth) / 2;
+        int dialogueBoxY = panelHeight - dialogueBoxHeight - 20; // 20px from bottom of the entire panel
+        
+        npcDialogueBox = new Rectangle(dialogueBoxX, dialogueBoxY, dialogueBoxWidth, dialogueBoxHeight);
+        
+        System.out.println("GamePanel: Activating NPC Dialogue - Name: " + npcName + ", Dialogue: " + dialogue);
+        repaint();
     }
 
     /**
@@ -1209,6 +1278,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
      * @param statisticsSummary The formatted string of statistics.
      */
     public void showStatisticsDialog(String statisticsSummary) {
+        // For now, keep JOptionPane for this as it's a less frequent, game-ending dialog.
+        // Future: Could also be an in-game panel.
+        stopGameTimer(); // Stop the game timer when statistics are shown
         // For better readability in JOptionPane, we can wrap the text in a JTextArea inside a JScrollPane.
         JTextArea textArea = new JTextArea(statisticsSummary);
         textArea.setEditable(false);
@@ -1340,5 +1412,78 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 System.exit(0);
                 break;
         }
+    }
+
+    private void drawNpcDialogue(Graphics g) {
+        if (!isNpcDialogueActive) {
+            return;
+        }
+
+        Graphics2D g2d = (Graphics2D) g.create(); // Create a copy to not affect other drawings
+
+        // 1. Draw Dialogue Box Background
+        g2d.setColor(new Color(0, 0, 0, 200)); // Semi-transparent black
+        g2d.fill(npcDialogueBox);
+        g2d.setColor(Color.WHITE);
+        g2d.draw(npcDialogueBox);
+
+        // 2. Draw NPC Portrait (Placeholder)
+        int portraitX = npcDialogueBox.x + DIALOGUE_PADDING;
+        int portraitY = npcDialogueBox.y + DIALOGUE_PADDING;
+        g2d.drawImage(npcPortraitPlaceholder, portraitX, portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE, this);
+        g2d.setColor(Color.GRAY);
+        g2d.drawRect(portraitX,portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE);
+
+
+        // 3. Draw NPC Name
+        g2d.setFont(DIALOGUE_NAME_FONT);
+        FontMetrics nameFm = g2d.getFontMetrics();
+        int nameX = portraitX + PORTRAIT_SIZE + DIALOGUE_PADDING;
+        int nameY = npcDialogueBox.y + DIALOGUE_PADDING + nameFm.getAscent();
+        g2d.setColor(Color.YELLOW); // Or any color for the name
+        g2d.drawString(currentNpcName + " says:", nameX, nameY);
+
+        // 4. Draw Dialogue Text (with basic word wrapping)
+        g2d.setFont(DIALOGUE_TEXT_FONT);
+        g2d.setColor(Color.WHITE);
+        FontMetrics textFm = g2d.getFontMetrics();
+        int textBlockStartX = npcDialogueBox.x + DIALOGUE_PADDING + PORTRAIT_SIZE + DIALOGUE_PADDING;
+        int availableTextWidth = (npcDialogueBox.x + npcDialogueBox.width - DIALOGUE_PADDING) - textBlockStartX;
+        
+        List<String> lines = new ArrayList<>();
+        String[] words = currentNpcDialogue.split(" ");
+        StringBuilder currentLine = new StringBuilder();
+
+        for (String word : words) {
+            if (textFm.stringWidth(currentLine.toString() + word) < availableTextWidth) {
+                currentLine.append(word).append(" ");
+            } else {
+                lines.add(currentLine.toString().trim());
+                currentLine = new StringBuilder(word + " ");
+            }
+        }
+        lines.add(currentLine.toString().trim()); // Add the last line
+
+        int lineY = nameY + DIALOGUE_PADDING;
+        for (String line : lines) {
+            if (lineY + textFm.getHeight() > npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING) { // Check bounds
+                g2d.drawString("...", textBlockStartX, lineY); // Indicate more text if it overflows
+                break;
+            }
+            g2d.drawString(line, textBlockStartX, lineY);
+            lineY += textFm.getHeight();
+        }
+
+
+        // 5. Draw "Press Enter to continue" prompt
+        g2d.setFont(DIALOGUE_TEXT_FONT.deriveFont(Font.ITALIC));
+        String continuePrompt = "Press ENTER to continue...";
+        int promptWidth = textFm.stringWidth(continuePrompt); // Use textFm from DIALOGUE_TEXT_FONT
+        int promptX = npcDialogueBox.x + npcDialogueBox.width - promptWidth - DIALOGUE_PADDING;
+        int promptY = npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING;
+        g2d.setColor(Color.LIGHT_GRAY);
+        g2d.drawString(continuePrompt, promptX, promptY);
+
+        g2d.dispose();
     }
 }

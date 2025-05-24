@@ -48,7 +48,7 @@ public class GameFrame extends JFrame {
             // Fallback to windowed mode if full-screen is not supported
             pack();
             setLocationRelativeTo(null);
-            setVisible(true);
+        setVisible(true);
         }
         
         // Ensure GamePanel can receive focus immediately

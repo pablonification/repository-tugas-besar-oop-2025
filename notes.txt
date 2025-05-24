@@ -223,3 +223,59 @@ Store bukannya di WorldMap ya?
 HOUSE HARUS PASSABLE, DIA BISA DILALUI DAN MASAK TUH BUKAN DI SEKITAR TAPI EMG DIDALEM HOUSENYA
 
 [IMPLEMENTED] HOUSE PASSABLE: Player bisa masuk ke area 6x6 House di FarmMap. Cooking dan Sleeping dilakukan di tile House tersebut. Interior rumah yang lebih besar untuk furniture adalah fitur bonus dan ditunda.
+
+---
+Asset Wishlist for Harvest Moon Style GUI (Based on Itch.io search)
+
+I. World & Environment Assets:
+    1.  Tilesets (Top-Down):
+        *   Farm Tiles: Grass, tillable soil, tilled soil, watered soil, crop growth stages, paths.
+        *   Seasonal Variations: Spring, Summer, Fall, Winter versions.
+        *   Farm Structures: Player's House (exterior), Shipping Bin, Barn, Coop, Fences.
+        *   Exterior Environment Tiles: Forest, River/Pond/Lake, Ocean/Beach, Mountain, Town/Village.
+        *   Interior Tiles: Floors, walls, furniture (Bed, Stove, TV, tables, chairs, decorations).
+    2.  Animated Tiles:
+        *   Water (flowing, sparkling).
+        *   Fire (fireplace, stove).
+
+II. Character & Object Assets:
+    1.  Player Character Sprites (Top-Down):
+        *   Walking animations (4/8-directional).
+        *   Action animations (tools, planting, eating, gifting).
+        *   Idle animations.
+    2.  NPC Sprites (Top-Down):
+        *   Walking animations.
+        *   Idle animations.
+        *   Unique designs.
+    3.  Character Portraits/Busts:
+        *   For dialogue (player & NPCs).
+        *   Multiple expressions.
+    4.  Item Sprites/Icons:
+        *   Crops, seeds, tools, cooked food, fish, forageables, crafted items, gold.
+    5.  Animals (Optional, for later):
+        *   Farm animals, wild animals.
+
+III. User Interface (UI) Assets:
+    1.  UI Frames & Borders:
+        *   For dialogue boxes, menus, HUD.
+    2.  Buttons & Icons:
+        *   Navigation, menu options, HUD icons (energy, time, season, weather).
+    3.  Fonts:
+        *   Pixel-art friendly, readable.
+    4.  HUD Elements:
+        *   Graphical energy bar, time/clock, calendar, weather icons.
+    5.  Cursors:
+        *   Hand icon or similar for selection.
+
+IV. Effects & Miscellaneous:
+    1.  Visual Effects (VFX):
+        *   Tool use, weather particles, level up/achievement indicators, cooking effects.
+    2.  Backgrounds:
+        *   Main Menu, event cutscenes.
+
+Tips for Itch.io Search:
+*   Keywords: "pixel art", "top-down", "RPG", "farming", "tileset", "sprites", "UI pack", "16x16", "32x32".
+*   Look for "asset packs".
+*   Check licenses.
+*   Prioritize style consistency.
+---
