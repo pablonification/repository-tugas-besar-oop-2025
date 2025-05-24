@@ -451,40 +451,111 @@ public class GameController {
      * @return A list of Item objects or null if an error occurs.
      */
     public List<Item> getStoreItemsForDisplay() {
-        if (farmModel == null || farmModel.getStore() == null || farmModel.getPriceList() == null) {
-            System.err.println("GameController: Farm, Store, or PriceList is null. Cannot fetch store items.");
-            return new ArrayList<>(); // Return empty list to prevent null pointer in UI
+        if (farmModel == null || farmModel.getStore() == null || farmModel.getItemRegistry() == null || farmModel.getPriceList() == null) {
+            System.err.println("Error: Model, Toko, ItemRegistry, atau PriceList null di GameController.getStoreItemsForDisplay.");
+            if (gamePanel != null) {
+                // gamePanel.displayMessage("Error: Data toko tidak dapat dimuat.");
+            }
+            return Collections.emptyList();
         }
         Store store = farmModel.getStore();
-        // The ItemRegistry is needed by store.getAvailableItemsForDisplay
-        // Assuming farmModel can provide access to something like an ItemRegistry if store needs it directly
-        // For now, let's assume ItemRegistry is implicitly handled or Main.setupItemRegistry() is the source of truth
-        // and Store's getAvailableItemsForDisplay can work with the farm's pricelist.
-        // The method signature in Main.java test case for Store was: 
-        // store.getAvailableItemsForDisplay(itemRegistry, priceList)
-        // We need ItemRegistry. We can get it from Farm if Farm stores it, or pass from Main.
-        // Let's assume Farm has a way to get the itemRegistry, or Store is initialized with it.
-        // For now, this controller method will rely on the Store object having what it needs.
-        // A more robust way would be for Farm to hold the ItemRegistry.
-        // Let's assume farm.getItemRegistry() exists for now. If not, we'll need to adjust.
-        Map<String, Item> itemRegistry = farmModel.getItemRegistry(); // ASSUMPTION: Farm has this getter
-        if (itemRegistry == null) {
-             System.err.println("GameController: ItemRegistry is null in Farm. Cannot fetch store items.");
-            return new ArrayList<>();
-        }
-
-        return store.getAvailableItemsForDisplay(itemRegistry, farmModel.getPriceList());
+        return store.getAvailableItemsForDisplay(farmModel.getItemRegistry(), farmModel.getPriceList());
     }
 
     /**
-     * Handles the player's request to buy an item from the store.
+     * Processes a player's request to buy an item from the store.
+     * Returns a String message indicating success or the reason for failure.
      * @param itemName The name of the item to buy.
-     * @param quantity The quantity to buy.
-     * @return true if the purchase was successful, false otherwise.
+     * @param quantity The quantity of the item to buy.
+     * @return A message string detailing the outcome.
      */
+    public String requestBuyItemAndGetMessage(String itemName, int quantity) {
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getStore() == null || farmModel.getPriceList() == null || farmModel.getItemRegistry() == null) {
+            return "Gagal: Sistem toko tidak tersedia atau data tidak lengkap.";
+        }
+        Player player = farmModel.getPlayer();
+        Store store = farmModel.getStore();
+        PriceList priceList = farmModel.getPriceList();
+        Map<String, Item> itemRegistry = farmModel.getItemRegistry();
+        Item itemToBuy = itemRegistry.get(itemName);
+
+        if (itemToBuy == null) {
+            return "Gagal: Item '" + itemName + "' tidak ditemukan.";
+        }
+
+        if (quantity <= 0) {
+            return "Gagal: Jumlah pembelian harus lebih dari 0.";
+        }
+
+        // Check if the item is actually sold by the store
+        // This relies on Store.getAvailableItemsForDisplay filtering correctly
+        // or Store.sellToPlayer having its own internal check.
+        // For a more direct check here, we'd need access to Store's internal list of items for sale.
+        // Let's assume Store.sellToPlayer handles this.
+        // We can check if the item has a valid buy price.
+        int buyPrice = priceList.getBuyPrice(itemName);
+        if (buyPrice == -1) { // Assuming -1 means not for sale or price not set
+            return "Gagal: Item '" + itemName + "' tidak dapat dibeli atau tidak dijual.";
+        }
+        
+        // Check if item is in the list of items the store *claims* to sell (from getAvailableItemsForDisplay)
+        // This is a sanity check. The ultimate truth is if priceList has a buy price.
+        boolean foundInStoreDisplayList = false;
+        List<Item> displayItems = store.getAvailableItemsForDisplay(itemRegistry, priceList);
+        for (Item displayItem : displayItems) {
+            if (displayItem.getName().equals(itemName)) {
+                foundInStoreDisplayList = true;
+                break;
+            }
+        }
+        if (!foundInStoreDisplayList) {
+             // This case implies an inconsistency, or the item is valid but was filtered out for display (e.g. buy price 0 before fix)
+             // but if it has a valid buyPrice > 0 from pricelist, it should be buyable.
+             // If buyPrice is 0, it means it's free.
+             if (buyPrice <= 0 && buyPrice != -1) { // Item is free or has an issue, but exists in priceList
+                 // Allow free items if they appear in price list with 0
+             } else if (buyPrice == -1) { // Definitely not for sale by priceList
+                return "Gagal: Item '" + itemName + "' tidak terdaftar untuk dijual (kode: C01).";
+             }
+             // If it has a positive price but not in display list, it's weird, but let's proceed if pricelist says it's buyable.
+        }
+
+
+        int totalPrice = buyPrice * quantity;
+
+        if (player.getGold() < totalPrice) {
+            return "Gagal: Gold tidak cukup. Butuh " + totalPrice + "G, kamu punya " + player.getGold() + "G.";
+        }
+
+        // Call the original Store.sellToPlayer method
+        // The existing sellToPlayer in Store.java is: sellToPlayer(Player player, Item item, int quantity, PriceList priceList, Map<String, Item> itemRegistry)
+        boolean success = store.sellToPlayer(player, itemToBuy, quantity, priceList, itemRegistry);
+
+        if (success) {
+            if (gamePanel != null) {
+                 gamePanel.updatePlayerInfoPanel();
+            }
+            String priceString = totalPrice == 0 ? "Gratis" : totalPrice + "G";
+            return "Berhasil membeli " + quantity + " " + itemToBuy.getName() + " (" + priceString + ").";
+        } else {
+            // Attempt to give a more specific reason if possible, otherwise generic.
+            // This part depends on Store.sellToPlayer's internal logic and if it provides feedback.
+            // For now, a general message.
+            return "Gagal membeli item. Mungkin inventory penuh atau item tidak lagi tersedia.";
+        }
+    }
+
+    /**
+     * Processes a player's request to buy an item from the store.
+     * @param itemName The name of the item to buy.
+     * @param quantity The quantity of the item to buy.
+     * @return true if the purchase was successful, false otherwise.
+     * @deprecated Use requestBuyItemAndGetMessage for detailed feedback.
+     */
+    @Deprecated
     public boolean requestBuyItem(String itemName, int quantity) {
         if (farmModel == null || farmModel.getStore() == null || farmModel.getPlayer() == null || 
-            farmModel.getPriceList() == null || farmModel.getItemRegistry() == null) { // Added itemRegistry check
+            farmModel.getPriceList() == null || farmModel.getItemRegistry() == null) {
             System.err.println("GameController: Critical model component is null. Cannot process purchase.");
             return false;
         }
@@ -492,11 +563,11 @@ public class GameController {
             System.err.println("GameController: Quantity must be positive.");
             return false;
         }
-
+        
         Store store = farmModel.getStore();
         Player player = farmModel.getPlayer();
         PriceList priceList = farmModel.getPriceList();
-        Map<String, Item> itemRegistry = farmModel.getItemRegistry(); // ASSUMPTION: Farm has this getter
+        Map<String, Item> itemRegistry = farmModel.getItemRegistry();
 
         Item itemToBuy = itemRegistry.get(itemName);
         if (itemToBuy == null) {
@@ -527,6 +598,9 @@ public class GameController {
                 }
             }
             // No direct energy cost for buying, so no checkPassOut() here unless specified.
+             if (gamePanel != null) {
+                 gamePanel.updatePlayerInfoPanel();
+            }
         }
         return success;
     }
@@ -1360,6 +1434,16 @@ public class GameController {
                 if (chatSuccess) {
                     String dialogue = targetNPC.getDialogue(player);
                     gamePanel.showNPCDialogue(targetNPC.getName(), dialogue);
+                } else {
+                    // Chat failed, check if it was due to energy for non-Emily NPCs
+                    // Player.chat() prints its own specific messages to console for other failures like distance.
+                    if (player.getEnergy() < Player.CHAT_ENERGY_COST) {
+                        gamePanel.displayMessage(player.getName() + " tidak punya cukup energi untuk berbicara (butuh " + Player.CHAT_ENERGY_COST + ").");
+                    } else {
+                        // For other failures like distance, Player.chat() already printed to console.
+                        // GamePanel already showed "Tidak ada NPC di dekatmu..." if findNearbyNPCForChat returned null.
+                        // So, no additional generic message here is needed unless we want to explicitly state chat failed without specific reason.
+                    }
                 }
             } else if (choice == 1) { // Open Store
                 gamePanel.openStoreDialog();
@@ -1372,6 +1456,16 @@ public class GameController {
             if (chatSuccess) {
                 String dialogue = targetNPC.getDialogue(player);
                 gamePanel.showNPCDialogue(targetNPC.getName(), dialogue);
+            } else {
+                // Chat failed, check if it was due to energy for non-Emily NPCs
+                // Player.chat() prints its own specific messages to console for other failures like distance.
+                if (player.getEnergy() < Player.CHAT_ENERGY_COST) {
+                    gamePanel.displayMessage(player.getName() + " tidak punya cukup energi untuk berbicara (butuh " + Player.CHAT_ENERGY_COST + ").");
+                } else {
+                    // For other failures like distance, Player.chat() already printed to console.
+                    // GamePanel already showed "Tidak ada NPC di dekatmu..." if findNearbyNPCForChat returned null.
+                    // So, no additional generic message here is needed unless we want to explicitly state chat failed without specific reason.
+                }
             }
         }
         gamePanel.updatePlayerInfoPanel();

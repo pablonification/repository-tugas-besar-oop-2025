@@ -103,7 +103,7 @@ public class Player {
     public static final int LOW_ENERGY_THRESHOLD = 10;
     private static final int DEFAULT_STARTING_GOLD = 500; 
     public static final int CHAT_MAX_DISTANCE = 1;
-    private static final int CHAT_ENERGY_COST = 10;
+    public static final int CHAT_ENERGY_COST = 10;
     private static final int CHAT_TIME_ADVANCE_MINUTES = 10;
     private static final int CHAT_HEART_POINTS_GAIN = 10;
 

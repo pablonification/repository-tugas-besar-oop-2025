@@ -36,15 +36,21 @@ Menangani kasus item habis setelah dimakan (selectedItem di-update oleh controll
 [SELESAI] Feedback Visual/Audio: Konfirmasi via perubahan energi di info panel dan log konsol.
 Fase 2: Ekonomi & Interaksi Dunia Luar
 Toko (Store):
-[IMPLEMENTED] GUI Toko (Beli): Dialog JOptionPane via tombol 'T' untuk menampilkan item yang dijual dari Store.java (Crop, Seed, Food, Equipment tertentu).
-Menampilkan harga beli dari PriceList.
+[IMPLEMENTED] GUI Toko (Beli): Panel in-game dasar via tombol 'T' sudah berfungsi. Menampilkan item dari Store.java.
+    - Lokasi: Hanya bisa diakses jika player.getCurrentMap().getName() adalah "STORE".
+    - Navigasi: Keyboard (Up/Down pilih item, E/Enter pilih/konfirmasi, Esc/T tutup).
+    - Tampilan: Daftar item & harga, gold pemain.
+    - Pembelian: Input kuantitas (Up/Down/Angka), konfirmasi pembelian.
+    - Feedback: [IMPLEMENTED] Pesan sukses/gagal beli, gold tidak cukup, dll. ditampilkan di UI Toko (menggantikan JOptionPane).
+[IMPLEMENTED] Menampilkan harga beli dari PriceList.
 [IMPLEMENTED] Pembelian Item (via GUI Toko):
-Input jumlah dari pemain (JOptionPane).
-Memvalidasi gold pemain (dilakukan oleh Store.sellToPlayer).
-Menambahkan item ke inventory pemain & mengurangi gold (dilakukan oleh Store.sellToPlayer).
-Feedback via JOptionPane.
-[IMPLEMENTED] Penyempurnaan GUI Toko: Tampilan yang lebih baik (misal, JDialog kustom, kategori item, tombol +/- untuk jumlah).
-[IMPLEMENTED] Interaksi dengan NPC Emily untuk membuka toko (jika diperlukan sebagai alternatif tombol 'T').
+    - Input jumlah dari pemain (via in-game UI).
+    - Memvalidasi gold pemain (dilakukan oleh Store.sellToPlayer dan dicek di GameController).
+    - Menambahkan item ke inventory pemain (dilakukan oleh Store.sellToPlayer).
+    - Mengurangi gold pemain (dilakukan oleh Player.spendGold via Store.sellToPlayer).
+    - Tidak ada penggunaan waktu.
+[IMPLEMENTED] Item yang dijual sesuai spesifikasi (Seeds, beberapa Food, Crops tertentu, Koran).
+[IMPLEMENTED] Harga item sesuai PriceList.csv.
 Shipping Bin:
 [IMPLEMENTED] GUI Shipping Bin: Dialog untuk memilih item dari inventory pemain yang bisa dijual (Crop, Fish, Food, MiscItem) via tombol 'B'.
 [IMPLEMENTED] Penjualan Item:
@@ -148,8 +154,13 @@ Furnitures (Termasuk interior rumah yang lebih besar dan detail seperti Stove, B
 Fase 6: Penyempurnaan GUI & Audio (Harvest Moon Style)
 
 GUI Enhancements:
-[UNTUK DILAKUKAN] Penghilangan Seluruh Window/Dialog Eksternal:
+[SEBAGIAN SUDAH] Penghilangan Seluruh Window/Dialog Eksternal:
     - Semua interaksi (toko, shipping bin, dialog NPC, konfirmasi, input, dsb) akan digantikan dengan panel/jendela in-game yang terintegrasi di dalam tampilan utama game (tidak ada lagi JOptionPane atau window terpisah).
+      - Dialog NPC utama sudah in-game.
+      - Toko (Store) sekarang menggunakan panel in-game dasar (navigasi keyboard, pemilihan item, input kuantitas dasar). 
+      - [UNTUK DILAKUKAN] Feedback Toko (sukses/gagal beli, dll.) masih menggunakan GamePanel.displayMessage() -> JOptionPane. Perlu diganti ke in-UI.
+      - [UNTUK DILAKUKAN] Shipping Bin masih menggunakan JOptionPane.
+      - [UNTUK DILAKUKAN] Dialog konfirmasi (Ya/Tidak), pesan info umum lainnya perlu diganti ke in-UI.
     - Navigasi dan interaksi dilakukan sepenuhnya dengan keyboard/controller/mouse di dalam game window, mirip main menu.
     - Tampilan panel-panel ini akan konsisten dengan style main menu (warna, font, animasi, dsb).
 [UNTUK DILAKUKAN] Main Menu In-Game (Lanjutan):
@@ -158,9 +169,9 @@ GUI Enhancements:
     - Integrasikan input Nama Pemain & Nama Kebun ke dalam alur "New Game" dari menu ini, bukan via JOptionPane di awal.
 
 [UNTUK DILAKUKAN] Kustomisasi Dialog In-Game:
-    - Ganti semua JOptionPane (Toko, Shipping Bin, Chat NPC, Konfirmasi Ya/Tidak, Pesan Info) dengan panel/jendela kustom yang terintegrasi dalam tampilan game.
+    - Ganti semua JOptionPane (Shipping Bin, Chat NPC sisa feedback, Konfirmasi Ya/Tidak, Pesan Info umum) dengan panel/jendela kustom yang terintegrasi dalam tampilan game.
+    - Penyempurnaan UI Toko: Input kuantitas yang lebih baik, feedback pembelian/kegagalan sepenuhnya in-game tanpa JOptionPane, ikon item.
     - Tampilkan potret karakter saat dialog dengan NPC.
-    - Gunakan ikon item di tampilan inventory, toko, dan daftar resep.
 
 [UNTUK DILAKUKAN] Penyempurnaan HUD/Info Panel Pemain:
     - Representasi grafis untuk bar energi.

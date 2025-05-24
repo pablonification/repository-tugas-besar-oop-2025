@@ -136,22 +136,13 @@ public class Store implements MapArea{
                 // Dapatkan harga beli aktual dari PriceList
                 int actualBuyPrice = priceList.getBuyPrice(itemName);
 
-                // Jika item tidak ada di PriceList atau harga <= 0 (kecuali koran), anggap tidak dijual
-                if (actualBuyPrice < 0 ) { // Harga -1 berarti tidak ditemukan di PriceList
+                // Jika item tidak ada di PriceList, anggap tidak dijual
+                if (actualBuyPrice < 0) { // Harga -1 berarti tidak ditemukan di PriceList
                     System.err.println("Peringatan: Harga beli untuk '" + itemName + "' tidak ditemukan di PriceList. Item tidak ditampilkan.");
                     continue;
                 }
-                 if (actualBuyPrice == 0 && !itemName.equals("Koran Edisi Baru")) { // Item dengan harga 0 tidak dijual kecuali koran
-                     // System.out.println("Info: Item '" + itemName + "' memiliki harga beli 0 dan tidak akan ditampilkan untuk dijual (kecuali koran).");
-                     // continue; // Lewati jika harga 0 dan bukan koran
-                 }
 
-
-                // Buat salinan item untuk ditampilkan (opsional, tapi lebih aman)
-                // atau modifikasi harga beli item master jika hanya untuk display sementara.
-                // Untuk kesederhanaan, kita asumsikan objek Item dari registry bisa langsung digunakan.
-                // Jika Item adalah immutable, kita perlu membuat instance baru dengan harga yang benar.
-                // Untuk sekarang, kita hanya tambahkan masterItem. View akan mengambil harga dari PriceList.
+                // Tambahkan item ke daftar yang tersedia
                 availableItems.add(masterItem);
             } else {
                 System.err.println("Peringatan: Item '" + itemName + "' yang terdaftar di toko tidak ditemukan di ItemRegistry.");

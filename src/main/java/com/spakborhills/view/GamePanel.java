@@ -74,6 +74,26 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final Font DIALOGUE_TEXT_FONT = new Font("Arial", Font.PLAIN, 18);
     private static final Font DIALOGUE_NAME_FONT = new Font("Arial", Font.BOLD, 20);
 
+    // Store UI State
+    private boolean isStoreUiActive = false;
+    private List<Item> storeItemsForDisplay;
+    private int currentStoreItemSelectionIndex = 0;
+    private int currentBuyQuantity = 1;
+    private String storeInputMode = "selecting_item"; // "selecting_item", "inputting_quantity"
+    private Rectangle storePanelRect;
+    private Rectangle storeItemListRect;
+    private Rectangle storeQuantityRect;
+    private Rectangle storeBuyButtonRect;
+    private Rectangle storeCloseButtonRect;
+    private static final Font STORE_FONT = new Font("Arial", Font.PLAIN, 18);
+    private static final Font STORE_ITEM_FONT = new Font("Monospaced", Font.PLAIN, 16);
+    private static final Color STORE_BG_COLOR = new Color(0, 0, 0, 200); // Semi-transparent black
+    private static final Color STORE_TEXT_COLOR = Color.WHITE;
+    private static final Color STORE_HIGHLIGHT_COLOR = Color.YELLOW;
+    private String storeFeedbackMessage = "";
+    private Color storeFeedbackColor = STORE_TEXT_COLOR; 
+    private Timer storeFeedbackTimer;
+
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
         this.gameController = gameController;
@@ -130,15 +150,53 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         int dialogueBoxY = preferredHeightTotal - dialogueBoxHeight - 20; // 20px from bottom of the entire panel
         npcDialogueBox = new Rectangle(dialogueBoxX, dialogueBoxY, dialogueBoxWidth, dialogueBoxHeight);
 
-        // Create a placeholder portrait
-        BufferedImage placeholder = new BufferedImage(PORTRAIT_SIZE, PORTRAIT_SIZE, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = placeholder.createGraphics();
-        g2d.setColor(Color.DARK_GRAY);
-        g2d.fillRect(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
-        g2d.setColor(Color.LIGHT_GRAY);
-        g2d.drawString("NPC", 10, PORTRAIT_SIZE / 2);
-        g2d.dispose();
-        npcPortraitPlaceholder = placeholder;
+        try {
+            // Load placeholder portrait (replace with actual path or use a default colored square)
+            // Assuming a placeholder.png exists in resources or adjust path
+            // BufferedImage tempImg = ImageIO.read(getClass().getResourceAsStream("/assets/images/npc/placeholder_portrait.png"));
+            // if (tempImg != null) {
+            //     npcPortraitPlaceholder = tempImg.getScaledInstance(PORTRAIT_SIZE, PORTRAIT_SIZE, Image.SCALE_SMOOTH);
+            // } else {
+                npcPortraitPlaceholder = new BufferedImage(PORTRAIT_SIZE, PORTRAIT_SIZE, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2d = ((BufferedImage)npcPortraitPlaceholder).createGraphics();
+                g2d.setColor(Color.LIGHT_GRAY);
+                g2d.fillRect(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
+                g2d.setColor(Color.BLACK);
+                g2d.drawString("P", PORTRAIT_SIZE/2 - 5, PORTRAIT_SIZE/2 + 5);
+                g2d.dispose();
+            // }
+        } catch (Exception e) { // Catch broader exception for ImageIO or NullPointer
+            System.err.println("Failed to load NPC portrait placeholder: " + e.getMessage());
+            // Create a fallback placeholder if loading failed
+            npcPortraitPlaceholder = new BufferedImage(PORTRAIT_SIZE, PORTRAIT_SIZE, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2d = ((BufferedImage)npcPortraitPlaceholder).createGraphics();
+            g2d.setColor(Color.GRAY);
+            g2d.fillRect(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
+            g2d.dispose();
+        }
+        
+        // Initialize Store UI Rectangles (example values, adjust as needed)
+        int storePanelWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE * 3 / 4;
+        int storePanelHeight = VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE; // FULL HEIGHT supaya muat semua item
+        int storePanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - storePanelWidth) / 2;
+        int storePanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE - storePanelHeight) / 2;
+        storePanelRect = new Rectangle(storePanelX, storePanelY, storePanelWidth, storePanelHeight);
+
+        // Perbesar area daftar item agar muat lebih banyak
+        storeItemListRect = new Rectangle(storePanelX + 20, storePanelY + 60, storePanelWidth - 40, storePanelHeight - 100);
+        storeQuantityRect = new Rectangle(storePanelX + 20, storePanelY + storePanelHeight - 80, storePanelWidth / 2 - 30, 40);
+        storeBuyButtonRect = new Rectangle(storePanelX + storePanelWidth / 2, storePanelY + storePanelHeight - 80, 100, 40);
+        storeCloseButtonRect = new Rectangle(storePanelX + storePanelWidth - 120, storePanelY + 20, 100, 30);
+
+        // Inisialisasi Timer untuk feedback Toko
+        storeFeedbackTimer = new Timer(3000, new ActionListener() { // Feedback hilang setelah 3 detik
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                storeFeedbackMessage = "";
+                repaint(); 
+            }
+        });
+        storeFeedbackTimer.setRepeats(false); // Hanya berjalan sekali per trigger
     }
 
     @Override
@@ -167,16 +225,16 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 return;
             }
             // Draw player info panel first (unclipped)
-            drawPlayerInfo(g);
+        drawPlayerInfo(g);
 
             // Store original clip and set new clip for map area
             Shape originalClip = g.getClip();
             g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
 
             // These are drawn within the new clipped area
-            drawCurrentMap(g);
-            drawNPCs(g);
-            drawPlayer(g);
+        drawCurrentMap(g);
+        drawNPCs(g);
+        drawPlayer(g);
             // drawDayNightTint(g); // Commented out as per user request
 
             // Restore original clip
@@ -185,6 +243,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             // Draw NPC Dialogue if active (on top of everything else in game world)
             if (isNpcDialogueActive) {
                 drawNpcDialogue(g);
+            }
+            if (isStoreUiActive) {
+                drawStoreUI((Graphics2D) g); // Explicitly cast here
             }
         }
     }
@@ -581,6 +642,12 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             return; // Consume the input, don't process other game actions
         }
 
+        if (isStoreUiActive) {
+            handleStoreInput(keyCode);
+            repaint();
+            return; 
+        }
+
         boolean actionTaken = false;
 
         switch (keyCode) {
@@ -720,18 +787,51 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     }
     
     public void openStoreDialog() {
-        if (gameController == null || farmModel == null) {
-            JOptionPane.showMessageDialog(this, "Sistem toko belum siap.", "Error", JOptionPane.ERROR_MESSAGE);
+        if (gameController == null || farmModel == null || farmModel.getPlayer() == null) {
+            // JOptionPane.showMessageDialog(this, "Sistem toko belum siap.", "Error", JOptionPane.ERROR_MESSAGE);
+            displayMessage("Sistem toko belum siap."); // Use in-game message
             return;
         }
 
-        // Get the parent frame to pass to the dialog
-        Frame parentFrame = JOptionPane.getFrameForComponent(this);
-        StoreDialog storeDialog = new StoreDialog(parentFrame, gameController, farmModel);
-        storeDialog.setVisible(true); // This will block until the dialog is closed
+        Player player = farmModel.getPlayer();
+        MapArea currentMap = player.getCurrentMap();
 
-        // After the dialog is closed, repaint the game panel to reflect any changes (e.g., gold, inventory)
+        // Check if player is in the store location
+        boolean isInStoreLocation = false;
+        if (currentMap != null) {
+            // Primary check: if the current map is an instance of the Store class
+            if (currentMap instanceof com.spakborhills.model.Store) {
+                isInStoreLocation = true;
+            } 
+            // Fallback or alternative: check if map name is "STORE" (less robust)
+            // else if (currentMap.getName().equalsIgnoreCase(LocationType.STORE.toString())) {
+            //     isInStoreLocation = true;
+            // }
+        }
+
+        if (!isInStoreLocation) {
+            displayMessage("Kamu harus berada di Toko untuk mengaksesnya.");
+            return;
+        }
+
+        // ---- NEW In-Game UI Logic ----
+        this.storeItemsForDisplay = gameController.getStoreItemsForDisplay();
+        if (this.storeItemsForDisplay == null || this.storeItemsForDisplay.isEmpty()) {
+            displayMessage("Toko sedang kosong saat ini.");
+            return;
+        }
+        this.currentStoreItemSelectionIndex = 0;
+        this.currentBuyQuantity = 1;
+        this.storeInputMode = "selecting_item";
+        this.isStoreUiActive = true;
         repaint();
+
+
+        // ---- OLD JOptionPane Logic ----
+        // Frame parentFrame = JOptionPane.getFrameForComponent(this);
+        // StoreDialog storeDialog = new StoreDialog(parentFrame, gameController, farmModel);
+        // storeDialog.setVisible(true); // This will block until the dialog is closed
+        // repaint(); // Repaint after dialog closes
     }
 
     /**
@@ -1485,5 +1585,270 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         g2d.drawString(continuePrompt, promptX, promptY);
 
         g2d.dispose();
+    }
+
+    private void handleStoreInput(int keyCode) {
+        if (!isStoreUiActive) return;
+
+        if (storeInputMode.equals("selecting_item")) {
+            switch (keyCode) {
+                case KeyEvent.VK_UP:
+                    if (currentStoreItemSelectionIndex > 0) {
+                        currentStoreItemSelectionIndex--;
+                    } else {
+                        currentStoreItemSelectionIndex = storeItemsForDisplay.size() - 1; // Wrap around
+                    }
+                    storeFeedbackMessage = ""; // Hapus feedback saat navigasi
+                    break;
+                case KeyEvent.VK_DOWN:
+                    if (currentStoreItemSelectionIndex < storeItemsForDisplay.size() - 1) {
+                        currentStoreItemSelectionIndex++;
+                    } else {
+                        currentStoreItemSelectionIndex = 0; // Wrap around
+                    }
+                    storeFeedbackMessage = ""; // Hapus feedback saat navigasi
+                    break;
+                case KeyEvent.VK_ENTER:
+                case KeyEvent.VK_E: // Use E as confirm
+                    if (storeItemsForDisplay != null && !storeItemsForDisplay.isEmpty()) {
+                        storeInputMode = "inputting_quantity";
+                        currentBuyQuantity = 1; // Reset quantity when selecting new item
+                        quantityInputString = "1"; // Reset juga string input kuantitas
+                        storeFeedbackMessage = ""; // Hapus feedback saat ganti mode
+                    }
+                    break;
+                case KeyEvent.VK_ESCAPE:
+                case KeyEvent.VK_T: // Allow T to also close the store
+                    isStoreUiActive = false;
+                    storeFeedbackMessage = ""; // Hapus feedback saat tutup toko
+                    break;
+            }
+        } else if (storeInputMode.equals("inputting_quantity")) {
+            switch (keyCode) {
+                case KeyEvent.VK_UP:
+                    currentBuyQuantity++;
+                    if (currentBuyQuantity > 999) currentBuyQuantity = 999; // Max quantity
+                    quantityInputString = String.valueOf(currentBuyQuantity);
+                    storeFeedbackMessage = "";
+                    break;
+                case KeyEvent.VK_DOWN:
+                    if (currentBuyQuantity > 1) {
+                        currentBuyQuantity--;
+                    }
+                    quantityInputString = String.valueOf(currentBuyQuantity);
+                    storeFeedbackMessage = "";
+                    break;
+                case KeyEvent.VK_ENTER:
+                case KeyEvent.VK_E: // Use E as confirm buy
+                    if (storeItemsForDisplay != null && !storeItemsForDisplay.isEmpty()) {
+                        Item selectedItem = storeItemsForDisplay.get(currentStoreItemSelectionIndex);
+                        // Memanggil requestBuyItem dari GameController
+                        // Asumsi requestBuyItem sekarang mengembalikan pesan atau status yang lebih detail
+                        String buyAttemptMessage = gameController.requestBuyItemAndGetMessage(selectedItem.getName(), currentBuyQuantity);
+                        
+                        boolean success = !buyAttemptMessage.toLowerCase().contains("gagal") && 
+                                          !buyAttemptMessage.toLowerCase().contains("tidak cukup") && 
+                                          !buyAttemptMessage.toLowerCase().contains("tidak tersedia") &&
+                                          !buyAttemptMessage.toLowerCase().contains("tidak dapat dibeli");
+
+                        if (success) {
+                            setStoreFeedback(buyAttemptMessage, false); // Pesan sukses
+                            storeItemsForDisplay = gameController.getStoreItemsForDisplay(); 
+                            if (storeItemsForDisplay == null || storeItemsForDisplay.isEmpty()) {
+                                isStoreUiActive = false; 
+                            } else {
+                                currentStoreItemSelectionIndex = Math.min(currentStoreItemSelectionIndex, storeItemsForDisplay.size() - 1);
+                                if (currentStoreItemSelectionIndex <0) currentStoreItemSelectionIndex = 0;
+                            }
+                        } else {
+                            setStoreFeedback(buyAttemptMessage, true); // Pesan error
+                        }
+                        storeInputMode = "selecting_item"; 
+                    }
+                    break;
+                case KeyEvent.VK_BACK_SPACE: // Go back to item selection without buying
+                     storeInputMode = "selecting_item";
+                     storeFeedbackMessage = "";
+                     break;
+                case KeyEvent.VK_ESCAPE:
+                    isStoreUiActive = false;
+                    storeFeedbackMessage = "";
+                    break;
+                 // Allow number input (basic, no text field yet)
+                case KeyEvent.VK_0: case KeyEvent.VK_NUMPAD0: updateQuantityInput(0); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_1: case KeyEvent.VK_NUMPAD1: updateQuantityInput(1); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_2: case KeyEvent.VK_NUMPAD2: updateQuantityInput(2); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_3: case KeyEvent.VK_NUMPAD3: updateQuantityInput(3); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_4: case KeyEvent.VK_NUMPAD4: updateQuantityInput(4); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_5: case KeyEvent.VK_NUMPAD5: updateQuantityInput(5); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_6: case KeyEvent.VK_NUMPAD6: updateQuantityInput(6); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_7: case KeyEvent.VK_NUMPAD7: updateQuantityInput(7); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_8: case KeyEvent.VK_NUMPAD8: updateQuantityInput(8); storeFeedbackMessage = ""; break;
+                case KeyEvent.VK_9: case KeyEvent.VK_NUMPAD9: updateQuantityInput(9); storeFeedbackMessage = ""; break;
+            }
+        }
+        repaint(); // Selalu repaint setelah input toko
+    }
+
+    // Helper for basic number input for quantity (appends digit)
+    private String quantityInputString = ""; 
+    private void updateQuantityInput(int digit) {
+        if (storeInputMode.equals("inputting_quantity")) {
+            if (quantityInputString.length() < 3) { // Max 3 digits for quantity (e.g., up to 999)
+                quantityInputString += digit;
+                try {
+                    currentBuyQuantity = Integer.parseInt(quantityInputString);
+                    if (currentBuyQuantity == 0 && quantityInputString.length() > 0) currentBuyQuantity = 1; // Avoid 0 if user types "0" then another digit
+                    if (currentBuyQuantity > 999) currentBuyQuantity = 999;
+
+                } catch (NumberFormatException e) {
+                    // Should not happen if only digits are appended
+                    quantityInputString = ""; 
+                    currentBuyQuantity = 1;
+                }
+            }
+             // If user presses a number, reset quantity and start new input.
+            if (digit != -1) { // -1 could signify a reset or non-digit action
+                 if (currentBuyQuantity > 0 && currentBuyQuantity <100 && quantityInputString.length() <2 ) { // if current quant is 1-99 and we add a digit
+                    currentBuyQuantity = currentBuyQuantity * 10 + digit;
+                 } else {
+                     currentBuyQuantity = digit; // Start new number
+                 }
+                 if (currentBuyQuantity == 0) currentBuyQuantity =1; // Min 1
+                 if (currentBuyQuantity > 999) currentBuyQuantity = 999; // Max 999
+                 quantityInputString = String.valueOf(currentBuyQuantity); // Keep string in sync for next potential digit.
+            }
+        }
+    }
+
+    private void drawStoreUI(Graphics2D g2d) {
+        if (!isStoreUiActive || storeItemsForDisplay == null) return;
+
+        g2d.setColor(STORE_BG_COLOR);
+        g2d.fillRect(storePanelRect.x, storePanelRect.y, storePanelRect.width, storePanelRect.height);
+        g2d.setColor(Color.WHITE);
+        g2d.drawRect(storePanelRect.x, storePanelRect.y, storePanelRect.width, storePanelRect.height);
+
+        g2d.setFont(DIALOGUE_NAME_FONT);
+        g2d.setColor(STORE_TEXT_COLOR);
+        String title = "Toko Spakbor Hills";
+        FontMetrics fmTitle = g2d.getFontMetrics();
+        int titleWidth = fmTitle.stringWidth(title);
+        g2d.drawString(title, storePanelRect.x + (storePanelRect.width - titleWidth) / 2, storePanelRect.y + 30);
+
+        g2d.setFont(STORE_FONT);
+        g2d.setColor(STORE_TEXT_COLOR);
+        g2d.drawString("[Esc] Tutup", storeCloseButtonRect.x + 5, storeCloseButtonRect.y + 20);
+
+        g2d.setFont(STORE_ITEM_FONT);
+        int itemY = storeItemListRect.y;
+        int itemLineHeight = g2d.getFontMetrics().getHeight() + 2;
+        int maxNameLength = 0;
+        if (storeItemsForDisplay != null && !storeItemsForDisplay.isEmpty()) {
+            for (Item item : storeItemsForDisplay) {
+                maxNameLength = Math.max(maxNameLength, item.getName().length());
+            }
+        }
+        maxNameLength = Math.max(maxNameLength, "Nama Item".length());
+        String formatString = "%-" + (maxNameLength + 2) + "s %7s";
+        g2d.drawString(String.format(formatString, "Nama Item", "Harga"), storeItemListRect.x, itemY);
+        itemY += itemLineHeight;
+        g2d.drawString(String.format(formatString, "---------", "-----"), storeItemListRect.x, itemY);
+        itemY += itemLineHeight;
+
+        int bottomReservedSpace = (itemLineHeight * 3) + 20; // Naikkan sedikit untuk feedback message
+
+        if (storeItemsForDisplay != null) {
+            for (int i = 0; i < storeItemsForDisplay.size(); i++) {
+                if (itemY > (storeItemListRect.y + storeItemListRect.height - bottomReservedSpace)) {
+                    g2d.drawString("...", storeItemListRect.x, itemY);
+                    break;
+                }
+                Item item = storeItemsForDisplay.get(i);
+                int price = farmModel.getPriceList().getBuyPrice(item.getName());
+                String priceText = price == 0 ? "Gratis" : price + " G";
+                String itemText = String.format(formatString, item.getName(), priceText);
+                if (i == currentStoreItemSelectionIndex) {
+                    g2d.setColor(STORE_HIGHLIGHT_COLOR);
+                    g2d.drawString("> " + itemText, storeItemListRect.x, itemY);
+                    g2d.setColor(STORE_TEXT_COLOR);
+                } else {
+                    g2d.drawString("  " + itemText, storeItemListRect.x, itemY);
+                }
+                itemY += itemLineHeight;
+            }
+        }
+        
+        FontMetrics bottomFontMetrics = g2d.getFontMetrics(STORE_FONT);
+        int bottomTextHeight = bottomFontMetrics.getHeight();
+        int goldTextY = storePanelRect.y + storePanelRect.height - 20;
+        String goldText = "Gold: " + farmModel.getPlayer().getGold() + " G";
+
+        // Posisi untuk feedback message, di atas Gold
+        int feedbackTextY = goldTextY - bottomTextHeight - 5; // 5px spasi di atas Gold
+
+        if (storeItemsForDisplay != null && !storeItemsForDisplay.isEmpty() && currentStoreItemSelectionIndex < storeItemsForDisplay.size()) {
+            if (storeInputMode.equals("inputting_quantity")) {
+                Item selectedItem = storeItemsForDisplay.get(currentStoreItemSelectionIndex);
+                g2d.setFont(STORE_FONT);
+                g2d.setColor(STORE_TEXT_COLOR);
+                String promptText1 = "Beli " + selectedItem.getName() + "? Jumlah: " + currentBuyQuantity;
+                String promptText2 = "([Up]/[Down] Ubah Jumlah)";
+                int quantityPromptX = storePanelRect.x + 20; // Mulai dari kiri seperti Gold
+                
+                // Posisi Y untuk prompt kuantitas, di atas feedback atau Gold
+                int quantityPromptY1 = feedbackTextY - bottomTextHeight - 5; // Di atas feedback
+                int quantityPromptY2 = feedbackTextY; // Sejajar dengan Y feedback (atau sedikit di bawahnya jika feedback panjang)
+
+                g2d.drawString(promptText1, quantityPromptX, quantityPromptY1);
+                g2d.drawString(promptText2, quantityPromptX, quantityPromptY2);
+
+                g2d.setColor(STORE_HIGHLIGHT_COLOR);
+                g2d.drawString("[E/Enter] Beli", storeBuyButtonRect.x, quantityPromptY1);
+                g2d.setColor(STORE_TEXT_COLOR);
+                g2d.drawString("[Esc/Bksp] Batal", storeBuyButtonRect.x, quantityPromptY2);
+            } else {
+                g2d.setFont(STORE_FONT);
+                g2d.setColor(STORE_TEXT_COLOR);
+                String instructionText = "([Up]/[Down] Pilih Item, [E/Enter] Pilih)";
+                FontMetrics instructionFm = g2d.getFontMetrics();
+                // Gambar instruksi umum di atas feedback atau Gold
+                g2d.drawString(instructionText, storePanelRect.x + 20, feedbackTextY - bottomTextHeight -5 ); 
+            }
+        } else if (storeItemsForDisplay == null || storeItemsForDisplay.isEmpty()) {
+             g2d.setFont(STORE_FONT);
+             g2d.setColor(Color.YELLOW);
+             String emptyStoreMsg = "Toko sedang kosong!";
+             FontMetrics msgFm = g2d.getFontMetrics();
+             g2d.drawString(emptyStoreMsg, storePanelRect.x + (storePanelRect.width - msgFm.stringWidth(emptyStoreMsg))/2, storeItemListRect.y + storeItemListRect.height / 2 );
+        }
+
+        // Gambar feedback message jika ada
+        if (storeFeedbackMessage != null && !storeFeedbackMessage.isEmpty()) {
+            g2d.setFont(STORE_FONT);
+            g2d.setColor(storeFeedbackColor);
+            FontMetrics feedbackFm = g2d.getFontMetrics();
+            // Pusatkan teks feedback jika memungkinkan, atau letakkan di kiri
+            int feedbackX = storePanelRect.x + 20; 
+            // Jika ingin tengah: storePanelRect.x + (storePanelRect.width - feedbackFm.stringWidth(storeFeedbackMessage)) / 2;
+            g2d.drawString(storeFeedbackMessage, feedbackX, feedbackTextY);
+        }
+        
+        // Gambar Gold terakhir agar selalu di atas jika ada overlap (seharusnya tidak dengan layout baru)
+        g2d.setFont(STORE_FONT);
+        g2d.setColor(STORE_TEXT_COLOR);
+        g2d.drawString(goldText, storePanelRect.x + 20, goldTextY);
+    }
+
+    // Metode baru untuk mengatur feedback di UI Toko
+    private void setStoreFeedback(String message, boolean isError) {
+        this.storeFeedbackMessage = message;
+        this.storeFeedbackColor = isError ? Color.RED : new Color(144, 238, 144); // Merah untuk error, hijau muda untuk sukses
+        if (storeFeedbackTimer.isRunning()) {
+            storeFeedbackTimer.restart();
+        } else {
+            storeFeedbackTimer.start();
+        }
+        repaint(); // Langsung repaint untuk menampilkan feedback
     }
 }
