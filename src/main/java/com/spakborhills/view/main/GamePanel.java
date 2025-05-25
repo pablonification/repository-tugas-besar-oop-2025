@@ -1,5 +1,8 @@
 package com.spakborhills.view.main;
 
+import com.spakborhills.controller.PlayerController;
+import com.spakborhills.model.Enum.GameState;
+import com.spakborhills.model.Enum.Gender;
 import com.spakborhills.model.Player;
 import com.spakborhills.model.tile.TileManager;
 import com.spakborhills.view.entity.PlayerView;
@@ -12,9 +15,8 @@ public class GamePanel extends JPanel implements Runnable {
     public static final int ONE_SECOND = 1_000_000_000;
 
     // screen settings
-    final int originalTileSize = 16;
-    final int scale = 3;
-
+    public final int originalTileSize = 16;
+    public final int scale = 3;
     public final int tileSize = originalTileSize * scale;
 
     // SCREEN
@@ -28,7 +30,9 @@ public class GamePanel extends JPanel implements Runnable {
     public final int maxWorldRow = 48;
 
     //ENTITY & PLAYER
-    public PlayerView player = new PlayerView(this);
+    public Player player = new Player("Diddy", Gender.MALE, "bjirlah", null, tileSize * 23, tileSize * 21, null, this);
+    public PlayerController controller = new PlayerController(this, player);
+    public PlayerView playerView = new PlayerView(this, player, controller);
 
     int speed = 4;
 
@@ -36,10 +40,12 @@ public class GamePanel extends JPanel implements Runnable {
     int fps = 60;
 
     //SYSTEM
-    public KeyHandler keyHandler = new KeyHandler();
+    public KeyHandler keyHandler = new KeyHandler(this);
     public CollisionChecker collisionChecker = new CollisionChecker(this);
     Thread gameThread = null;
-    TileManager tileManager = new TileManager(this);
+    public TileManager tileManager = new TileManager(this);
+    public GameState gameState = GameState.PLAY;
+    public UI ui = new UI(this);
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -58,7 +64,9 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void update() {
 //        System.out.println("Called");
-        player.update();
+        if (gameState == GameState.PLAY) {
+            playerView.update();
+        }
     }
 
     @Override
@@ -70,7 +78,9 @@ public class GamePanel extends JPanel implements Runnable {
 
         tileManager.draw(g2);
 
-        player.draw(g2);
+        playerView.draw(g2);
+
+        ui.draw(g2);
 
         g2.dispose();
     }

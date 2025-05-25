@@ -16,6 +16,10 @@ package com.spakborhills.model.Item;
 
 import com.spakborhills.model.Enum.ItemCategory;
 import com.spakborhills.model.Player;
+import com.spakborhills.model.Util.Utility;
+
+import java.awt.image.BufferedImage;
+import java.nio.Buffer;
 // import java.util.Objects;
 
 public abstract class Item {
@@ -23,12 +27,23 @@ public abstract class Item {
     private ItemCategory category;
     private int buyPrice;
     private int sellPrice;
+    public BufferedImage image;
 
-    public Item(String name, ItemCategory category, int buyPrice, int sellPrice) {
+    public Item(String name, ItemCategory category, int buyPrice, int sellPrice, String imagePath) {
         this.name = name;
         this.category = category;
         this.buyPrice = buyPrice;
         this.sellPrice = sellPrice;
+        if(imagePath != null)
+            this.image = Utility.getInstance().setup(imagePath, 48, 48); // TODO: add gp
+    }
+
+    public Item(String name, ItemCategory category, int buyPrice, int sellPrice) {
+        this(name, category, buyPrice, sellPrice, null);
+    }
+
+    public void setImage(String path) {
+        image = Utility.getInstance().setup(path, 48,48); // TODO: add gp
     }
     
     public String getName() {

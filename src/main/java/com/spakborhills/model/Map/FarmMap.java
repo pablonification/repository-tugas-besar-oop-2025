@@ -7,9 +7,11 @@ import com.spakborhills.model.Object.DeployedObject;
 import com.spakborhills.model.Object.House; // Contoh DeployedObject
 import com.spakborhills.model.Object.Pond;   // Contoh DeployedObject
 import com.spakborhills.model.Object.ShippingBinObject; // Contoh DeployedObject
+import com.spakborhills.model.Player;
+import com.spakborhills.model.Enum.Direction;
+import com.spakborhills.view.main.GamePanel;
 
-import java.awt.Point;
-import java.awt.Dimension;
+import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -21,11 +23,13 @@ import java.util.Random;
  * Berdasarkan spesifikasi Halaman 21-22 dan diagram kelas.
  */
 public class FarmMap implements MapArea{
-    private static final int DEFAULT_WIDTH = 32;
-    private static final int DEFAULT_HEIGHT = 32;
+    private static final int DEFAULT_WIDTH = 48;
+    private static final int DEFAULT_HEIGHT = 48;
     private final String name = "Farm";
-    private final Tile[][] tiles;
-    private final Map<Point, DeployedObject> deployedObjectsMap;
+    private final Tile[][] tiles; /** ini nanti ga dipake lagi */
+    private final int[][] mapTileNum = new int[DEFAULT_WIDTH][DEFAULT_HEIGHT];
+    private final Map<Point, DeployedObject> deployedObjectsMap; /** ini probably juga nggak (liat sikon) */
+
     private final java.util.List<Point> entryPoints; // Daftar EntryPoint
 
     /**
@@ -33,7 +37,7 @@ public class FarmMap implements MapArea{
      * Menginisialisasi grid Tile, menempatkan objek awal, dan mendefinisikan entry point.
      */
     public FarmMap() {
-        this.tiles = new Tile[DEFAULT_HEIGHT][DEFAULT_WIDTH];
+        this.tiles = new Tile[DEFAULT_HEIGHT][DEFAULT_WIDTH]; /** ini nanti ga dipake lagi */
         this.deployedObjectsMap = new HashMap<>();
         this.entryPoints = new java.util.ArrayList<>();
 
@@ -56,55 +60,128 @@ public class FarmMap implements MapArea{
      * Shipping Bin selalu berjarak 1 petak dari rumah.
      */
     private void placeInitialDeployedObjects() {
+        // house & shipping bin generation;
         Random random = new Random();
+        int houseX = random.nextInt(22) + 9;
+        int houseY = random.nextInt(25) + 9;
 
-        // A. Tempatkan House (6x6) secara acak
-        House playerHouse = new House(); // Asumsi konstruktor default ada
-        boolean housePlaced = false;
-        while (!housePlaced) {
-            // Batasi area penempatan agar tidak terlalu mepet pinggir
-            int houseX = random.nextInt(DEFAULT_WIDTH - playerHouse.getWidth() - 2) + 1; // +1 agar tidak di kolom 0
-            int houseY = random.nextInt(DEFAULT_HEIGHT - playerHouse.getHeight() - 2) + 1; // +1 agar tidak di baris 0
-            if (placeObject(playerHouse, houseX, houseY)) {
-                housePlaced = true;
-                System.out.println("Rumah ditempatkan di (" + houseX + "," + houseY + ")");
+        /*
+         * Rectangle below specify the allocated space for the house & shipping bin + 1 tile
+         * additional space in every side to prevent pond getting side by side with house & shipping bin
+         * (it's not specified in the specs, but I think it better be that way)
+         * */
+        Rectangle house = new Rectangle(houseX - 1, houseY - 1, 12, 8 );
 
-                // B. Tempatkan Shipping Bin (3x2) 1 petak dari rumah (Halaman 21)
-                // Coba tempatkan di sebelah kanan rumah
-                ShippingBinObject shippingBin = new ShippingBinObject(); // Asumsi konstruktor default
-                int binX = houseX + playerHouse.getWidth() + 1; // 1 petak di kanan rumah
-                int binY = houseY; // Sejajar dengan bagian atas rumah (bisa disesuaikan)
-                // Pastikan bin masih dalam batas peta
-                if (isAreaAvailable(binX, binY, shippingBin.getWidth(), shippingBin.getHeight())) {
-                    placeObject(shippingBin, binX, binY);
-                    System.out.println("Shipping Bin ditempatkan di (" + binX + "," + binY + ")");
-                } else {
-                    // Coba di kiri, atas, atau bawah jika kanan tidak bisa (logika bisa lebih kompleks)
-                    System.err.println("PERINGATAN: Tidak bisa menempatkan Shipping Bin di sebelah kanan rumah. Perlu logika penempatan alternatif.");
+        Rectangle pond = new Rectangle();
+        pond.width = 4;
+        pond.height = 3;
+        do {
+            pond.x = (random.nextInt(28) + 9);
+            pond.y = (random.nextInt(27) + 9);
+        } while (house.intersects(pond));
+
+        house.x++;
+        house.y++;
+        house.width -= 2;
+        house.height -= 2;
+
+        System.out.println("House(" + house.x + ", " + house.y + ')');
+        System.out.println("Pond(" + pond.x + ", " + pond.y + ')');
+
+        for(int row = 0; row < 8; ++row) {
+            for(int col = 0; col < 48; ++col) {
+                mapTileNum[col][row] = 2;
+            }
+        }
+
+        for(int row = 8; row < 40; ++row) {
+            for(int col = 0; col < 48; ++col) {
+                if(col < 8) {
+                    mapTileNum[col][row] = 2;
+                }
+                else if(col < 40) {
+                    if(pond.contains(col,row)) {
+                        mapTileNum[col][row] = 1;
+                    }
+
+                    else if(house.contains(col, row)) {
+                        if(col - house.x < 6) {
+                            mapTileNum[col][row] = 2;
+                        }
+                        else if(col - house.x > 6 && row - house.y < 2) {
+                            mapTileNum[col][row] = 3;
+                        }
+                        else {
+                            mapTileNum[col][row] = 0;
+                        }
+                    }
+
+                    else {
+                        mapTileNum[col][row] = 0;
+                    }
+
+                }
+                else {
+                    mapTileNum[col][row] = 2;
                 }
             }
         }
 
+        for(int row = 40; row < 48; ++row) {
+            for(int col = 0; col < 48; ++col) {
+                mapTileNum[col][row] = 2;
+            }
+        }
+//        Random random = new Random();
+//
+//        // A. Tempatkan House (6x6) secara acak
+//        House playerHouse = new House(); // Asumsi konstruktor default ada
+//        boolean housePlaced = false;
+//        while (!housePlaced) {
+//            // Batasi area penempatan agar tidak terlalu mepet pinggir
+//            int houseX = random.nextInt(DEFAULT_WIDTH - playerHouse.getWidth() - 2) + 1; // +1 agar tidak di kolom 0
+//            int houseY = random.nextInt(DEFAULT_HEIGHT - playerHouse.getHeight() - 2) + 1; // +1 agar tidak di baris 0
+//            if (placeObject(playerHouse, houseX, houseY)) {
+//                housePlaced = true;
+//                System.out.println("Rumah ditempatkan di (" + houseX + "," + houseY + ")");
+//
+//                // B. Tempatkan Shipping Bin (3x2) 1 petak dari rumah (Halaman 21)
+//                // Coba tempatkan di sebelah kanan rumah
+//                ShippingBinObject shippingBin = new ShippingBinObject(); // Asumsi konstruktor default
+//                int binX = houseX + playerHouse.getWidth() + 1; // 1 petak di kanan rumah
+//                int binY = houseY; // Sejajar dengan bagian atas rumah (bisa disesuaikan)
+//                // Pastikan bin masih dalam batas peta
+//                if (isAreaAvailable(binX, binY, shippingBin.getWidth(), shippingBin.getHeight())) {
+//                    placeObject(shippingBin, binX, binY);
+//                    System.out.println("Shipping Bin ditempatkan di (" + binX + "," + binY + ")");
+//                } else {
+//                    // Coba di kiri, atas, atau bawah jika kanan tidak bisa (logika bisa lebih kompleks)
+//                    System.err.println("PERINGATAN: Tidak bisa menempatkan Shipping Bin di sebelah kanan rumah. Perlu logika penempatan alternatif.");
+//                }
+//            }
+//        }
+
 
         // C. Tempatkan Pond (4x3) secara acak, pastikan tidak tumpang tindih dengan House/Bin
-        Pond farmPond = new Pond(); // Asumsi konstruktor default ada
-        boolean pondPlaced = false;
-        int maxAttempts = 100; // Hindari infinite loop jika peta terlalu penuh
-        int attempts = 0;
-        while (!pondPlaced && attempts < maxAttempts) {
-            int pondX = random.nextInt(DEFAULT_WIDTH - farmPond.getWidth());
-            int pondY = random.nextInt(DEFAULT_HEIGHT - farmPond.getHeight());
-            if (placeObject(farmPond, pondX, pondY)) {
-                pondPlaced = true;
-                System.out.println("Pond ditempatkan di (" + pondX + "," + pondY + ")");
-            }
-            attempts++;
-        }
-        if (!pondPlaced) {
-            System.err.println("PERINGATAN: Gagal menempatkan Pond setelah " + maxAttempts + " percobaan. Peta mungkin terlalu penuh.");
-        }
+//        Pond farmPond = new Pond(); // Asumsi konstruktor default ada
+//        boolean pondPlaced = false;
+//        int maxAttempts = 100; // Hindari infinite loop jika peta terlalu penuh
+//        int attempts = 0;
+//        while (!pondPlaced && attempts < maxAttempts) {
+//            int pondX = random.nextInt(DEFAULT_WIDTH - farmPond.getWidth());
+//            int pondY = random.nextInt(DEFAULT_HEIGHT - farmPond.getHeight());
+//            if (placeObject(farmPond, pondX, pondY)) {
+//                pondPlaced = true;
+//                System.out.println("Pond ditempatkan di (" + pondX + "," + pondY + ")");
+//            }
+//            attempts++;
+//        }
+//        if (!pondPlaced) {
+//            System.err.println("PERINGATAN: Gagal menempatkan Pond setelah " + maxAttempts + " percobaan. Peta mungkin terlalu penuh.");
+//        }
     }
 
+    /** gw gatau ini ngapain asli */
     private void defineEntryPoints() {
         // Entry Point Utara (tengah atas)
         int northX = DEFAULT_WIDTH / 2;
@@ -203,32 +280,44 @@ public class FarmMap implements MapArea{
      * yang mencakup koordinat tersebut.
      * Sesuai diagram kelas MapArea.
      */
-    @Override
-    public boolean isOccupied(int x, int y) {
-        if (!isWithinBounds(x, y)) {
-            return true; // Di luar batas dianggap ditempati/tidak bisa diakses
-        }
-        // Cek dulu tipe tile dasarnya, apakah memang tidak bisa dilewati (misal Tembok, Air)
-        Tile currentTile = tiles[y][x];
-        if (currentTile.getType() == TileType.WALL || 
-            currentTile.getType() == TileType.WATER) { // WATER is generally impassable
-            // Tambahkan TileType lain yang tidak bisa dilewati di sini jika ada (misal, MOUNTAIN)
-            return true;
+//    @Override
+    //TODO: implement more generalized version (Player -> Entity)
+    public boolean isOccupied(GamePanel gp, Player entity) {
+        int entityLeftWorldX = entity.worldX + entity.solidArea.x;
+        int entityRightWorldX = entityLeftWorldX + entity.solidArea.width;
+        int entityTopWorldY = entity.worldY + entity.solidArea.y;
+        int entityBottomWorldY = entityTopWorldY + entity.solidArea.height;
+
+        int entityLeftCol = entityLeftWorldX/gp.tileSize;
+        int entityRightCol = entityRightWorldX/gp.tileSize;
+        int entityTopRow = entityTopWorldY/gp.tileSize;
+        int entityBottomRow = entityBottomWorldY/gp.tileSize;
+
+        int tileNum1 = 0, tileNum2 = 0;
+        switch (entity.direction) {
+            case Direction.NORTH:
+                entityTopRow = (entityTopWorldY - entity.speed)/gp.tileSize;
+                tileNum1 = gp.tileManager.mapTileNum[entityLeftCol][entityTopRow];
+                tileNum2 = gp.tileManager.mapTileNum[entityRightCol][entityTopRow];
+                break;
+            case Direction.SOUTH:
+                entityBottomRow = (entityBottomWorldY + entity.speed)/gp.tileSize;
+                tileNum1 = gp.tileManager.mapTileNum[entityLeftCol][entityBottomRow];
+                tileNum2 = gp.tileManager.mapTileNum[entityRightCol][entityBottomRow];
+                break;
+            case Direction.WEST:
+                entityLeftCol = (entityLeftWorldX - entity.speed)/gp.tileSize;
+                tileNum1 = gp.tileManager.mapTileNum[entityLeftCol][entityTopRow];
+                tileNum2 = gp.tileManager.mapTileNum[entityLeftCol][entityBottomRow];
+                break;
+            case Direction.EAST:
+                entityRightCol = (entityRightWorldX + entity.speed)/gp.tileSize;
+                tileNum1 = gp.tileManager.mapTileNum[entityRightCol][entityTopRow];
+                tileNum2 = gp.tileManager.mapTileNum[entityRightCol][entityBottomRow];
+                break;
         }
 
-        // Kemudian cek apakah ada DeployedObject di lokasi tersebut
-        DeployedObject obj = getObjectAt(x, y);
-        if (obj != null) {
-            // Jika objeknya adalah House, maka tile TIDAK dianggap occupied (bisa dilewati)
-            if (obj instanceof House) {
-                return false; 
-            }
-            // Untuk objek lain, anggap tile occupied (tidak bisa dilewati)
-            return true; 
-        }
-        
-        // Jika tidak ada objek dan tipe tile-nya sendiri tidak menghalangi, maka tidak occupied
-        return false;
+        return gp.tileManager.tiles[tileNum1].collision || gp.tileManager.tiles[tileNum2].collision;
     }
 
     /**
@@ -347,4 +436,8 @@ public class FarmMap implements MapArea{
         return false;
     }
 
+    @Override
+    public boolean isOccupied(int x, int y) {
+        return false;
+    }
 }

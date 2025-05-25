@@ -64,9 +64,9 @@ class Player {
 
  package com.spakborhills.model; // Pastikan sesuai struktur Anda
 
+import java.awt.*;
 import java.util.List;
 import java.util.Map;
-import java.awt.Point;
 import java.util.ArrayList;
 
 // Import kelas/enum lain yang dibutuhkan (Pastikan path benar!)
@@ -88,15 +88,13 @@ import com.spakborhills.model.NPC.NPC; // Pastikan ada
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
 import com.spakborhills.model.Map.FarmMap; // Impor FarmMap
-import com.spakborhills.model.Util.GameTime;
+import com.spakborhills.model.Util.*;
 // import com.spakborhills.model.Util.GameTime; // Anda mungkin perlu ini di Controller
-import com.spakborhills.model.Util.Inventory;
-import com.spakborhills.model.Util.Recipe; // Pastikan ada
-import com.spakborhills.model.Util.ShippingBin; // Pastikan ada
 import com.spakborhills.model.Item.Equipment; // Pastikan import Equipment ada
-import com.spakborhills.model.Util.EndGameStatistics; // Pastikan import EndGameStatistics ada
+import com.spakborhills.view.entity.Entity;
+import com.spakborhills.view.main.GamePanel;
 
-public class Player {
+public class Player extends Entity{
     // --- Konstanta ---
     public static final int MAX_ENERGY = 100;
     public static final int MIN_ENERGY = -20;
@@ -121,7 +119,11 @@ public class Player {
     private String favoriteItemName;
     private Item selectedItem; // Ditambahkan
     private int engagementDay;
+    GamePanel gp;
+    public int spriteNumber = 0;
 
+    //COUNTER
+    private int spriteCounter = 0;
     /**
      * Konstruktor untuk kelas Player.
      * Menginisialisasi state pemain di awal permainan.
@@ -134,7 +136,8 @@ public class Player {
      * @param startY        Koordinat Y awal.
      * @param itemRegistry  Sebuah Map yang merepresentasikan registri item (String nama -> objek Item).
      */
-    public Player(String name, Gender gender, String farmName, MapArea startMap, int startX, int startY, Map<String, Item> itemRegistry) {
+    public Player(String name, Gender gender, String farmName, MapArea startMap, int startX, int startY, Map<String, Item> itemRegistry, GamePanel gamePanel) {
+        this.gp = gamePanel;
         this.name = name;
         this.gender = gender;
         this.farmName = farmName;
@@ -142,12 +145,16 @@ public class Player {
         this.gold = DEFAULT_STARTING_GOLD;
         this.inventory = new Inventory(); // Buat inventory baru
         this.currentMap = startMap;
-        this.currentTileX = startX;
-        this.currentTileY = startY;
+        this.currentTileX = startX; /** ini nanti ga dipake lagi */
+        this.currentTileY = startY; /** ini nanti ga dipake lagi */
+        this.worldX = startX;
+        this.worldY = startY;
+        this.speed = 4; //TODO: tambahin param speed ke constructor Player;
         this.favoriteItemName = ""; // Default kosong
         this.partner = null; // Mulai single
         this.selectedItem = null; // Inisialisasi selectedItem
         this.engagementDay = -1; // Inisialisasi engagementDay
+        this.solidArea = new Rectangle(8, 16, 32, 32);
 
         // Inisialisasi inventory dengan item default (Halaman 23)
         if (itemRegistry != null) {
@@ -231,6 +238,8 @@ public class Player {
         } else {
             System.err.println("PERINGATAN: ItemRegistry (Map) null. Inventory tidak diinisialisasi.");
         }
+
+        setupImage();
     }
 
     // --- Getters ---
@@ -307,32 +316,28 @@ public class Player {
      * Mencoba memindahkan pemain satu petak ke arah yang ditentukan.
      * Memeriksa batas peta dan halangan.
      *
-     * @param direction Arah untuk bergerak.
+     *
      * @return true jika perpindahan berhasil, false jika gagal.
      */
-    public boolean move(Direction direction) {
-        int nextX = currentTileX;
-        int nextY = currentTileY;
+    public void walk() {
+        collisionOn = false;
+        gp.collisionChecker.checkTile(this);
+        if(!collisionOn) {
+            switch (direction) {
+                case NORTH -> worldY -= speed;
+                case SOUTH -> worldY += speed;
+                case EAST -> worldX += speed;
+                case WEST -> worldX -= speed;
+            }
 
-        switch (direction) {
-            case NORTH: nextY--; break;
-            case SOUTH: nextY++; break;
-            case EAST:  nextX++; break;
-            case WEST:  nextX--; break;
+            spriteCounter++;
+            if (spriteCounter > 12) {
+                if (spriteNumber == 1) {
+                    spriteNumber = 2;
+                } else spriteNumber = 1;
+                spriteCounter = 0;
+            }
         }
-
-        if (currentMap == null || !currentMap.isWithinBounds(nextX, nextY)) {
-            System.out.println("Tidak bisa bergerak ke luar batas map.");
-            return false;
-        }
-        if (currentMap.isOccupied(nextX, nextY)) {
-            System.out.println("Jalan terhalang.");
-            return false;
-        }
-
-        currentTileX = nextX;
-        currentTileY = nextY;
-        return true;
     }
 
     /**
@@ -1164,11 +1169,27 @@ public class Player {
             }
         }
         return false;
-    } 
+    }
+
+    public void setSpriteNumber(int spriteNumber) {
+        this.spriteNumber = spriteNumber;
+    }
 
     // Anda bisa menambahkan metode helper lain di sini jika diperlukan
     // Misalnya:
     // private Tile getFacingTile() { ... }
     // private NPC getNearbyNPC() { ... }
+
+    public void setupImage() {
+        Utility utility = Utility.getInstance();
+        down1 = utility.setup("/player/girl_down_1", gp.tileSize, gp.tileSize);
+        down2 = utility.setup("/player/girl_down_2", gp.tileSize, gp.tileSize);
+        up1 = utility.setup("/player/girl_up_1", gp.tileSize, gp.tileSize);
+        up2 = utility.setup("/player/girl_up_2", gp.tileSize, gp.tileSize);
+        left1 = utility.setup("/player/girl_left_1", gp.tileSize, gp.tileSize);
+        left2 = utility.setup("/player/girl_left_2", gp.tileSize, gp.tileSize);
+        right1 = utility.setup("/player/girl_right_1", gp.tileSize, gp.tileSize);
+        right2 = utility.setup("/player/girl_right_2", gp.tileSize, gp.tileSize);
+    }
 
 } 

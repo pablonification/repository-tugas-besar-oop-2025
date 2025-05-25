@@ -1,7 +1,7 @@
 package com.spakborhills.view.entity;
 
 import com.spakborhills.model.Util.Utility;
-import com.spakborhills.view.main.Direction;
+import com.spakborhills.model.Enum.Direction;
 import com.spakborhills.view.main.GamePanel;
 
 import javax.imageio.ImageIO;
@@ -12,9 +12,9 @@ import java.io.IOException;
 @SuppressWarnings({"DataFlowIssue", "CallToPrintStackTrace"})
 public class Entity {
 
-    GamePanel gp;
+//    GamePanel gp;
     public BufferedImage up1, up2, down1, down2, left1, left2, right1, right2;
-    public Direction direction;
+    public Direction direction = Direction.SOUTH;
 
     public boolean collisionOn = false;
 
@@ -24,21 +24,14 @@ public class Entity {
 
     public Rectangle solidArea;
 
-    public Entity(GamePanel gp) {
-        this.gp = gp;
+//    public Entity(GamePanel gp) {
+//        this.gp = gp;
+//    }
+
+    public void setDirection(Direction direction) {
+        this.direction = direction;
     }
 
-    public BufferedImage setup(String imagePath) {
-        BufferedImage image = null;
-        try{
-            image = ImageIO.read(getClass().getResourceAsStream(imagePath + ".png"));
-            image = Utility.scaleImage(image, gp.tileSize, gp.tileSize);
 
-        }catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return image;
-    }
 
 }

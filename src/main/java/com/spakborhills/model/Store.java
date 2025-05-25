@@ -7,7 +7,9 @@ import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
 import com.spakborhills.model.Object.DeployedObject; 
 // import com.spakborhills.model.Player;
-import com.spakborhills.model.Util.PriceList; 
+import com.spakborhills.model.Util.PriceList;
+import com.spakborhills.view.entity.Entity;
+import com.spakborhills.view.main.GamePanel;
 
 import java.awt.Dimension;
 import java.awt.Point;

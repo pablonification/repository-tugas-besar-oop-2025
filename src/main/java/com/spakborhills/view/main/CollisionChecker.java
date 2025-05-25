@@ -1,6 +1,7 @@
 package com.spakborhills.view.main;
 
 import com.spakborhills.view.entity.Entity;
+import com.spakborhills.model.Enum.Direction;
 
 public class CollisionChecker {
 
@@ -9,8 +10,8 @@ public class CollisionChecker {
         this.gp = gp;
     }
 
-
     public void checkTile(Entity entity) {
+        System.out.println("HI");
         int entityLeftWorldX = entity.worldX + entity.solidArea.x;
         int entityRightWorldX = entityLeftWorldX + entity.solidArea.width;
         int entityTopWorldY = entity.worldY + entity.solidArea.y;
@@ -21,40 +22,32 @@ public class CollisionChecker {
         int entityTopRow = entityTopWorldY/gp.tileSize;
         int entityBottomRow = entityBottomWorldY/gp.tileSize;
 
-        int tileNum1, tileNum2;
+        int tileNum1 = 0, tileNum2 = 0;
         switch (entity.direction) {
-            case Direction.UP:
+            case Direction.NORTH:
                 entityTopRow = (entityTopWorldY - entity.speed)/gp.tileSize;
                 tileNum1 = gp.tileManager.mapTileNum[entityLeftCol][entityTopRow];
                 tileNum2 = gp.tileManager.mapTileNum[entityRightCol][entityTopRow];
-                if(gp.tileManager.tiles[tileNum1].collision || gp.tileManager.tiles[tileNum2].collision) {
-                    entity.collisionOn = true;
-                }
                 break;
-            case Direction.DOWN:
+            case Direction.SOUTH:
                 entityBottomRow = (entityBottomWorldY + entity.speed)/gp.tileSize;
                 tileNum1 = gp.tileManager.mapTileNum[entityLeftCol][entityBottomRow];
                 tileNum2 = gp.tileManager.mapTileNum[entityRightCol][entityBottomRow];
-                if(gp.tileManager.tiles[tileNum1].collision || gp.tileManager.tiles[tileNum2].collision) {
-                    entity.collisionOn = true;
-                }
                 break;
-            case Direction.LEFT:
+            case Direction.WEST:
                 entityLeftCol = (entityLeftWorldX - entity.speed)/gp.tileSize;
                 tileNum1 = gp.tileManager.mapTileNum[entityLeftCol][entityTopRow];
                 tileNum2 = gp.tileManager.mapTileNum[entityLeftCol][entityBottomRow];
-                if(gp.tileManager.tiles[tileNum1].collision || gp.tileManager.tiles[tileNum2].collision) {
-                    entity.collisionOn = true;
-                }
                 break;
-            case Direction.RIGHT:
+            case Direction.EAST:
                 entityRightCol = (entityRightWorldX + entity.speed)/gp.tileSize;
                 tileNum1 = gp.tileManager.mapTileNum[entityRightCol][entityTopRow];
                 tileNum2 = gp.tileManager.mapTileNum[entityRightCol][entityBottomRow];
-                if(gp.tileManager.tiles[tileNum1].collision || gp.tileManager.tiles[tileNum2].collision) {
-                    entity.collisionOn = true;
-                }
                 break;
+        }
+
+        if(gp.tileManager.tiles[tileNum1].collision || gp.tileManager.tiles[tileNum2].collision) {
+            entity.collisionOn = true;
         }
     }
 }

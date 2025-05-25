@@ -96,7 +96,7 @@ public class Farm {
       this.statistics = statistics;
       this.priceList = priceList;
       this.itemRegistry = itemRegistry;
-      this.currentGameState = GameState.MAIN_MENU;
+      this.currentGameState = GameState.TITLE;
       System.out.println("Selamat datang di Kebun '" + name + "'!");
     }
 

@@ -5,6 +5,8 @@ import com.spakborhills.model.Enum.TileType; // Untuk tile default
 import com.spakborhills.model.Object.DeployedObject; // Jika ada objek di world map
 import com.spakborhills.model.Store; 
 import com.spakborhills.model.NPC.*; // Import all NPC classes
+import com.spakborhills.view.entity.Entity;
+import com.spakborhills.view.main.GamePanel;
 
 import java.awt.Dimension;
 import java.awt.Point;
@@ -138,18 +140,15 @@ public class WorldMap implements MapArea {
     }
 
     @Override
+    public boolean isOccupied(int x, int y) {
+        return false;
+    }
+
+    @Override
     public boolean isWithinBounds(int x, int y) {
         return x >= 0 && x < GENERIC_WIDTH && y >= 0 && y < GENERIC_HEIGHT;
     }
 
-    @Override
-    public boolean isOccupied(int x, int y) {
-        if (!isWithinBounds(x, y)) {
-            return true;
-        }
-        Tile tile = getTile(x,y);
-        return tile != null && tile.getAssociatedObject() != null;
-    }
 
     /**
      * Menempatkan objek di area generik WorldMap.
