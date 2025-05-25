@@ -27,6 +27,7 @@ import com.spakborhills.model.Enum.FishRarity; // Added for fishdebug
 import com.spakborhills.model.NPC.NPC; // Make sure NPC is imported
 import com.spakborhills.model.Enum.GameState; // Added import for GameState
 import com.spakborhills.model.Util.ShippingBin; // Corrected import path
+import com.spakborhills.model.Object.DeployedObject; // Added import for DeployedObject
 
 import javax.imageio.ImageIO; // For loading placeholder image
 import javax.swing.*;
@@ -40,6 +41,8 @@ import java.io.IOException; // For image loading
 import java.util.List;
 import java.util.ArrayList; // For creating list of sellable items
 import java.util.Map; // For iterating inventory
+import java.util.Set; // For alreadyDrawnLargeObjects
+import java.util.HashSet; // For alreadyDrawnLargeObjects
 
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
 
@@ -100,6 +103,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private Timer storeFeedbackTimer;
 
     private NPC currentInteractingNPC;
+    private javax.swing.Timer animationTimer;
 
     // Shipping Bin UI State
     private List<Item> playerSellableItems; // Items from player inventory that can be sold
@@ -147,6 +151,37 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final Color END_OF_DAY_BG_COLOR = new Color(50, 50, 70, 230); // Dark blueish-purple
     private static final Color END_OF_DAY_TEXT_COLOR = Color.WHITE;
 
+    // World Map Selection UI State
+    private List<String> worldMapDestinations;
+    private int currentWorldMapSelectionIndex = 0;
+    private Rectangle worldMapPanelRect;
+    private static final Font WORLD_MAP_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
+    private static final Font WORLD_MAP_FONT_ITEM = new Font("Arial", Font.PLAIN, 22);
+    private static final Color WORLD_MAP_BG_COLOR = new Color(60, 100, 60, 220); // Forest green-ish
+    private static final Color WORLD_MAP_TEXT_COLOR = Color.WHITE;
+    private static final Color WORLD_MAP_HIGHLIGHT_COLOR = Color.YELLOW;
+
+    // Tile Images
+    private BufferedImage tillableImage;
+    private BufferedImage tilledImage;
+    private BufferedImage plantedImage;
+    private BufferedImage harvestableImage;
+    private BufferedImage waterImage; // For watered soil or water bodies
+    private BufferedImage grassImage; // Example for GRASS TileType
+    private BufferedImage obstacleImage; // Example for OBSTACLE TileType
+    private BufferedImage plantWateredImage; // For watered planted tiles
+    private BufferedImage shippingBinImage; // For ShippingBinObject
+    private BufferedImage houseTileImage; // Added: For individual house tiles
+    private BufferedImage portalImage; // Added: For ENTRY_POINT tiles
+    private BufferedImage woodFloorImage;
+    private BufferedImage stoneFloorImage;
+    private BufferedImage carpetFloorImage;
+    private BufferedImage luxuryFloorImage;
+    private BufferedImage dirtFloorImage;
+    private BufferedImage wallImage;
+    private BufferedImage storeTileImage;
+    // Add more BufferedImages for other tile types as needed
+
     public GamePanel(Farm farmModel, GameController gameController) {
         this.farmModel = farmModel;
         this.gameController = gameController;
@@ -172,7 +207,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                             statisticsShown = true; // Set flag so it doesn't trigger repeatedly
                             return; // Crucial: Do not advance time or repaint if stats are shown
                         }
-
+    
                         // If timer is still running (i.e., stats not shown and timer not stopped by stats display)
                         if (gameTimer.isRunning()) { 
                             farmModel.getCurrentTime().advance(5); // Advance 5 game minutes
@@ -180,7 +215,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                             if (gameController != null) {
                                 gameController.checkTimeBasedPassOut(); 
                             }
-                            repaint(); // Redraw the panel to update time, etc.
+                            // NOTE: repaint() dipindah ke animationTimer untuk sinkronisasi yang lebih baik
                         }
                     } else if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
                         repaint(); // Keep repainting menu for potential animations or cursor blink later
@@ -188,7 +223,52 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 }
             }
         });
-        gameTimer.start();
+    
+        // Timer untuk animasi (100ms = 10 FPS untuk animasi smooth)
+        animationTimer = new javax.swing.Timer(80, new ActionListener() { // Misal, sekitar 12 FPS (80ms delay)
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (farmModel != null && farmModel.getPlayer() != null) {
+                    if (farmModel.getCurrentGameState() == GameState.IN_GAME || 
+                        farmModel.getCurrentGameState() == GameState.SHIPPING_BIN || // Tambahkan state UI lain jika perlu animasi player
+                        farmModel.getCurrentGameState() == GameState.STORE_UI ||
+                        farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
+                        
+                        // Update animasi pemain
+                        farmModel.getPlayer().updateAnimation();
+                        
+                        // Update animasi NPC jika ada
+                        // Mengambil semua NPC dari farmModel, lalu cek apakah mereka di peta saat ini
+                        MapArea currentPlayerMap = farmModel.getPlayer().getCurrentMap();
+                        if (currentPlayerMap != null && farmModel.getNPCs() != null) {
+                            for (NPC npc : farmModel.getNPCs()) { // Iterasi semua NPC dari Farm
+                                if (npc != null) {
+                                    // Cek apakah NPC berada di peta yang sama dengan pemain
+                                    MapArea npcMap = farmModel.getMapArea(npc.getHomeLocation()); // Asumsi homeLocation adalah map NPC berada
+                                    if (npcMap == currentPlayerMap) {
+                                        // Jika NPC memiliki metode updateAnimation, panggil di sini
+                                        npc.updateAnimation();
+                                        // npc.updateAI();
+                                        // Untuk sekarang, kita belum implementasi updateAnimation() di NPC.java abstrak
+                                        // Jika sudah ada, uncomment baris di atas.
+                                    }
+                                }
+                            }
+                        }
+                        repaint(); // Repaint untuk update visual animasi
+                    } else if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
+                        repaint(); // Repaint menu jika ada elemen dinamis
+                    }
+                }
+            }
+        });
+        animationTimer.start(); // Jangan lupa start animationTimer
+    
+        // Start kedua timer
+        // gameTimer.start(); // GameTimer starts based on game state now
+        // animationTimer.start(); // animationTimer starts based on game state now
+
+        loadTileImages(); // Load tile images
 
         // Set default font for JOptionPane dialogs
         UIManager.put("OptionPane.messageFont", DIALOG_FONT);
@@ -299,6 +379,63 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         int eodPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - eodPanelWidth) / 2;
         int eodPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - eodPanelHeight) / 2; // Centered
         endOfDayPanelRect = new Rectangle(eodPanelX, eodPanelY, eodPanelWidth, eodPanelHeight);
+
+        // Initialize World Map Selection Panel Rect (similar to End of Day summary)
+        int wmPanelWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE * 2 / 3;
+        int wmPanelHeight = VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE / 2;
+        int wmPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - wmPanelWidth) / 2;
+        int wmPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - wmPanelHeight) / 2; // Centered
+        worldMapPanelRect = new Rectangle(wmPanelX, wmPanelY, wmPanelWidth, wmPanelHeight);
+    }
+
+    private void loadTileImages() {
+        try {
+            tillableImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/tillable.png"));
+            tilledImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/tilled.png"));
+            plantedImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/planted.png"));
+            harvestableImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/harvestable.png"));
+            waterImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/water.png"));
+            plantWateredImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/plant_watered.png"));
+            shippingBinImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/shippingbin.png"));
+            houseTileImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/house_tile.png"));
+            portalImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/portal.png"));
+            grassImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/grass.png"));
+            // obstacleImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/obstacle.png")); // Temporarily commented out
+            woodFloorImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/wood_tile.png"));
+            stoneFloorImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/stone_tile.png"));
+            carpetFloorImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/carpet_tile.png"));
+            luxuryFloorImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/luxury_tile.png"));
+            dirtFloorImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/dirt_tile.png"));
+            wallImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/wall.png"));
+            storeTileImage = ImageIO.read(getClass().getResourceAsStream("/assets/sprites/tile/store_tile.png"));
+
+            if (tillableImage == null) System.err.println("Failed to load tillable.png");
+            if (tilledImage == null) System.err.println("Failed to load tilled.png");
+            if (plantedImage == null) System.err.println("Failed to load planted.png");
+            if (harvestableImage == null) System.err.println("Failed to load harvestable.png");
+            if (waterImage == null) System.err.println("Failed to load water.png");
+            if (plantWateredImage == null) System.err.println("Failed to load plant_watered.png");
+            if (shippingBinImage == null) System.err.println("Failed to load shippingbin.png");
+            if (houseTileImage == null) System.err.println("Failed to load house_tile.png");
+            if (portalImage == null) System.err.println("Failed to load portal.png");
+            if (grassImage == null) System.err.println("Failed to load grass.png");
+            // if (obstacleImage == null) System.err.println("Failed to load obstacle.png"); // Temporarily commented out
+            if (woodFloorImage == null) System.err.println("Failed to load wood_tile.png");
+            if (stoneFloorImage == null) System.err.println("Failed to load stone_tile.png");
+            if (carpetFloorImage == null) System.err.println("Failed to load carpet_tile.png");
+            if (luxuryFloorImage == null) System.err.println("Failed to load luxury_tile.png");
+            if (dirtFloorImage == null) System.err.println("Failed to load dirt_tile.png");
+            if (wallImage == null) System.err.println("Failed to load wall.png");
+            if (storeTileImage == null) System.err.println("Failed to load store_tile.png");
+
+        } catch (IOException e) {
+            System.err.println("Error loading tile images: " + e.getMessage());
+            e.printStackTrace();
+            // Consider setting placeholder images or colors if loading fails
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error with image path (IllegalArgumentException): " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void setGeneralGameMessage(String message, boolean isError) {
@@ -312,97 +449,106 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         repaint(); // Immediately repaint to show the message
     }
 
+    public void stopAllTimers() {
+        if (gameTimer != null && gameTimer.isRunning()) {
+            gameTimer.stop();
+            System.out.println("GamePanel: Game timer stopped.");
+        }
+        if (animationTimer != null && animationTimer.isRunning()) {
+            animationTimer.stop();
+            System.out.println("GamePanel: Animation timer stopped.");
+        }
+    }
+    
+    // Update method yang sudah ada untuk stop timer
+    public void stopGameTimer() {
+        stopAllTimers(); // Ganti dengan method baru
+    }
+    
+    // Jika ada method untuk restart/resume game, tambahkan ini:
+    public void startAllTimers() {
+        if (gameTimer != null && !gameTimer.isRunning()) {
+            gameTimer.start();
+            System.out.println("GamePanel: Game timer started.");
+        }
+        if (animationTimer != null && !animationTimer.isRunning()) {
+            animationTimer.start();
+            System.out.println("GamePanel: Animation timer started.");
+        }
+    }
+    
+    // Optional: Method untuk pause/resume hanya animasi (misal saat dialog)
+    public void pauseAnimation() {
+        if (animationTimer != null && animationTimer.isRunning()) {
+            animationTimer.stop();
+        }
+    }
+    
+    public void resumeAnimation() {
+        if (animationTimer != null && !animationTimer.isRunning() && 
+            farmModel != null && farmModel.getCurrentGameState() == GameState.IN_GAME) {
+            animationTimer.start();
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g.create(); // Work with a copy for transformations etc.
 
-        if (farmModel == null) { // Simplified initial check
-            g.setColor(Color.BLACK);
-            g.fillRect(0, 0, getWidth(), getHeight());
-            g.setColor(Color.WHITE);
-            g.setFont(new Font("Arial", Font.BOLD, 16));
-            g.drawString("Loading Game Data...", 20, getHeight() / 2);
+        // Clear the panel
+        g2d.setColor(getBackground()); // Use the panel's background color
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+
+        if (farmModel == null || farmModel.getPlayer() == null) {
+            // Draw loading screen or simple message
+            g2d.setColor(Color.BLACK);
+            g2d.setFont(new Font("Arial", Font.BOLD, 24));
+            String loadingMsg = "Game Model or Player not initialized.";
+            FontMetrics fm = g2d.getFontMetrics();
+            int msgWidth = fm.stringWidth(loadingMsg);
+            g2d.drawString(loadingMsg, (getWidth() - msgWidth) / 2, getHeight() / 2);
+            g2d.dispose();
             return;
         }
 
-        if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
-            drawMainMenu(g);
-        } else if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
-            if (farmModel.getPlayer() == null || farmModel.getPlayer().getCurrentMap() == null) {
-                // Still loading or error state after selecting new game but before player is ready
-                g.setColor(Color.BLACK);
-                g.fillRect(0, 0, getWidth(), getHeight());
-                g.setColor(Color.WHITE);
-                g.setFont(new Font("Arial", Font.BOLD, 16));
-                g.drawString("Initializing Game World...", 20, getHeight() / 2);
-                return;
-            }
-            // Draw player info panel first (unclipped)
-        drawPlayerInfo(g);
+        GameState currentState = farmModel.getCurrentGameState();
 
-            // Store original clip and set new clip for map area
-            Shape originalClip = g.getClip();
-            g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
-
-            // These are drawn within the new clipped area
-        drawCurrentMap(g);
-        drawNPCs(g);
-        drawPlayer(g);
-            // drawDayNightTint(g); // Commented out as per user request
-
-            // Restore original clip
-            g.setClip(originalClip);
-
-            // Draw NPC Dialogue if active (on top of everything else in game world)
-            if (isNpcDialogueActive) {
-                drawNpcDialogue(g);
+        if (currentState == GameState.MAIN_MENU) {
+            drawMainMenu(g2d);
+        } else if (currentState == GameState.END_OF_DAY_SUMMARY) {
+             // Draw game world behind summary first (optional, or just a dark overlay)
+            drawCurrentMap(g2d);
+            drawPlayer(g2d);
+            drawNPCs(g2d); 
+            // Then draw the summary UI on top
+            drawEndOfDaySummaryUI(g2d);
+        } else {
+            // For IN_GAME, STORE_UI, NPC_DIALOGUE, etc., draw the game world
+            drawCurrentMap(g2d);
+            drawPlayer(g2d);
+            drawNPCs(g2d); // Make sure this is called to draw NPCs
+            drawPlayerInfo(g2d); // Draw player info panel at the bottom
+            // drawDayNightTint(g2d); // Temporarily commented out for testing house rendering
+            
+            // Draw UI elements on top based on state
+            if (currentState == GameState.NPC_DIALOGUE) {
+                drawNpcDialogue(g2d);
+            } else if (currentState == GameState.STORE_UI) {
+                drawStoreUI(g2d);
+            } else if (currentState == GameState.SHIPPING_BIN) {
+                drawShippingBinUI(g2d);
+            } else if (currentState == GameState.CHEAT_INPUT) {
+                drawCheatInputUI(g2d);
+            } else if (currentState == GameState.WORLD_MAP_SELECTION) { // Added new state
+                drawWorldMapSelectionUI(g2d);
             }
-            if (isStoreUiActive) {
-                drawStoreUI((Graphics2D) g); // Explicitly cast here
-            }
-            // Draw General Game Message if active (on top of IN_GAME elements, but below modal UIs like Store/ShippingBin)
-            if (!generalGameMessage.isEmpty() && farmModel.getCurrentGameState() == GameState.IN_GAME) {
-                 drawGeneralGameMessage((Graphics2D) g);
-            }
-        } else if (farmModel.getCurrentGameState() == GameState.SHIPPING_BIN) {
-            // Need to ensure game world is drawn underneath if desired, or just the UI
-            // For now, let's draw the game world then the UI on top
-            if (farmModel.getPlayer() != null && farmModel.getPlayer().getCurrentMap() != null) {
-                drawPlayerInfo(g);
-                Shape originalClip = g.getClip();
-                g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
-                drawCurrentMap(g);
-                drawNPCs(g);
-                drawPlayer(g);
-                g.setClip(originalClip);
-            } else { // Fallback if player/map somehow null during this state
-                g.setColor(Color.DARK_GRAY);
-                g.fillRect(0,0, getWidth(), getHeight());
-            }
-            drawShippingBinUI((Graphics2D) g);
-        } else if (farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
-            // Draw game world underneath as a backdrop
-            if (farmModel.getPlayer() != null && farmModel.getPlayer().getCurrentMap() != null) {
-                drawPlayerInfo(g);
-                Shape originalClip = g.getClip();
-                g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
-                drawCurrentMap(g);
-                drawNPCs(g);
-                drawPlayer(g);
-                g.setClip(originalClip);
-            }
-            drawCheatInputUI((Graphics2D) g);
-        } else if (farmModel.getCurrentGameState() == GameState.END_OF_DAY_SUMMARY) {
-            // Optionally draw the game world faintly in the background
-            // if (farmModel.getPlayer() != null && farmModel.getPlayer().getCurrentMap() != null) {
-            //     drawPlayerInfo(g); // Could be distracting
-            //     Shape originalClip = g.getClip();
-            //     g.setClip(0, INFO_PANEL_HEIGHT, getWidth(), getHeight() - INFO_PANEL_HEIGHT);
-            //     drawCurrentMap(g); // Faded or normal
-            //     g.setClip(originalClip);
-            // }
-            drawEndOfDaySummaryUI((Graphics2D) g);
         }
+
+        // Draw general game messages on top of everything if active
+        drawGeneralGameMessage(g2d);
+
+        g2d.dispose(); // Dispose of the graphics copy
     }
 
     private void drawGeneralGameMessage(Graphics2D g2d) {
@@ -602,174 +748,166 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         Player player = farmModel.getPlayer();
         MapArea currentMap = player.getCurrentMap();
 
+        if (currentMap == null) {
+            System.err.println("GamePanel.drawCurrentMap: currentMap is null.");
+            return;
+        }
+
         Dimension mapSize = currentMap.getSize();
         int mapWidthInTiles = mapSize.width;
         int mapHeightInTiles = mapSize.height;
         int mapWidthInPixels = mapWidthInTiles * TILE_SIZE;
         int mapHeightInPixels = mapHeightInTiles * TILE_SIZE;
 
-        // Visible area for the map (below info panel)
         int viewportWidth = getWidth();
         int viewportHeight = getHeight() - INFO_PANEL_HEIGHT;
 
-        // Kamera berpusat pada pemain
-        // Player's position in pixels relative to the entire map
         int playerCenterXInMap = player.getCurrentTileX() * TILE_SIZE + TILE_SIZE / 2;
         int playerCenterYInMap = player.getCurrentTileY() * TILE_SIZE + TILE_SIZE / 2;
         
-        // camX and camY are the top-left coordinates of the visible part of the map
         int camX = playerCenterXInMap - viewportWidth / 2;
         int camY = playerCenterYInMap - viewportHeight / 2;
 
-        // Batasi kamera agar tidak keluar dari batas peta
         camX = Math.max(0, Math.min(camX, mapWidthInPixels - viewportWidth));
         camY = Math.max(0, Math.min(camY, mapHeightInPixels - viewportHeight));
         
-        // Handle jika map lebih kecil dari panel viewport
         if (mapWidthInPixels < viewportWidth) {
-            camX = (mapWidthInPixels - viewportWidth) / 2; // Center map horizontally
+            camX = (mapWidthInPixels - viewportWidth) / 2;
         }
         if (mapHeightInPixels < viewportHeight) {
-             camY = (mapHeightInPixels - viewportHeight) / 2; // Center map vertically
+             camY = (mapHeightInPixels - viewportHeight) / 2;
         }
 
-        for (int yTile = 0; yTile < mapHeightInTiles; yTile++) {
-            for (int xTile = 0; xTile < mapWidthInTiles; xTile++) {
-                Tile tile = currentMap.getTile(xTile, yTile);
-                if (tile == null) continue;
+        for (int row = 0; row < mapHeightInTiles; row++) {
+            for (int col = 0; col < mapWidthInTiles; col++) {
+                int screenX = col * TILE_SIZE - camX;
+                int screenY = row * TILE_SIZE - camY + INFO_PANEL_HEIGHT;
 
-                // Position of the tile on the screen
-                int screenX = xTile * TILE_SIZE - camX;
-                int screenY = yTile * TILE_SIZE - camY + INFO_PANEL_HEIGHT; // Offset by info panel height
-
-                // Culling: Hanya gambar tile yang terlihat di layar (within the map viewport)
                 if (screenX + TILE_SIZE <= 0 || screenX >= getWidth() ||
                     screenY + TILE_SIZE <= INFO_PANEL_HEIGHT || screenY >= getHeight()) {
                     continue;
                 }
-                
-                    Color tileColor;
-                    switch (tile.getType()) {
-                    case GRASS:
-                        tileColor = new Color(34, 139, 34); // ForestGreen
-                            break;
-                    case TILLABLE: 
-                        tileColor = new Color(210, 180, 140); // Tan
-                            break;
-                    case TILLED: 
-                        tileColor = new Color(139, 69, 19); // SaddleBrown
-                            if (tile.isWatered()) {
-                           tileColor = new Color(90, 45, 10); // Darker, wet brown (adjusted from saddle brown)
-                            }
-                            break;
-                    case PLANTED:
-                                if (tile.isHarvestable()) {
-                            tileColor = Color.YELLOW; 
-                        } else {
-                            Seed plantedSeed = tile.getPlantedSeed();
-                            if (plantedSeed != null && plantedSeed.getDaysToHarvest() > 0) {
-                                double growthPercentage = (double) tile.getGrowthDays() / plantedSeed.getDaysToHarvest();
-                                if (growthPercentage < 0.33) {
-                                    tileColor = new Color(144, 238, 144); // LightGreen
-                                } else if (growthPercentage < 0.66) {
-                                    tileColor = new Color(60, 179, 113);  // MediumSeaGreen
-                                } else {
-                                    tileColor = new Color(34, 139, 34);   // ForestGreen
-                                    }
-                                    if (tile.isWatered()) {
-                                     tileColor = tileColor.darker(); // Darken if watered
-                                }
+
+                Tile currentTile = currentMap.getTile(col, row);
+                if (currentTile == null) {
+                    // Draw a default color if tile is unexpectedly null
+                    g.setColor(Color.PINK); // Indicates an error or uninitialized tile
+                    g.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                    continue;
+                }
+
+                Image imageToDraw = null;
+                TileType type = currentTile.getType();
+
+                // Special handling for Store map
+                if (currentMap instanceof com.spakborhills.model.Store) {
+                    if (type == TileType.DEPLOYED_OBJECT) {
+                        DeployedObject associatedObj = currentTile.getAssociatedObject();
+                        // Handle specific deployed objects in store if needed, e.g., counter
+                        // For now, assuming they have their own sprites or will be handled by the generic DEPLOYED_OBJECT case below if not specific.
+                        // This 'if' block for DEPLOYED_OBJECT in store might need more specific logic
+                        // if store objects are different from farm/house objects.
+                        // Let it fall through to the main switch for now if no store-specific object logic is here.
+                    } else if (type == TileType.WALL) {
+                        imageToDraw = wallImage;
+                    } else if (type == TileType.ENTRY_POINT) {
+                        imageToDraw = portalImage;
+                    } else {
+                        // For most other tile types on the store map, use storeTileImage as the floor
+                        imageToDraw = storeTileImage;
+                    }
+                }
+
+                // If not in store, or if in store and imageToDraw is still null (e.g., for a DEPLOYED_OBJECT)
+                if (imageToDraw == null) {
+                    switch (type) {
+                        case PLANTED:
+                            if (currentTile.isHarvestable()) {
+                                imageToDraw = harvestableImage;
+                            } else if (currentTile.isWatered()) {
+                                imageToDraw = plantWateredImage;
                             } else {
-                                 tileColor = new Color(0,100,0); // Default for PLANTED if no valid seed info
+                                imageToDraw = plantedImage;
                             }
-                        }
-                        break;
-                    case WATER: // Assuming TileType.WATER for water sources
-                        tileColor = new Color(0, 100, 200); // Darker Blue
-                        break;
-                    case ENTRY_POINT:
-                        tileColor = Color.MAGENTA; 
                             break;
-                    case OBSTACLE:
-                            tileColor = Color.DARK_GRAY;
+                        case TILLED:
+                            imageToDraw = tilledImage;
+                            break;
+                        case TILLABLE:
+                            imageToDraw = tillableImage;
+                            break;
+                        case GRASS:
+                            imageToDraw = grassImage;
+                            break;
+                        case OBSTACLE:
+                            imageToDraw = obstacleImage;
+                            break;
+                        case WATER:
+                            imageToDraw = waterImage;
+                            break;
+                        case ENTRY_POINT:
+                            imageToDraw = portalImage;
+                            break;
+                        case DEPLOYED_OBJECT:
+                            DeployedObject associatedObj = currentTile.getAssociatedObject();
+                            if (associatedObj instanceof com.spakborhills.model.Object.House) {
+                                imageToDraw = houseTileImage;
+                            } else if (associatedObj instanceof com.spakborhills.model.Object.ShippingBinObject) {
+                                imageToDraw = shippingBinImage;
+                            } else {
+                                // Placeholder for other deployed objects if they have a generic tile
+                            }
+                            break;
+                        case WOOD_FLOOR:
+                            imageToDraw = woodFloorImage;
+                            break;
+                        case STONE_FLOOR:
+                            imageToDraw = stoneFloorImage;
+                            break;
+                        case CARPET_FLOOR:
+                            imageToDraw = carpetFloorImage;
+                            break;
+                        case LUXURY_FLOOR:
+                            imageToDraw = luxuryFloorImage;
+                            break;
+                        case DIRT_FLOOR:
+                            imageToDraw = dirtFloorImage;
+                            break;
+                        case WALL:
+                            imageToDraw = wallImage;
                             break;
                         default:
-                            tileColor = Color.LIGHT_GRAY;
+                            // Fallback handled after this switch
                             break;
                     }
-                    g.setColor(tileColor);
-                g.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-                g.setColor(Color.BLACK);
-                g.drawRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                }
+                
+                // Draw the selected base image
+                if (imageToDraw != null) {
+                    g.drawImage(imageToDraw, screenX, screenY, TILE_SIZE, TILE_SIZE, this);
+                } else { // Simplified fallback logic for tiles that genuinely don't have an image
+                    // Fallback for unhandled tile types or if an image is missing.
+                    g.setColor(new Color(128, 0, 128, 150)); // Semi-transparent Purple for fallback
+                    g.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                    g.setColor(Color.WHITE);
+                    g.drawString(type.toString().substring(0, Math.min(type.toString().length(),3)), screenX + 5, screenY + 20);
+                }
+
+                // Overlay for watered state (if applicable)
+                // This draws water.png on top of TILLED tiles if they are watered.
+                // Planted tiles now have their own watered state image (plantWateredImage).
+                if (currentTile.isWatered() && type == TileType.TILLED) { // Only for TILLED type now
+                    if (waterImage != null) {
+                        g.drawImage(waterImage, screenX, screenY, TILE_SIZE, TILE_SIZE, this);
+                    }
+                }
+                
+                // Optional: Draw grid lines for debugging
+                // g.setColor(new Color(200, 200, 200, 50)); // Light semi-transparent gray
+                // g.drawRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
             }
         }
     }
-
-    @Deprecated
-    // private void drawNPCs(Graphics g) {
-    //     Player player = farmModel.getPlayer();
-    //     MapArea currentMap = player.getCurrentMap();
-    //     List<NPC> allNPCs = farmModel.getNPCs();
-
-    //     if (currentMap == null || allNPCs == null || allNPCs.isEmpty()) {
-    //         return;
-    //     }
-
-    //     // Camera calculations (copied from drawCurrentMap/drawPlayer for context, can be refactored)
-    //     Dimension mapSize = currentMap.getSize();
-    //     int mapWidthInTiles = mapSize.width;
-    //     int mapHeightInTiles = mapSize.height;
-    //     int mapWidthInPixels = mapWidthInTiles * TILE_SIZE;
-    //     int mapHeightInPixels = mapHeightInTiles * TILE_SIZE;
-
-    //     int viewportWidth = getWidth();
-    //     int viewportHeight = getHeight() - INFO_PANEL_HEIGHT;
-
-    //     int playerCenterXInMap = player.getCurrentTileX() * TILE_SIZE + TILE_SIZE / 2;
-    //     int playerCenterYInMap = player.getCurrentTileY() * TILE_SIZE + TILE_SIZE / 2;
-        
-    //     int camX = playerCenterXInMap - viewportWidth / 2;
-    //     int camY = playerCenterYInMap - viewportHeight / 2;
-
-    //     camX = Math.max(0, Math.min(camX, mapWidthInPixels - viewportWidth));
-    //     camY = Math.max(0, Math.min(camY, mapHeightInPixels - viewportHeight));
-        
-    //     if (mapWidthInPixels < viewportWidth) {
-    //         camX = (mapWidthInPixels - viewportWidth) / 2;
-    //     }
-    //     if (mapHeightInPixels < viewportHeight) {
-    //          camY = (mapHeightInPixels - viewportHeight) / 2;
-    //     }
-
-    //     // Iterate through all NPCs and draw them if they are on the current map
-    //     for (NPC npc : allNPCs) {
-    //         MapArea npcHomeMapInstance = farmModel.getMapArea(npc.getHomeLocation());
-
-    //         // Check if the NPC belongs to the currently displayed map
-    //         if (currentMap == npcHomeMapInstance) {
-    //             int npcScreenX = npc.getCurrentTileX() * TILE_SIZE - camX;
-    //             int npcScreenY = npc.getCurrentTileY() * TILE_SIZE - camY + INFO_PANEL_HEIGHT;
-
-    //             // Culling: Only draw if NPC is within the visible viewport
-    //             if (npcScreenX + TILE_SIZE <= 0 || npcScreenX >= getWidth() ||
-    //                 npcScreenY + TILE_SIZE <= INFO_PANEL_HEIGHT || npcScreenY >= getHeight()) {
-    //                 continue;
-    //             }
-
-    //             // Simple representation: a colored rectangle and their initial
-    //             g.setColor(Color.ORANGE); // Example color for NPCs
-    //             g.fillRect(npcScreenX, npcScreenY, TILE_SIZE, TILE_SIZE);
-                
-    //             g.setColor(Color.BLACK);
-    //             g.setFont(new Font("Arial", Font.BOLD, 12));
-    //             // Draw NPC's initial or name (adjust text position for visibility)
-    //             String npcLabel = npc.getName().substring(0, Math.min(npc.getName().length(), 1)); // First letter
-    //             FontMetrics fm = g.getFontMetrics();
-    //             int textWidth = fm.stringWidth(npcLabel);
-    //             g.drawString(npcLabel, npcScreenX + (TILE_SIZE - textWidth) / 2, npcScreenY + TILE_SIZE / 2 + fm.getAscent()/2);
-    //         }
-    //     }
-    // }
 
     private void drawNPCs(Graphics g) {
         Player player = farmModel.getPlayer();
@@ -895,8 +1033,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         Image spriteFrame = player.getCurrentSpriteFrame();
     
         if (spriteFrame != null) {
-            int originalSpriteWidth = player.spriteWidth;  // Ambil dari Player
-            int originalSpriteHeight = player.spriteHeight; // Ambil dari Player
+            // *** KOREKSI DI SINI ***
+            int originalSpriteWidth = player.spriteWidthPlayer;  // Ambil dari Player (menggunakan nama field yang baru)
+            int originalSpriteHeight = player.spriteHeightPlayer; // Ambil dari Player (menggunakan nama field yang baru)
     
             if (originalSpriteWidth > 0 && originalSpriteHeight > 0) {
                 int drawHeight = TILE_SIZE; // Target tinggi
@@ -910,6 +1049,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 // Fallback jika dimensi sprite pemain tidak valid
                 g.setColor(Color.BLUE); // Warna placeholder berbeda untuk pemain
                 g.fillRect(playerTileScreenX, playerTileScreenY, TILE_SIZE, TILE_SIZE);
+                g.setColor(Color.BLACK);
+                g.drawString("DIM?", playerTileScreenX + 5, playerTileScreenY + 15); // Pesan jika dimensi asli 0
             }
         } else {
             // Fallback jika spriteFrame pemain null
@@ -917,24 +1058,38 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             g.fillRect(playerTileScreenX, playerTileScreenY, TILE_SIZE, TILE_SIZE);
             g.setColor(Color.BLACK);
             g.drawRect(playerTileScreenX, playerTileScreenY, TILE_SIZE, TILE_SIZE);
+            g.drawString("NO SPRITE", playerTileScreenX + 5, playerTileScreenY + 15); // Pesan jika frame null
         }
     
-        // Menggambar nama item yang dipilih di atas pemain (kode ini bisa tetap)
+        // Menggambar nama item yang dipilih di atas pemain
         Item selectedItem = player.getSelectedItem();
         if (selectedItem != null) {
             String itemName = selectedItem.getName();
             g.setColor(Color.WHITE);
-            FontMetrics fm = g.getFontMetrics();
+            FontMetrics fm = g.getFontMetrics(); // Sebaiknya FontMetrics untuk font yang akan digunakan untuk teks
+            // Jika ingin menggunakan font yang sama dengan DIALOGUE_TEXT_FONT misalnya:
+            // g.setFont(DIALOGUE_TEXT_FONT); // Set font sebelum mengambil FontMetrics jika beda
+            // fm = g.getFontMetrics();
+
             int stringWidth = fm.stringWidth(itemName);
-            // Gambar teks sedikit di atas sprite pemain yang sudah diskalakan
-            // Jika drawY adalah posisi atas sprite yang diskalakan:
-            // int textY = playerTileScreenY + (TILE_SIZE - (player.spriteHeight * TILE_SIZE / player.spriteHeight)) - 5; // contoh jika drawY belum ada
-            // Karena drawY sudah ada:
-            int textY = playerTileScreenY + (TILE_SIZE - (int) ((double) TILE_SIZE / player.spriteHeight * player.spriteHeight)) - 5; // Ini adalah posisi Y atas dari tile
-                                                                                                           // kita perlu posisi Y atas dari sprite yg digambar
-            // Mari gunakan posisi Y sprite yang digambar (drawY dari atas) dikurangi sedikit offset
-            int drawYForText = playerTileScreenY + (TILE_SIZE - (int) ((double) TILE_SIZE / player.spriteHeight * player.spriteHeight)); // ini sama dengan drawY di atas
-            g.drawString(itemName, playerTileScreenX + (TILE_SIZE - stringWidth) / 2, drawYForText - 5);
+            
+            // Menghitung posisi Y untuk teks item.
+            // Kita ingin teks berada di atas sprite yang telah digambar (yang bagian bawahnya rata dengan tile).
+            // Jadi, kita ambil posisi Y atas dari tile, lalu kurangi sedikit.
+            // Posisi Y atas dari tile di layar adalah playerTileScreenY.
+            int textY = playerTileScreenY - 5; // 5 piksel di atas tile
+
+            // Jika ingin teks tepat di atas kepala sprite yang mungkin lebih pendek dari TILE_SIZE:
+            // int spriteActualDrawY = playerTileScreenY + (TILE_SIZE - (int) ((double) TILE_SIZE / player.spriteHeightPlayer * player.spriteHeightPlayer));
+            // int textY = spriteActualDrawY - 5; 
+            // Namun, player.spriteHeightPlayer bisa jadi tidak ada, maka gunakan player.spriteHeightPlayer
+            // Perbaikan untuk textY berdasarkan asumsi drawHeight = TILE_SIZE untuk sprite:
+            // Posisi atas sprite adalah playerTileScreenY + (TILE_SIZE - TILE_SIZE) = playerTileScreenY
+            // Jika sprite rata bawah, posisi Y atasnya adalah playerTileScreenY + (TILE_SIZE - drawHeight)
+            // dimana drawHeight = TILE_SIZE, jadi Y atas sprite = playerTileScreenY.
+            // Jadi, playerTileScreenY - 5 sudah benar untuk menempatkannya di atas tile.
+
+            g.drawString(itemName, playerTileScreenX + (TILE_SIZE - stringWidth) / 2, textY);
         }
     }
 
@@ -949,34 +1104,41 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
         int keyCode = e.getKeyCode();
 
-        if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
-            handleMainMenuInput(keyCode);
+        // Priority for modal-like UI states
+        if (farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
+            handleCheatTyping(e); // Pass full event for char typing
             repaint();
             return;
         }
-
-        if (isNpcDialogueActive) {
-            if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_X || keyCode == KeyEvent.VK_E) {
-                isNpcDialogueActive = false;
+        if (farmModel.getCurrentGameState() == GameState.WORLD_MAP_SELECTION) {
+            handleWorldMapSelectionInput(keyCode); // Pass only keyCode for navigation
+            repaint();
+            return;
+        }
+        if (farmModel.getCurrentGameState() == GameState.STORE_UI) { // Check before MAIN_MENU or IN_GAME
+            handleStoreInput(keyCode);
+            repaint();
+            return; 
+        }
+        if (farmModel.getCurrentGameState() == GameState.SHIPPING_BIN) { // Check before MAIN_MENU or IN_GAME
+            handleShippingBinInput(keyCode);
+            repaint(); 
+            return;     
+        }
+        if (farmModel.getCurrentGameState() == GameState.NPC_DIALOGUE) { // Use isNpcDialogueActive or GameState
+             if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_X || keyCode == KeyEvent.VK_E) {
+                // This should ideally be handled by GameController to manage dialogue flow and state
+                // For now, directly closing here as a simple mechanism
+                isNpcDialogueActive = false; // This flag might become redundant if GameState is the primary driver
+                farmModel.setCurrentGameState(GameState.IN_GAME); // Or previous state if more complex
                 repaint();
             }
             return;
         }
 
-        if (isStoreUiActive) { 
-            handleStoreInput(keyCode);
-            repaint();
-            return; 
-        }
-
-        if (farmModel.getCurrentGameState() == GameState.SHIPPING_BIN) {
-            handleShippingBinInput(keyCode);
-            repaint(); 
-            return;     
-        }
-
-        if (farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
-            handleCheatTyping(e); // Pass the full KeyEvent
+        // Non-modal UI states or main game states
+        if (farmModel.getCurrentGameState() == GameState.MAIN_MENU) {
+            handleMainMenuInput(keyCode);
             repaint();
             return;
         }
@@ -984,114 +1146,107 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (farmModel.getCurrentGameState() == GameState.END_OF_DAY_SUMMARY) {
             if (keyCode == KeyEvent.VK_ENTER) {
                 farmModel.setCurrentGameState(GameState.IN_GAME);
-                // The game logic for advancing to the new day (time, weather, etc.)
-                // should have already been completed by GameController before setting this state.
-                // This UI is purely for display and acknowledgement.
-                // Ensure game timer is running if it was stopped for this screen (though it usually isn't for EOD)
                 startGameTimer(); 
             }
-            repaint(); // Repaint to clear the summary screen or update if needed
+            repaint(); 
             return;
         }
 
-        // IN_GAME actions below
-        boolean actionTaken = false;
-
-        switch (keyCode) {
-            case KeyEvent.VK_W: case KeyEvent.VK_UP:
-                actionTaken = gameController.requestPlayerMove(Direction.NORTH);
-                break;
-            case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
-                actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
-                break;
-            case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
-                actionTaken = gameController.requestPlayerMove(Direction.WEST);
-                break;
-            case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
-                actionTaken = gameController.requestPlayerMove(Direction.EAST);
-                break;
-            case KeyEvent.VK_E: 
-                actionTaken = tryGeneralAction();
-                break;
-            case KeyEvent.VK_F: 
-                actionTaken = gameController.requestEatSelectedItem();
-                break;
-            case KeyEvent.VK_T: 
-                openStoreDialog(); 
-                actionTaken = true; 
-                break;
-            case KeyEvent.VK_B: 
-                 actionTaken = tryOpenShippingBinDialog();
-                break;
-            case KeyEvent.VK_C: // Changed to activate CHEAT_INPUT state
-                if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+        // IN_GAME actions below - only if current state is IN_GAME
+        if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+            boolean actionTaken = false;
+            switch (keyCode) {
+                case KeyEvent.VK_W: case KeyEvent.VK_UP:
+                    actionTaken = gameController.requestPlayerMove(Direction.NORTH);
+                    break;
+                case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
+                    actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
+                    break;
+                case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
+                    actionTaken = gameController.requestPlayerMove(Direction.WEST);
+                    break;
+                case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
+                    actionTaken = gameController.requestPlayerMove(Direction.EAST);
+                    break;
+                case KeyEvent.VK_E: 
+                    actionTaken = tryGeneralAction();
+                    break;
+                case KeyEvent.VK_F: 
+                    actionTaken = gameController.requestEatSelectedItem();
+                    break;
+                case KeyEvent.VK_T: 
+                    openStoreDialog(); 
+                    actionTaken = true; 
+                    break;
+                case KeyEvent.VK_B: 
+                    actionTaken = tryOpenShippingBinDialog();
+                    break;
+                case KeyEvent.VK_C:
                     farmModel.setCurrentGameState(GameState.CHEAT_INPUT);
-                    cheatInputString = ""; // Clear previous input
+                    cheatInputString = ""; 
                     setGeneralGameMessage("Cheat mode activated. Enter code.", false);
                     actionTaken = true;
-                } else if (farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
-                    // If already in cheat input, C could alternatively close it or be ignored
-                    // For now, let C while in cheat input do nothing or be handled by handleCheatTyping
-                }
-                break;
-            case KeyEvent.VK_1:
-                gameController.selectPreviousItem();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_2:
-                gameController.selectNextItem();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_X: // Chat with NPC
-                gameController.handleChatRequest(); // Returns void, handles its own feedback
-                actionTaken = true; // An attempt to chat was made
-                break;
-            case KeyEvent.VK_G: // Gift to NPC
-                System.out.println("G key pressed - Attempting Gift");
+                    break;
+                case KeyEvent.VK_1:
+                    gameController.selectPreviousItem();
+                    actionTaken = true;
+                    break;
+                case KeyEvent.VK_2:
+                    gameController.selectNextItem();
+                    actionTaken = true;
+                    break;
+                case KeyEvent.VK_X:
+                    gameController.handleChatRequest();
+                    actionTaken = true;
+                    break;
+                case KeyEvent.VK_G:
+                    System.out.println("G key pressed - Attempting Gift");
                     gameController.handleGiftRequest();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_L: // Sleep (Lodge/Lie down)
-                gameController.requestNormalSleep(); // This will handle location check & next day
-                actionTaken = true; // Assuming sleep always initiates a process
-                break;
-            case KeyEvent.VK_P: // Propose
-                if (gameController != null) {
-                    gameController.handleProposeRequest();
-                    actionTaken = true; // Assuming propose request is an action
-                }
-                break;
-            case KeyEvent.VK_M:
-                if(gameController != null){
-                    gameController.handleMarryRequest();
                     actionTaken = true;
-                }
-                break;
-            case KeyEvent.VK_K: //cooking
-                if(gameController != null){
-                    gameController.handleCookRequest();
+                    break;
+                case KeyEvent.VK_L:
+                    gameController.requestNormalSleep();
                     actionTaken = true;
-                }
-                break;
-            case KeyEvent.VK_V: // Added for Watching TV
-                System.out.println("V key pressed - Attempting to Watch TV");
-                gameController.requestWatchTV();
-                actionTaken = true;
-                break;
-            case KeyEvent.VK_I: // Added for View Player Info
-                System.out.println("I key pressed - Viewing Player Info");
-                gameController.requestViewPlayerInfo();
-                actionTaken = true; // Technically not an action that changes game state, but good to acknowledge
-                break;
-            case KeyEvent.VK_O: // Added for View Statistics
-                System.out.println("O key pressed - Viewing Statistics");
-                gameController.requestShowStatistics();
-                actionTaken = true; // This action does stop the timer
-                break;
-        }
+                    break;
+                case KeyEvent.VK_P:
+                    if (gameController != null) {
+                        gameController.handleProposeRequest();
+                        actionTaken = true;
+                    }
+                    break;
+                case KeyEvent.VK_M:
+                    if(gameController != null){
+                        gameController.handleMarryRequest();
+                        actionTaken = true;
+                    }
+                    break;
+                case KeyEvent.VK_K:
+                    if(gameController != null){
+                        gameController.handleCookRequest();
+                        actionTaken = true;
+                    }
+                    break;
+                case KeyEvent.VK_V:
+                    System.out.println("V key pressed - Attempting to Watch TV");
+                    gameController.requestWatchTV();
+                    actionTaken = true;
+                    break;
+                case KeyEvent.VK_I:
+                    System.out.println("I key pressed - Viewing Player Info");
+                    gameController.requestViewPlayerInfo();
+                    actionTaken = true;
+                    break;
+                case KeyEvent.VK_O:
+                    System.out.println("O key pressed - Viewing Statistics");
+                    gameController.requestShowStatistics();
+                    actionTaken = true;
+                    break;
+                // Removed VK_H case for showWorldMapSelectionDialog()
+            }
 
-        if (actionTaken) {
-            repaint(); // Repaint the panel if an action was taken that might change the view
+            if (actionTaken) {
+                repaint();
+            }
         }
     }
 
@@ -1350,7 +1505,25 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
     @Override
     public void keyReleased(KeyEvent e) {
-        // Not used
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getCurrentGameState() != GameState.IN_GAME) {
+            return;
+        }
+        Player player = farmModel.getPlayer();
+        int keyCode = e.getKeyCode();
+    
+        // Hanya set isMoving ke false jika tombol yang dilepas adalah tombol gerakan
+        if (keyCode == KeyEvent.VK_W || keyCode == KeyEvent.VK_UP ||
+            keyCode == KeyEvent.VK_S || keyCode == KeyEvent.VK_DOWN ||
+            keyCode == KeyEvent.VK_A || keyCode == KeyEvent.VK_LEFT ||
+            keyCode == KeyEvent.VK_D || keyCode == KeyEvent.VK_RIGHT) {
+    
+            // Cek apakah ada tombol gerakan lain yang MASIH ditekan.
+            // Ini agak rumit tanpa melacak status semua tombol.
+            // Pendekatan sederhana: jika salah satu dilepas, anggap berhenti sementara.
+            // Pembaruan isMoving akan terjadi lagi jika tombol lain ditekan di keyPressed.
+            player.setMoving(false);
+            repaint(); // Penting untuk update ke frame diam
+        }
     }
 
     /**
@@ -1390,87 +1563,50 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
         Player player = farmModel.getPlayer();
         MapArea currentMap = player.getCurrentMap();
-        String currentMapName = currentMap.getName(); // Used for a simple exclusion attempt
+        String currentMapName = currentMap.getName();
 
-        java.util.List<String> destinationNames = new java.util.ArrayList<>();
+        // Ensure worldMapDestinations is initialized if null, or clear if already exists
+        if (this.worldMapDestinations == null) {
+            this.worldMapDestinations = new ArrayList<>();
+        } else {
+            this.worldMapDestinations.clear();
+        }
+
         for (com.spakborhills.model.Enum.LocationType locType : com.spakborhills.model.Enum.LocationType.values()) {
-            // Exclude FARM itself (as you are trying to leave it or another map)
-            // Exclude POND always (as it's part of FARM and not a separate visitable world location)
-            // Exclude the current location the player is on, if its name matches a LocationType enum string.
-            
             boolean isCurrentMapType = locType.toString().equalsIgnoreCase(currentMapName);
-            // Special handling if currentMap is FarmMap instance, for more robust exclusion of FARM
             if (currentMap instanceof FarmMap && locType == com.spakborhills.model.Enum.LocationType.FARM) {
                  isCurrentMapType = true;
             }
-            // Special handling if currentMap is Store instance, for more robust exclusion of STORE
-            // This requires Store to either have a getLocationType() or its name to be predictable.
-            // Assuming Store.getName() is "Toko Spakbor Hills" and LocationType.STORE.toString() is "STORE"
-            // A direct name check might be needed if Store.java doesn't identify its LocationType.
-            // For now, the generic locType.toString().equalsIgnoreCase(currentMapName) might catch some cases.
             if (currentMap instanceof Store && locType == com.spakborhills.model.Enum.LocationType.STORE) {
                 isCurrentMapType = true;
             }
 
             if (locType != com.spakborhills.model.Enum.LocationType.POND && !isCurrentMapType) {
-                destinationNames.add(locType.toString());
+                this.worldMapDestinations.add(locType.toString());
             }
         }
 
-        if (destinationNames.isEmpty()) {
-            // This might happen if on a map like STORE and all other options are somehow filtered out,
-            // or if on FARM and only POND was filtered leaving no other valid world locations.
-            // A fallback could be to always offer FARM if not currently on FARM.
-            // For now, if empty, show a message. This indicates a potential logic issue or lack of destinations.
-            if (!(currentMap instanceof FarmMap) && !destinationNames.contains(com.spakborhills.model.Enum.LocationType.FARM.toString())) {
-                 // If not on Farm, and Farm is not in the list, always add Farm as an option to return.
+        if (this.worldMapDestinations.isEmpty()) {
+            if (!(currentMap instanceof FarmMap) && !this.worldMapDestinations.contains(com.spakborhills.model.Enum.LocationType.FARM.toString())) {
                  boolean farmAlreadyExcludedAsCurrent = com.spakborhills.model.Enum.LocationType.FARM.toString().equalsIgnoreCase(currentMapName);
                  if (!farmAlreadyExcludedAsCurrent) {
-                    destinationNames.add(com.spakborhills.model.Enum.LocationType.FARM.toString());
+                    this.worldMapDestinations.add(com.spakborhills.model.Enum.LocationType.FARM.toString());
                  }
             }
-            if (destinationNames.isEmpty()) { // Re-check after potentially adding FARM
-                 JOptionPane.showMessageDialog(this, "No other locations available to visit from here.", "Pindah Lokasi", JOptionPane.INFORMATION_MESSAGE);
+            if (this.worldMapDestinations.isEmpty()) {
+                 setGeneralGameMessage("No other locations available to visit from here.", false);
                  return;
             }
         }
 
-        String[] options = destinationNames.toArray(new String[0]);
-        String chosenDestination = (String) JOptionPane.showInputDialog(
-                this,
-                "Kamu berada di tepi kebun. Mau pergi ke mana?",
-                "Pilih Tujuan",
-                JOptionPane.PLAIN_MESSAGE,
-                null, // No custom icon
-                options, // Array of choices
-                options[0] // Default choice
-        );
-
-        if (chosenDestination != null && !chosenDestination.isEmpty()) {
-            try {
-                com.spakborhills.model.Enum.LocationType destinationEnum = 
-                    com.spakborhills.model.Enum.LocationType.valueOf(chosenDestination.toUpperCase());
-                
-                // Call the controller to handle the visit
-                boolean visitSuccess = gameController.requestVisit(destinationEnum);
-                
-                if (visitSuccess) {
-                    // Repaint is handled by GameController after successful visit and model update
-                    // No need to advance time here, GameController handles it.
-                    System.out.println("GamePanel: Visit to " + destinationEnum + " requested.");
-                } else {
-                    // GameController.requestVisit already shows a JOptionPane on failure.
-                    // System.out.println("GamePanel: Visit to " + destinationEnum + " failed or map not available.");
-                    // Optionally, re-show the dialog or provide other feedback if needed here,
-                    // but for now, the JOptionPane in GameController should suffice.
-                }
-            } catch (IllegalArgumentException e) {
-                System.err.println("GamePanel: Invalid destination string chosen: " + chosenDestination + " Error: " + e.getMessage());
-                JOptionPane.showMessageDialog(this, 
-                    "Invalid location selected: " + chosenDestination, 
-                    "Selection Error", 
-                    JOptionPane.ERROR_MESSAGE);
-            }
+        // Instead of JOptionPane, set the game state to show the new UI
+        if (!this.worldMapDestinations.isEmpty()) {
+            this.currentWorldMapSelectionIndex = 0;
+            farmModel.setCurrentGameState(GameState.WORLD_MAP_SELECTION);
+            repaint();
+        } else {
+             // This case should ideally be caught by the isEmpty check above and show general message
+            setGeneralGameMessage("No destinations loaded for map selection.", true);
         }
     }
 
@@ -1570,12 +1706,12 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     /**
      * Stops the main game timer.
      */
-    public void stopGameTimer() {
-        if (gameTimer != null && gameTimer.isRunning()) {
-            gameTimer.stop();
-            System.out.println("Game Timer stopped.");
-        }
-    }
+    // public void stopGameTimer() {
+    //     if (gameTimer != null && gameTimer.isRunning()) {
+    //         gameTimer.stop();
+    //         System.out.println("Game Timer stopped.");
+    //     }
+    // }
 
     /**
      * Starts or restarts the main game timer if it's not already running.
@@ -2559,5 +2695,104 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             lines.add(currentLine.toString().trim());
         }
         return lines;
+    }
+
+    private void drawWorldMapSelectionUI(Graphics2D g2d) {
+        if (farmModel.getCurrentGameState() != GameState.WORLD_MAP_SELECTION || worldMapDestinations == null) {
+            return;
+        }
+
+        // Panel Background
+        g2d.setColor(WORLD_MAP_BG_COLOR);
+        g2d.fill(worldMapPanelRect);
+        g2d.setColor(WORLD_MAP_TEXT_COLOR.brighter());
+        g2d.draw(worldMapPanelRect);
+
+        int currentY = worldMapPanelRect.y + 40;
+        int textX = worldMapPanelRect.x + 30;
+
+        // Title
+        g2d.setFont(WORLD_MAP_FONT_TITLE);
+        g2d.setColor(WORLD_MAP_TEXT_COLOR);
+        String title = "Pilih Tujuan";
+        FontMetrics fmTitle = g2d.getFontMetrics();
+        int titleWidth = fmTitle.stringWidth(title);
+        g2d.drawString(title, worldMapPanelRect.x + (worldMapPanelRect.width - titleWidth) / 2, currentY);
+        currentY += fmTitle.getHeight() + 25; // Spacing
+
+        // Destination List
+        g2d.setFont(WORLD_MAP_FONT_ITEM);
+        FontMetrics fmItem = g2d.getFontMetrics();
+        int itemLineHeight = fmItem.getHeight() + 10; // Spacing between items
+
+        for (int i = 0; i < worldMapDestinations.size(); i++) {
+            // Adjusted condition to allow more items before cutting off for instructions
+            // Check if drawing the current item would overlap with the instruction text area
+            int instructionTextY = worldMapPanelRect.y + worldMapPanelRect.height - 25 - fmItem.getDescent(); // Approximate top of instruction text
+            if (currentY + fmItem.getAscent() > instructionTextY - itemLineHeight) { // If next line starts to overlap or gets too close
+                g2d.drawString("...", textX, currentY);
+                break;
+            }
+            String destName = worldMapDestinations.get(i);
+            if (i == currentWorldMapSelectionIndex) {
+                g2d.setColor(WORLD_MAP_HIGHLIGHT_COLOR);
+                g2d.drawString("> " + destName, textX, currentY);
+                g2d.setColor(WORLD_MAP_TEXT_COLOR);
+            } else {
+                g2d.drawString("  " + destName, textX, currentY);
+            }
+            currentY += itemLineHeight;
+        }
+
+        // Instructions
+        g2d.setFont(WORLD_MAP_FONT_ITEM.deriveFont(Font.ITALIC, 18f));
+        String instructions = "[Up/Down] Pilih  [Enter] Pergi  [Esc] Batal";
+        FontMetrics fmInstructions = g2d.getFontMetrics();
+        int instructionsWidth = fmInstructions.stringWidth(instructions);
+        g2d.drawString(instructions, worldMapPanelRect.x + (worldMapPanelRect.width - instructionsWidth) / 2, worldMapPanelRect.y + worldMapPanelRect.height - 25);
+    }
+
+    private void handleWorldMapSelectionInput(int keyCode) {
+        if (farmModel.getCurrentGameState() != GameState.WORLD_MAP_SELECTION || worldMapDestinations == null || worldMapDestinations.isEmpty()) {
+            return;
+        }
+
+        switch (keyCode) {
+            case KeyEvent.VK_UP:
+                currentWorldMapSelectionIndex--;
+                if (currentWorldMapSelectionIndex < 0) {
+                    currentWorldMapSelectionIndex = worldMapDestinations.size() - 1;
+                }
+                break;
+            case KeyEvent.VK_DOWN:
+                currentWorldMapSelectionIndex++;
+                if (currentWorldMapSelectionIndex >= worldMapDestinations.size()) {
+                    currentWorldMapSelectionIndex = 0;
+                }
+                break;
+            case KeyEvent.VK_ENTER:
+                if (currentWorldMapSelectionIndex >= 0 && currentWorldMapSelectionIndex < worldMapDestinations.size()) {
+                    String chosenDestination = worldMapDestinations.get(currentWorldMapSelectionIndex);
+                    try {
+                        com.spakborhills.model.Enum.LocationType destinationEnum =
+                                com.spakborhills.model.Enum.LocationType.valueOf(chosenDestination.toUpperCase());
+                        
+                        // GameController will handle changing state back to IN_GAME after successful visit
+                        gameController.requestVisit(destinationEnum); 
+                        // UI will close automatically when state changes
+                    } catch (IllegalArgumentException ex) {
+                        System.err.println("GamePanel: Invalid destination string chosen from UI: " + chosenDestination + " Error: " + ex.getMessage());
+                        setGeneralGameMessage("Error: Invalid location '" + chosenDestination + "' selected.", true);
+                        // Optionally, revert to IN_GAME state if selection is fundamentally broken
+                        // farmModel.setCurrentGameState(GameState.IN_GAME);
+                    }
+                }
+                break;
+            case KeyEvent.VK_ESCAPE:
+                farmModel.setCurrentGameState(GameState.IN_GAME);
+                // No specific message needed for cancel, just return to game
+                break;
+        }
+        repaint(); // Repaint to reflect selection changes or UI closing
     }
 }

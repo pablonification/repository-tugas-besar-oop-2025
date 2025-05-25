@@ -32,6 +32,7 @@ import java.io.IOException;
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Enum.RelationshipStatus;
+import com.spakborhills.model.Enum.Direction;
 import com.spakborhills.model.Player;
 
 public abstract class NPC {
@@ -56,10 +57,24 @@ public abstract class NPC {
     // Dimensi dan koordinat untuk potret default di dialog
     public int defaultPortraitX, defaultPortraitY, portraitWidth, portraitHeight;
 
+    protected Direction currentDirection;
+    protected boolean isMoving;
+    protected int animationFrame;
+    protected int animationCounter;
+    protected static final int ANIMATION_SPEED = 3; // Sama dengan Player
+    protected static final int WALKING_FRAMES = 4; // Jumlah frame animasi berjalan per arah
+
+
+    // Layout spritesheet NPC (sesuaikan dengan spritesheet NPC Anda)
+    protected int spriteSheetRowDown = 0;    // Baris untuk menghadap bawah
+    protected int spriteSheetRowUp = 2;      // Baris untuk menghadap atas  
+    protected int spriteSheetRowLeft = 3;    // Baris untuk menghadap kiri
+    protected int spriteSheetRowRight = 1;   // Baris untuk menghadap kanan
+
 
     protected NPC(String name, LocationType homeLocation, boolean isBachelor, String spritesheetPath,
-                  int defaultSpriteX, int defaultSpriteY, int spriteWidth, int spriteHeight,
-                  int defaultPortraitX, int defaultPortraitY, int portraitWidth, int portraitHeight) {
+    int defaultSpriteX, int defaultSpriteY, int spriteWidth, int spriteHeight,
+    int defaultPortraitX, int defaultPortraitY, int portraitWidth, int portraitHeight) {
         this.name = name;
         this.homeLocation = homeLocation;
         this.isBachelor = isBachelor;
@@ -86,8 +101,15 @@ public abstract class NPC {
         this.portraitWidth = portraitWidth;
         this.portraitHeight = portraitHeight;
 
+        // Inisialisasi animasi
+        this.currentDirection = Direction.SOUTH; // Arah hadap awal
+        this.isMoving = false;
+        this.animationFrame = 0; // Frame diam
+        this.animationCounter = 0;
+
         loadSpritesheet();
     }
+
 
     private void loadSpritesheet() {
         try {
@@ -105,20 +127,125 @@ public abstract class NPC {
     }
 
     // Mendapatkan frame sprite default untuk di peta
-    public Image getCurrentSpriteFrame() {
+// Ganti method getCurrentSpriteFrame() yang lama dengan ini:
+public Image getCurrentSpriteFrame() {
+    if (this.fullSpritesheet == null) {
+        if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
+            loadSpritesheet();
+        }
         if (this.fullSpritesheet == null) {
-            if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
-                loadSpritesheet(); // Coba muat ulang jika belum ada
-            }
-            if (this.fullSpritesheet == null) return null; // Tetap null jika gagal muat
+            System.err.println("NPC " + name + ": fullSpritesheet null di getCurrentSpriteFrame.");
+            return null;
         }
-        // Potong sub-gambar dari spritesheet untuk frame sprite default
-        // Pastikan koordinat dan dimensi tidak melebihi batas gambar
-        if (defaultSpriteX + spriteWidth > fullSpritesheet.getWidth() || defaultSpriteY + spriteHeight > fullSpritesheet.getHeight()) {
-            System.err.println("Koordinat atau dimensi sprite default untuk " + name + " di luar batas spritesheet.");
-            return null; 
+    }
+
+    int spriteSheetRowPixelY; 
+    int spriteSheetColPixelX; 
+
+    // Tentukan baris berdasarkan arah hadap
+    switch (currentDirection) {
+        case NORTH:
+            spriteSheetRowPixelY = spriteSheetRowUp * spriteHeight;
+            break;
+        case SOUTH:
+        default: 
+            spriteSheetRowPixelY = spriteSheetRowDown * spriteHeight;
+            break;
+        case WEST:
+            spriteSheetRowPixelY = spriteSheetRowLeft * spriteHeight;
+            break;
+        case EAST:
+            spriteSheetRowPixelY = spriteSheetRowRight * spriteHeight;
+            break;
+    }
+
+    // Tentukan kolom berdasarkan status bergerak dan frame animasi
+    if (isMoving) {
+        switch (animationFrame) { 
+            case 0: // Kaki Kiri
+                spriteSheetColPixelX = 1 * spriteWidth;
+                break;
+            case 1: // Diam (posisi tengah)
+                spriteSheetColPixelX = 0 * spriteWidth;
+                break;
+            case 2: // Kaki Kanan
+                spriteSheetColPixelX = 3 * spriteWidth;
+                break;
+            case 3: // Diam lagi (kembali ke tengah)
+            default: 
+                spriteSheetColPixelX = 0 * spriteWidth;
+                break;
         }
+    } else {
+        // NPC diam, gunakan frame idle (kolom 0)
+        spriteSheetColPixelX = 0 * spriteWidth;
+    }
+    
+    // Validasi batas
+    if (spriteSheetColPixelX < 0 || spriteSheetRowPixelY < 0 ||
+        spriteSheetColPixelX + spriteWidth > fullSpritesheet.getWidth() ||
+        spriteSheetRowPixelY + spriteHeight > fullSpritesheet.getHeight()) {
+        System.err.println("NPC " + name + ": Koordinat/dimensi sprite di luar batas!" +
+                           " Dir: " + currentDirection + ", Moving: " + isMoving + ", AnimFrameIdx: " + animationFrame +
+                           ", Xpx: " + spriteSheetColPixelX + ", Ypx: " + spriteSheetRowPixelY +
+                           ", W: " + spriteWidth + ", H: " + spriteHeight +
+                           ", Sheet: " + fullSpritesheet.getWidth() + "x" + fullSpritesheet.getHeight());
+        // Fallback ke frame default lama jika ada error
         return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
+    }
+
+    try {
+        return this.fullSpritesheet.getSubimage(spriteSheetColPixelX, spriteSheetRowPixelY, spriteWidth, spriteHeight);
+    } catch (Exception e) {
+        System.err.println("NPC " + name + ": Exception saat getSubimage: " + e.getMessage());
+        e.printStackTrace();
+        // Fallback ke frame default lama jika ada exception
+        return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
+    }
+}
+
+
+    // Method untuk update animasi NPC
+    public void updateAnimation() {
+        // Force NPC to stay idle
+        animationFrame = 0; 
+        animationCounter = 0; 
+        isMoving = false; // Ensure isMoving is also false
+    }
+
+    // Getter dan Setter untuk animasi
+    public void setMoving(boolean moving) {
+        // Force NPC to not be in a moving state
+        this.isMoving = false;
+        // Reset animation to idle if it wasn't already
+        this.animationFrame = 0;
+        this.animationCounter = 0;
+    }
+
+    public void setCurrentDirection(Direction direction) {
+        if (this.currentDirection != direction) {
+            this.currentDirection = direction;
+            this.animationFrame = 0; 
+            this.animationCounter = 0;
+        } else if (!isMoving) { // Jika arah sama tapi berhenti bergerak, reset animasi ke idle
+            this.animationFrame = 0;
+            this.animationCounter = 0;
+        }
+    }
+
+    public Direction getCurrentDirection() {
+        return currentDirection;
+    }
+
+    // Untuk testing, NPC tidak bisa bergerak
+    public boolean move(Direction direction) {
+        // Prevent NPC from moving
+        this.isMoving = false;
+        this.animationFrame = 0;
+        this.animationCounter = 0;
+        // Optionally, set a default standing direction if needed, e.g.,
+        // this.currentDirection = Direction.SOUTH; 
+        return false; // Indicate movement failed or was prevented
     }
 
     // Mendapatkan potret default untuk dialog

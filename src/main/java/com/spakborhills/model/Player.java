@@ -127,10 +127,33 @@ public class Player {
     private Item selectedItem; // Ditambahkan
     private int engagementDay;
 
-    // Atribut untuk sprite pemain
-    private String spritesheetPath;
-    private transient BufferedImage fullSpritesheet;
-    public int defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight; 
+    // Atribut untuk sprite dan animasi pemain
+    private String spritesheetPathPlayer; // Ganti nama agar tidak konflik dengan field NPC jika ada subclassing
+    private transient BufferedImage fullSpritesheetPlayer;
+    public int spriteWidthPlayer, spriteHeightPlayer; // Dimensi asli SATU frame
+
+    private Direction currentDirection;
+    private boolean isMoving;
+    private int animationFrame;
+    private int animationCounter;
+    private static final int ANIMATION_SPEED = 10; // Ganti frame setiap X panggilan updateAnimation
+    private static final int WALKING_FRAMES = 4; // Jumlah frame animasi berjalan per arah (misal, kiri-kanan)
+
+    // Anda perlu mendefinisikan Y offset di spritesheet untuk setiap arah
+    // Ini SANGAT tergantung layout spritesheet Anda. Anggap saja:
+    // Baris 0: Menghadap Bawah (SOUTH)
+    // Baris 1: Menghadap Atas (NORTH)
+    // Baris 2: Menghadap Kiri (WEST)
+    // Baris 3: Menghadap Kanan (EAST)
+    // Frame 0 = Diam, Frame 1 = Kaki Kiri, Frame 2 = Kaki Kanan (atau sebaliknya)
+    // Jika spritesheet Anda punya lebih banyak frame per animasi (misal 4), sesuaikan WALKING_FRAMES
+    // dan logika di getCurrentSpriteFrame.
+    // Ini adalah contoh, Anda HARUS menyesuaikannya dengan spritesheet Anda.
+    private int spriteSheetRowDown = 0;    // Y-offset di spritesheet untuk menghadap bawah (kali spriteHeightPlayer)
+    private int spriteSheetRowUp = 2;      // Y-offset di spritesheet untuk menghadap atas
+    private int spriteSheetRowLeft = 3;    // Y-offset di spritesheet untuk menghadap kiri
+    private int spriteSheetRowRight = 1;   // Y-offset di spritesheet untuk menghadap kanan
+    // Jika setiap baris HANYA berisi frame animasi untuk satu arah, maka Y offsetnya adalah `baris_ke * spriteHeightPlayer`
 
     /**
      * Konstruktor untuk kelas Player.
@@ -144,30 +167,33 @@ public class Player {
      * @param startY        Koordinat Y awal.
      * @param itemRegistry  Sebuah Map yang merepresentasikan registri item (String nama -> objek Item).
      */
-    public Player(String name, Gender gender, String farmName, MapArea startMap, int startX, int startY, 
-                  Map<String, Item> itemRegistry, String spritesheetPath, 
-                  int defaultSpriteX, int defaultSpriteY, int spriteWidth, int spriteHeight) {
-        this.name = name;
-        this.gender = gender;
-        this.farmName = farmName;
-        this.energy = MAX_ENERGY;
+    public Player(String name, Gender gender, String farmName, MapArea startMap, int startX, int startY,
+                  Map<String, Item> itemRegistry, String spritesheetPath,
+                  int spriteWidth, int spriteHeight) { // Hanya perlu lebar & tinggi satu frame
+        this.name = name; //
+        this.gender = gender; //
+        this.farmName = farmName; //
+        this.energy = MAX_ENERGY; //
         this.gold = DEFAULT_STARTING_GOLD;
-        this.inventory = new Inventory(); // Buat inventory baru
-        this.currentMap = startMap;
-        this.currentTileX = startX;
-        this.currentTileY = startY;
-        this.favoriteItemName = ""; // Default kosong
-        this.partner = null; // Mulai single
-        this.selectedItem = null; // Inisialisasi selectedItem
-        this.engagementDay = -1; // Inisialisasi engagementDay
+        this.inventory = new Inventory(); //
+        this.currentMap = startMap; //
+        this.currentTileX = startX; //
+        this.currentTileY = startY; //
+        this.favoriteItemName = "";
+        this.partner = null;
+        this.selectedItem = null;
+        this.engagementDay = -1; //
 
         // Inisialisasi sprite
-        this.spritesheetPath = spritesheetPath;
-        this.defaultSpriteX = defaultSpriteX;
-        this.defaultSpriteY = defaultSpriteY;
-        this.spriteWidth = spriteWidth;
-        this.spriteHeight = spriteHeight;
+        this.spritesheetPathPlayer = spritesheetPath;
+        this.spriteWidthPlayer = spriteWidth;   // Lebar SATU frame
+        this.spriteHeightPlayer = spriteHeight; // Tinggi SATU frame
         loadSpritesheet();
+
+        this.currentDirection = Direction.SOUTH; // Arah hadap awal
+        this.isMoving = false;
+        this.animationFrame = 0; // Frame diam
+        this.animationCounter = 0;
 
         // Inisialisasi inventory dengan item default (Halaman 23)
         if (itemRegistry != null) {
@@ -255,10 +281,12 @@ public class Player {
 
     private void loadSpritesheet() {
         try {
-            if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
-                this.fullSpritesheet = ImageIO.read(getClass().getResourceAsStream(this.spritesheetPath));
-                if (this.fullSpritesheet == null) {
-                    System.err.println("Gagal memuat spritesheet Pemain: " + this.name + " dari path: " + this.spritesheetPath);
+            if (this.spritesheetPathPlayer != null && !this.spritesheetPathPlayer.isEmpty()) {
+                this.fullSpritesheetPlayer = ImageIO.read(getClass().getResourceAsStream(this.spritesheetPathPlayer));
+                if (this.fullSpritesheetPlayer == null) {
+                    System.err.println("Gagal memuat spritesheet Pemain: " + this.name + " dari path: " + this.spritesheetPathPlayer);
+                } else {
+                    System.out.println("Berhasil memuat spritesheet Pemain " + this.name);
                 }
             }
         } catch (IOException e) {
@@ -269,17 +297,122 @@ public class Player {
     }
 
     public Image getCurrentSpriteFrame() {
-        if (this.fullSpritesheet == null) {
-            if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
-                loadSpritesheet(); 
+        if (this.fullSpritesheetPlayer == null) {
+            if (this.spritesheetPathPlayer != null && !this.spritesheetPathPlayer.isEmpty()) {
+                loadSpritesheet();
             }
-            if (this.fullSpritesheet == null) return null; 
+            if (this.fullSpritesheetPlayer == null) {
+                 System.err.println("Player " + name + ": fullSpritesheetPlayer null di getCurrentSpriteFrame.");
+                return null;
+            }
         }
-        if (defaultSpriteX + spriteWidth > fullSpritesheet.getWidth() || defaultSpriteY + spriteHeight > fullSpritesheet.getHeight()) {
-            System.err.println("Koordinat atau dimensi sprite default untuk Pemain " + name + " di luar batas spritesheet.");
-            return null; 
+    
+        int spriteSheetRowPixelY; 
+        int spriteSheetColPixelX; 
+    
+        switch (currentDirection) {
+            case NORTH:
+                spriteSheetRowPixelY = spriteSheetRowUp * spriteHeightPlayer;
+                break;
+            case SOUTH:
+            default: 
+                spriteSheetRowPixelY = spriteSheetRowDown * spriteHeightPlayer;
+                break;
+            case WEST:
+                spriteSheetRowPixelY = spriteSheetRowLeft * spriteHeightPlayer;
+                break;
+            case EAST:
+                spriteSheetRowPixelY = spriteSheetRowRight * spriteHeightPlayer;
+                break;
         }
-        return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
+    
+        if (isMoving) {
+            switch (animationFrame) { // animationFrame will cycle 0, 1, 2, 3
+                case 0: // Kaki Kiri - Use spritesheet column 1
+                    spriteSheetColPixelX = 1 * spriteWidthPlayer;
+                    break;
+                case 1: // Diam Intermediate - Use spritesheet column 2
+                    spriteSheetColPixelX = 2 * spriteWidthPlayer;
+                    break;
+                case 2: // Kaki Kanan - Use spritesheet column 3
+                    spriteSheetColPixelX = 3 * spriteWidthPlayer;
+                    break;
+                case 3: // Diam Intermediate (again for symmetry) - Use spritesheet column 2
+                default: 
+                    spriteSheetColPixelX = 2 * spriteWidthPlayer;
+                    break;
+            }
+        } else {
+            // Player is not moving, use the idle frame (spritesheet column 0)
+            spriteSheetColPixelX = 0 * spriteWidthPlayer; // Diam
+        }
+        
+        // Validasi batas (tetap sama)
+        if (spriteSheetColPixelX < 0 || spriteSheetRowPixelY < 0 ||
+            spriteSheetColPixelX + spriteWidthPlayer > fullSpritesheetPlayer.getWidth() ||
+            spriteSheetRowPixelY + spriteHeightPlayer > fullSpritesheetPlayer.getHeight()) {
+            System.err.println("Player " + name + ": Koordinat/dimensi sprite di luar batas!" +
+                               " Dir: " + currentDirection + ", Moving: " + isMoving + ", AnimFrameIdx: " + animationFrame +
+                               ", Xpx: " + spriteSheetColPixelX + ", Ypx: " + spriteSheetRowPixelY +
+                               ", W: " + spriteWidthPlayer + ", H: " + spriteHeightPlayer +
+                               ", Sheet: " + fullSpritesheetPlayer.getWidth() + "x" + fullSpritesheetPlayer.getHeight());
+            return this.fullSpritesheetPlayer.getSubimage(0, spriteSheetRowDown * spriteHeightPlayer, spriteWidthPlayer, spriteHeightPlayer); 
+        }
+    
+        try {
+            return this.fullSpritesheetPlayer.getSubimage(spriteSheetColPixelX, spriteSheetRowPixelY, spriteWidthPlayer, spriteHeightPlayer);
+        } catch (Exception e) {
+            System.err.println("Player " + name + ": Exception saat getSubimage: " + e.getMessage());
+            e.printStackTrace();
+            return this.fullSpritesheetPlayer.getSubimage(0, spriteSheetRowDown * spriteHeightPlayer, spriteWidthPlayer, spriteHeightPlayer);
+        }
+    }
+    
+
+    public void updateAnimation() {
+        if (isMoving) {
+            animationCounter++;
+            if (animationCounter >= ANIMATION_SPEED) {
+                animationCounter = 0;
+                animationFrame++;
+                if (animationFrame >= WALKING_FRAMES) {
+                    animationFrame = 0;
+                }
+                // DEBUG: Lihat perubahan animationFrame
+                System.out.println("Player.updateAnimation: isMoving=true, new animationFrame = " + animationFrame);
+            }
+        } else {
+            if (animationFrame != 0 || animationCounter != 0) { // Hanya print jika ada perubahan
+                System.out.println("Player.updateAnimation: isMoving=false, resetting animationFrame to 0");
+            }
+            animationFrame = 0; 
+            animationCounter = 0; 
+        }
+    }
+
+    // Getter dan Setter untuk animasi (dipanggil dari GamePanel/GameController)
+    public void setMoving(boolean moving) {
+        isMoving = moving;
+        if (!moving) { // Jika berhenti bergerak, reset ke frame diam
+            animationFrame = 0;
+            animationCounter = 0;
+        }
+    }
+    public void setCurrentDirection(Direction direction) { //
+        if (this.currentDirection != direction) {
+            this.currentDirection = direction;
+            this.animationFrame = 0; 
+            this.animationCounter = 0;
+        } else if (!isMoving) { // Jika arah sama tapi berhenti bergerak, reset animasi ke idle
+             this.animationFrame = 0;
+             this.animationCounter = 0;
+        }
+    }
+    public Direction getCurrentDirection() {
+        return currentDirection;
+    }
+    public boolean isMoving() {
+        return isMoving;
     }
 
     // --- Getters ---
@@ -359,9 +492,13 @@ public class Player {
      * @param direction Arah untuk bergerak.
      * @return true jika perpindahan berhasil, false jika gagal.
      */
-    public boolean move(Direction direction) {
+    // @Override
+    public boolean move(Direction direction) { //
         int nextX = currentTileX;
         int nextY = currentTileY;
+
+        // Set arah hadap pemain bahkan sebelum mencoba bergerak
+        setCurrentDirection(direction); // Update arah hadap
 
         switch (direction) {
             case NORTH: nextY--; break;
@@ -372,15 +509,18 @@ public class Player {
 
         if (currentMap == null || !currentMap.isWithinBounds(nextX, nextY)) {
             System.out.println("Tidak bisa bergerak ke luar batas map.");
+            setMoving(false); // Berhenti bergerak jika menabrak batas
             return false;
         }
         if (currentMap.isOccupied(nextX, nextY)) {
             System.out.println("Jalan terhalang.");
+            setMoving(false); // Berhenti bergerak jika terhalang
             return false;
         }
 
         currentTileX = nextX;
         currentTileY = nextY;
+        setMoving(true); // Mulai animasi bergerak
         return true;
     }
 
@@ -587,7 +727,6 @@ public class Player {
      * @return true jika panen berhasil, false jika gagal.
      */
     public boolean harvest(Tile targetTile, Map<String, Item> itemRegistry, EndGameStatistics statistics) {
-        // TODO: Implementasi lebih detail terkait item spesifik dari tanaman
         if (targetTile == null || !targetTile.isHarvestable() || targetTile.getPlantedSeed() == null) {
             System.out.println("Player.harvest: Tidak ada yang bisa dipanen atau tile tidak valid.");
             return false;

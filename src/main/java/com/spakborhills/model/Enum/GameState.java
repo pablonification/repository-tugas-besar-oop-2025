@@ -8,5 +8,7 @@ public enum GameState {
     CHEAT_INPUT,
     END_OF_DAY_SUMMARY,
     GAME_OVER,
+    NPC_DIALOGUE,
+    WORLD_MAP_SELECTION,
     PAUSED // For potential future use
 } 

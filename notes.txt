@@ -24,6 +24,10 @@ Aksi Pertanian Dasar:
 [SELESAI] Visualisasi Pertumbuhan Tanaman:
 [SELESAI] Mengubah tampilan tile PLANTED berdasarkan growthDays relatif terhadap daysToHarvest (perubahan warna dari hijau muda ke hijau tua, lalu kuning saat siap panen).
 [SELESAI] Indikasi jelas jika tanaman siap panen (isHarvestable()) dengan warna kuning.
+[SELESAI] Tile images for: grass, tillable, tilled, planted, watered, harvestable, plant_watered, portal, house_tile, shippingbin.
+[SELESAI] Tile images for floors: wood_tile, stone_tile, carpet_tile, luxury_tile, dirt_tile.
+[SELESAI] Tile image for: wall.
+[SELESAI] Tile image for: store_tile (used as store floor).
 Aksi Makan (Eating):
 [SELESAI] Input Pemain: Tombol 'F' digunakan.
 [SELESAI] GameController.requestEatSelectedItem():
@@ -158,12 +162,11 @@ GUI Enhancements:
     - Semua interaksi (toko, shipping bin, dialog NPC, konfirmasi, input, dsb) akan digantikan dengan panel/jendela in-game yang terintegrasi di dalam tampilan utama game (tidak ada lagi JOptionPane atau window terpisah).
       - [IMPLEMENTED] Dialog NPC utama sudah in-game.
       - [IMPLEMENTED] Toko (Store) sekarang menggunakan panel in-game dasar (navigasi keyboard, pemilihan item, input kuantitas dasar).
-      - [IMPLEMENTED] Feedback Toko: Semua pesan terkait toko (pra-pembukaan dan sukses/gagal beli) kini sepenuhnya in-UI.
-      - [IMPLEMENTED] Shipping Bin sekarang menggunakan panel in-game dasar (termasuk feedback interaktifnya).
-      - [IMPLEMENTED] Dialog konfirmasi (Ya/Tidak), pesan info umum lainnya perlu diganti ke in-UI.
-        - [IMPLEMENTED] Cheat input (via 'C') kini menggunakan panel in-game.
-        - [IMPLEMENTED] End of Day Summary (tidur/pingsan) kini menggunakan panel in-game.
-        - [UNTUK DILAKUKAN] World Map selection dialog (saat di entry point).
+      - [IMPLEMENTED] Feedback Toko: Semua pesan terkait toko kini sepenuhnya in-UI.
+      - [IMPLEMENTED] Shipping Bin sekarang menggunakan panel in-game dasar.
+      - [IMPLEMENTED] Cheat input (via 'C') kini menggunakan panel in-game.
+      - [IMPLEMENTED] End of Day Summary (tidur/pingsan) kini menggunakan panel in-game.
+      - [IMPLEMENTED] World Map selection dialog (saat di entry point) uses in-game panel.
     - Navigasi dan interaksi dilakukan sepenuhnya dengan keyboard/controller/mouse di dalam game window, mirip main menu.
     - Tampilan panel-panel ini akan konsisten dengan style main menu (warna, font, animasi, dsb).
 [UNTUK DILAKUKAN] Main Menu In-Game (Lanjutan):

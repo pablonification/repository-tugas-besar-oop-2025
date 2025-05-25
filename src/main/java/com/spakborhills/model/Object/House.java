@@ -1,8 +1,8 @@
 package com.spakborhills.model.Object;
 
 public class House extends DeployedObject {
-    private static final int DEFAULT_HOUSE_WIDTH = 6;
-    private static final int DEFAULT_HOUSE_HEIGHT = 6;
+    public static final int DEFAULT_HOUSE_WIDTH = 6;
+    public static final int DEFAULT_HOUSE_HEIGHT = 6;
 
     public House(){
         super("Rumah", DEFAULT_HOUSE_WIDTH, DEFAULT_HOUSE_HEIGHT);
