@@ -72,7 +72,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-        if(currentMode == UI_MODE) {
+        if(args[0].equals("UI")) {
 
 //            GamePanel p = new GamePanel();
 //            TileManager manager = new TileManager(p);

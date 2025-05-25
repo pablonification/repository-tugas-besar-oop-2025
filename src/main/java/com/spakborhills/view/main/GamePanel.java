@@ -1,7 +1,8 @@
 package com.spakborhills.view.main;
 
+import com.spakborhills.model.Player;
 import com.spakborhills.model.tile.TileManager;
-import com.spakborhills.view.entity.Player;
+import com.spakborhills.view.entity.PlayerView;
 
 import javax.swing.*;
 import java.awt.*;
@@ -27,7 +28,7 @@ public class GamePanel extends JPanel implements Runnable {
     public final int maxWorldRow = 48;
 
     //ENTITY & PLAYER
-    public Player player = new Player(this);
+    public PlayerView player = new PlayerView(this);
 
     int speed = 4;
 

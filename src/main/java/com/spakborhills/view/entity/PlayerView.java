@@ -6,7 +6,7 @@ import com.spakborhills.view.main.GamePanel;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-public class Player extends Entity {
+public class PlayerView extends Entity {
 
     public final int screenX;
     public final int screenY;
@@ -15,8 +15,7 @@ public class Player extends Entity {
     int spriteNumber = 1;
 
 
-
-    public Player(GamePanel gamePanel) {
+    public PlayerView(GamePanel gamePanel) {
         super(gamePanel);
         screenX = gp.screenWidth/2 - gp.tileSize/2;
         screenY = gp.screenHeight/2 - gp.tileSize/2;
@@ -32,14 +31,14 @@ public class Player extends Entity {
     }
 
     public void getPlayerImage() {
-        up1 = setup("/player/boy_up_1");
-        up2 = setup("/player/boy_up_2");
-        down1 = setup("/player/boy_down_1");
-        down2 = setup("/player/boy_down_2");
-        left1 = setup("/player/boy_left_1");
-        left2 = setup("/player/boy_left_2");
-        right1 = setup("/player/boy_right_1");
-        right2 = setup("/player/boy_right_2");
+        down1 = setup("/player/girl_down_1");
+        down2 = setup("/player/girl_down_2");
+        up1 = setup("/player/girl_up_1");
+        up2 = setup("/player/girl_up_2");
+        left1 = setup("/player/girl_left_1");
+        left2 = setup("/player/girl_left_2");
+        right1 = setup("/player/girl_right_1");
+        right2 = setup("/player/girl_right_2");
     }
 
     public void update() {
