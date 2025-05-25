@@ -17,8 +17,26 @@ hatedItems: Seluruh item yang bukan merupakan lovedItems dan likedItems
 
  */
 public class MayorTadi extends NPC {
+    private static final String MAYOR_TADI_SPRITESHEET_PATH = "/assets/sprites/npc/mayor_tadi.png";
+    // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
+    // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
+    private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
+    private static final int DEFAULT_SPRITE_Y = 3;     // Koordinat Y frame di spritesheet
+    private static final int SPRITE_WIDTH = 16;        // Lebar satu frame sprite
+    private static final int SPRITE_HEIGHT = 29;       // Tinggi satu frame sprite
+
+    // Untuk potret di dialog (misal, potret netral pertama)
+    private static final int DEFAULT_PORTRAIT_X = 64; // Koordinat X potret di spritesheet
+    private static final int DEFAULT_PORTRAIT_Y = 99;   // Koordinat Y potret di spritesheet
+    private static final int PORTRAIT_WIDTH = 64;      // Lebar satu potret
+    private static final int PORTRAIT_HEIGHT = 61;     // Tinggi satu potret
     public MayorTadi() {
-        super("Mayor Tadi", LocationType.MAYOR_TADI_HOME, false);
+        super("Mayor Tadi",
+        LocationType.MAYOR_TADI_HOME,
+        false,
+        MAYOR_TADI_SPRITESHEET_PATH,
+        DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
+        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT);
         this.lovedItems.add("Legend");
         this.likedItems.addAll(Arrays.asList("Angler", "Crimsonfish", "Glacierfish"));
         // hated items

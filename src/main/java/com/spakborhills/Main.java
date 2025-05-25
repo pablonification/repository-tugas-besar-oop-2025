@@ -173,8 +173,17 @@ public class Main {
             farmName = playerName + "'s Farm"; // Default farm name
         }
 
+        String playerSpritesheetPath = "/assets/sprites/player/main_char.png"; // Ganti dengan path Anda
+        int playerDefaultSpriteX = 1;    // Ganti dengan koordinat X frame default pemain
+        int playerDefaultSpriteY = 1;    // Ganti dengan koordinat Y frame default pemain
+        int playerSpriteWidth = 14;      // Ganti dengan lebar frame pemain
+        int playerSpriteHeight = 31;     // Ganti dengan tinggi frame pemain
 
-        Player player = new Player(playerName, playerGender, farmName, farmMap, 5, 5, itemRegistry);
+
+        Player player = new Player(playerName, playerGender, farmName, farmMap, 5, 5, 
+                                   itemRegistry, playerSpritesheetPath,
+                                   playerDefaultSpriteX, playerDefaultSpriteY, 
+                                   playerSpriteWidth, playerSpriteHeight);
         EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), player);
 
         Farm farm = new Farm(

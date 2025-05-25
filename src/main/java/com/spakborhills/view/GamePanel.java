@@ -54,6 +54,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final Font DIALOG_FONT = new Font("Arial", Font.PLAIN, 20); // Updated font size to 20
     private static final Font NPC_DIALOG_FONT = new Font("Arial", Font.PLAIN, 16); // Font for NPC dialogues
 
+    // private NPC currentInteractingNPC;
+
     private javax.swing.Timer gameTimer;
     private boolean statisticsShown = false; // Flag to ensure stats are shown only once
 
@@ -96,6 +98,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private String storeFeedbackMessage = "";
     private Color storeFeedbackColor = STORE_TEXT_COLOR; 
     private Timer storeFeedbackTimer;
+
+    private NPC currentInteractingNPC;
 
     // Shipping Bin UI State
     private List<Item> playerSellableItems; // Items from player inventory that can be sold
@@ -701,31 +705,97 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
     }
 
+    @Deprecated
+    // private void drawNPCs(Graphics g) {
+    //     Player player = farmModel.getPlayer();
+    //     MapArea currentMap = player.getCurrentMap();
+    //     List<NPC> allNPCs = farmModel.getNPCs();
+
+    //     if (currentMap == null || allNPCs == null || allNPCs.isEmpty()) {
+    //         return;
+    //     }
+
+    //     // Camera calculations (copied from drawCurrentMap/drawPlayer for context, can be refactored)
+    //     Dimension mapSize = currentMap.getSize();
+    //     int mapWidthInTiles = mapSize.width;
+    //     int mapHeightInTiles = mapSize.height;
+    //     int mapWidthInPixels = mapWidthInTiles * TILE_SIZE;
+    //     int mapHeightInPixels = mapHeightInTiles * TILE_SIZE;
+
+    //     int viewportWidth = getWidth();
+    //     int viewportHeight = getHeight() - INFO_PANEL_HEIGHT;
+
+    //     int playerCenterXInMap = player.getCurrentTileX() * TILE_SIZE + TILE_SIZE / 2;
+    //     int playerCenterYInMap = player.getCurrentTileY() * TILE_SIZE + TILE_SIZE / 2;
+        
+    //     int camX = playerCenterXInMap - viewportWidth / 2;
+    //     int camY = playerCenterYInMap - viewportHeight / 2;
+
+    //     camX = Math.max(0, Math.min(camX, mapWidthInPixels - viewportWidth));
+    //     camY = Math.max(0, Math.min(camY, mapHeightInPixels - viewportHeight));
+        
+    //     if (mapWidthInPixels < viewportWidth) {
+    //         camX = (mapWidthInPixels - viewportWidth) / 2;
+    //     }
+    //     if (mapHeightInPixels < viewportHeight) {
+    //          camY = (mapHeightInPixels - viewportHeight) / 2;
+    //     }
+
+    //     // Iterate through all NPCs and draw them if they are on the current map
+    //     for (NPC npc : allNPCs) {
+    //         MapArea npcHomeMapInstance = farmModel.getMapArea(npc.getHomeLocation());
+
+    //         // Check if the NPC belongs to the currently displayed map
+    //         if (currentMap == npcHomeMapInstance) {
+    //             int npcScreenX = npc.getCurrentTileX() * TILE_SIZE - camX;
+    //             int npcScreenY = npc.getCurrentTileY() * TILE_SIZE - camY + INFO_PANEL_HEIGHT;
+
+    //             // Culling: Only draw if NPC is within the visible viewport
+    //             if (npcScreenX + TILE_SIZE <= 0 || npcScreenX >= getWidth() ||
+    //                 npcScreenY + TILE_SIZE <= INFO_PANEL_HEIGHT || npcScreenY >= getHeight()) {
+    //                 continue;
+    //             }
+
+    //             // Simple representation: a colored rectangle and their initial
+    //             g.setColor(Color.ORANGE); // Example color for NPCs
+    //             g.fillRect(npcScreenX, npcScreenY, TILE_SIZE, TILE_SIZE);
+                
+    //             g.setColor(Color.BLACK);
+    //             g.setFont(new Font("Arial", Font.BOLD, 12));
+    //             // Draw NPC's initial or name (adjust text position for visibility)
+    //             String npcLabel = npc.getName().substring(0, Math.min(npc.getName().length(), 1)); // First letter
+    //             FontMetrics fm = g.getFontMetrics();
+    //             int textWidth = fm.stringWidth(npcLabel);
+    //             g.drawString(npcLabel, npcScreenX + (TILE_SIZE - textWidth) / 2, npcScreenY + TILE_SIZE / 2 + fm.getAscent()/2);
+    //         }
+    //     }
+    // }
+
     private void drawNPCs(Graphics g) {
         Player player = farmModel.getPlayer();
         MapArea currentMap = player.getCurrentMap();
         List<NPC> allNPCs = farmModel.getNPCs();
-
+    
         if (currentMap == null || allNPCs == null || allNPCs.isEmpty()) {
             return;
         }
-
-        // Camera calculations (copied from drawCurrentMap/drawPlayer for context, can be refactored)
+    
+        // Kalkulasi kamera (camX, camY)
         Dimension mapSize = currentMap.getSize();
         int mapWidthInTiles = mapSize.width;
         int mapHeightInTiles = mapSize.height;
         int mapWidthInPixels = mapWidthInTiles * TILE_SIZE;
         int mapHeightInPixels = mapHeightInTiles * TILE_SIZE;
-
+    
         int viewportWidth = getWidth();
         int viewportHeight = getHeight() - INFO_PANEL_HEIGHT;
-
+    
         int playerCenterXInMap = player.getCurrentTileX() * TILE_SIZE + TILE_SIZE / 2;
         int playerCenterYInMap = player.getCurrentTileY() * TILE_SIZE + TILE_SIZE / 2;
         
         int camX = playerCenterXInMap - viewportWidth / 2;
         int camY = playerCenterYInMap - viewportHeight / 2;
-
+    
         camX = Math.max(0, Math.min(camX, mapWidthInPixels - viewportWidth));
         camY = Math.max(0, Math.min(camY, mapHeightInPixels - viewportHeight));
         
@@ -735,40 +805,61 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (mapHeightInPixels < viewportHeight) {
              camY = (mapHeightInPixels - viewportHeight) / 2;
         }
-
-        // Iterate through all NPCs and draw them if they are on the current map
+    
         for (NPC npc : allNPCs) {
             MapArea npcHomeMapInstance = farmModel.getMapArea(npc.getHomeLocation());
-
-            // Check if the NPC belongs to the currently displayed map
-            if (currentMap == npcHomeMapInstance) {
-                int npcScreenX = npc.getCurrentTileX() * TILE_SIZE - camX;
-                int npcScreenY = npc.getCurrentTileY() * TILE_SIZE - camY + INFO_PANEL_HEIGHT;
-
-                // Culling: Only draw if NPC is within the visible viewport
-                if (npcScreenX + TILE_SIZE <= 0 || npcScreenX >= getWidth() ||
-                    npcScreenY + TILE_SIZE <= INFO_PANEL_HEIGHT || npcScreenY >= getHeight()) {
+    
+            if (currentMap == npcHomeMapInstance) { // Hanya gambar NPC jika di map yang benar
+                int npcTileScreenX = npc.getCurrentTileX() * TILE_SIZE - camX; // Koordinat X tile NPC di layar
+                int npcTileScreenY = npc.getCurrentTileY() * TILE_SIZE - camY + INFO_PANEL_HEIGHT; // Koordinat Y tile NPC di layar
+    
+                // Culling: Periksa apakah area TILE_SIZE tempat NPC akan digambar ada di viewport
+                if (npcTileScreenX + TILE_SIZE <= 0 || npcTileScreenX >= getWidth() ||
+                    npcTileScreenY + TILE_SIZE <= INFO_PANEL_HEIGHT || npcTileScreenY >= getHeight()) {
                     continue;
                 }
-
-                // Simple representation: a colored rectangle and their initial
-                g.setColor(Color.ORANGE); // Example color for NPCs
-                g.fillRect(npcScreenX, npcScreenY, TILE_SIZE, TILE_SIZE);
-                
-                g.setColor(Color.BLACK);
-                g.setFont(new Font("Arial", Font.BOLD, 12));
-                // Draw NPC's initial or name (adjust text position for visibility)
-                String npcLabel = npc.getName().substring(0, Math.min(npc.getName().length(), 1)); // First letter
-                FontMetrics fm = g.getFontMetrics();
-                int textWidth = fm.stringWidth(npcLabel);
-                g.drawString(npcLabel, npcScreenX + (TILE_SIZE - textWidth) / 2, npcScreenY + TILE_SIZE / 2 + fm.getAscent()/2);
-            }
-        }
-    }
+    
+                Image spriteFrame = npc.getCurrentSpriteFrame(); 
+                if (spriteFrame != null) {
+                    int originalSpriteWidth = npc.spriteWidth; 
+                    int originalSpriteHeight = npc.spriteHeight; 
+    
+                    if (originalSpriteWidth > 0 && originalSpriteHeight > 0) {
+                        
+                        int drawHeight = TILE_SIZE; // Buat tinggi sprite sama dengan TILE_SIZE
+                        int drawWidth = (int) ((double) TILE_SIZE / originalSpriteHeight * originalSpriteWidth); // Lebar disesuaikan rasio
+    
+                        // Posisi X dan Y untuk menggambar sprite agar tengah horizontal dan rata bawah di dalam tile
+                        int drawX = npcTileScreenX + (TILE_SIZE - drawWidth) / 2; // Tengah horizontal
+                        int drawY = npcTileScreenY + (TILE_SIZE - drawHeight);    // Rata bawah
+    
+                        g.drawImage(spriteFrame, drawX, drawY, drawWidth, drawHeight, this);
+                    
+                    } else {
+                        // Fallback jika dimensi sprite asli tidak valid (misal 0), gambar kotak placeholder
+                        g.setColor(Color.MAGENTA); // Warna placeholder yang mencolok jika dimensi asli bermasalah
+                        g.fillRect(npcTileScreenX, npcTileScreenY, TILE_SIZE, TILE_SIZE); 
+                        g.setColor(Color.BLACK);
+                        g.drawString("DIM?", npcTileScreenX + 5, npcTileScreenY + 15);
+                    }
+                } else {
+                    // Fallback jika spriteFrame null (gagal mengambil frame dari NPC)
+                    g.setColor(Color.ORANGE);
+                    g.fillRect(npcTileScreenX, npcTileScreenY, TILE_SIZE, TILE_SIZE); 
+                    g.setColor(Color.BLACK);
+                    g.setFont(new Font("Arial", Font.BOLD, 12));
+                    String npcLabel = npc.getName().substring(0, Math.min(npc.getName().length(), 1));
+                    FontMetrics fm = g.getFontMetrics();
+                    int textWidth = fm.stringWidth(npcLabel);
+                    g.drawString(npcLabel, npcTileScreenX + (TILE_SIZE - textWidth) / 2, npcTileScreenY + TILE_SIZE / 2 + fm.getAscent() / 2);
+                }
+            } // Kurung kurawal penutup untuk "if (currentMap == npcHomeMapInstance)"
+        } // Kurung kurawal penutup untuk "for (NPC npc : allNPCs)"
+    } // Kurung kurawal penutup untuk metode "private void drawNPCs(Graphics g)"
 
     private void drawPlayer(Graphics g) {
         if (farmModel == null || farmModel.getPlayer() == null || farmModel.getPlayer().getCurrentMap() == null) return;
-
+    
         Player player = farmModel.getPlayer();
         MapArea currentMap = player.getCurrentMap();
         Dimension mapSize = currentMap.getSize();
@@ -777,16 +868,16 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         int mapHeightInTiles = mapSize.height;
         int mapWidthInPixels = mapWidthInTiles * TILE_SIZE;
         int mapHeightInPixels = mapHeightInTiles * TILE_SIZE;
-
+    
         int viewportWidth = getWidth();
         int viewportHeight = getHeight() - INFO_PANEL_HEIGHT;
         
         int playerCenterXInMap = player.getCurrentTileX() * TILE_SIZE + TILE_SIZE / 2;
         int playerCenterYInMap = player.getCurrentTileY() * TILE_SIZE + TILE_SIZE / 2;
-
+    
         int camX = playerCenterXInMap - viewportWidth / 2;
         int camY = playerCenterYInMap - viewportHeight / 2;
-
+    
         camX = Math.max(0, Math.min(camX, mapWidthInPixels - viewportWidth));
         camY = Math.max(0, Math.min(camY, mapHeightInPixels - viewportHeight));
         
@@ -796,26 +887,54 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (mapHeightInPixels < viewportHeight) {
              camY = (mapHeightInPixels - viewportHeight) / 2;
         }
-
-        // Player position on screen
-        int playerScreenX = player.getCurrentTileX() * TILE_SIZE - camX;
-        int playerScreenY = player.getCurrentTileY() * TILE_SIZE - camY + INFO_PANEL_HEIGHT;
-
-        g.setColor(Color.RED); // Player color
-        g.fillRect(playerScreenX, playerScreenY, TILE_SIZE, TILE_SIZE);
-        
-        // Optionally, draw an outline or a more detailed player sprite
-        g.setColor(Color.BLACK);
-        g.drawRect(playerScreenX, playerScreenY, TILE_SIZE, TILE_SIZE);
-
-        // Draw selected item name above player if an item is selected
+    
+        // Koordinat tile pemain di layar
+        int playerTileScreenX = player.getCurrentTileX() * TILE_SIZE - camX;
+        int playerTileScreenY = player.getCurrentTileY() * TILE_SIZE - camY + INFO_PANEL_HEIGHT;
+    
+        Image spriteFrame = player.getCurrentSpriteFrame();
+    
+        if (spriteFrame != null) {
+            int originalSpriteWidth = player.spriteWidth;  // Ambil dari Player
+            int originalSpriteHeight = player.spriteHeight; // Ambil dari Player
+    
+            if (originalSpriteWidth > 0 && originalSpriteHeight > 0) {
+                int drawHeight = TILE_SIZE; // Target tinggi
+                int drawWidth = (int) ((double) TILE_SIZE / originalSpriteHeight * originalSpriteWidth); // Lebar sesuai rasio
+    
+                int drawX = playerTileScreenX + (TILE_SIZE - drawWidth) / 2;  // Tengah horizontal
+                int drawY = playerTileScreenY + (TILE_SIZE - drawHeight);     // Rata bawah
+    
+                g.drawImage(spriteFrame, drawX, drawY, drawWidth, drawHeight, this);
+            } else {
+                // Fallback jika dimensi sprite pemain tidak valid
+                g.setColor(Color.BLUE); // Warna placeholder berbeda untuk pemain
+                g.fillRect(playerTileScreenX, playerTileScreenY, TILE_SIZE, TILE_SIZE);
+            }
+        } else {
+            // Fallback jika spriteFrame pemain null
+            g.setColor(Color.RED); 
+            g.fillRect(playerTileScreenX, playerTileScreenY, TILE_SIZE, TILE_SIZE);
+            g.setColor(Color.BLACK);
+            g.drawRect(playerTileScreenX, playerTileScreenY, TILE_SIZE, TILE_SIZE);
+        }
+    
+        // Menggambar nama item yang dipilih di atas pemain (kode ini bisa tetap)
         Item selectedItem = player.getSelectedItem();
         if (selectedItem != null) {
             String itemName = selectedItem.getName();
             g.setColor(Color.WHITE);
             FontMetrics fm = g.getFontMetrics();
             int stringWidth = fm.stringWidth(itemName);
-            g.drawString(itemName, playerScreenX + (TILE_SIZE - stringWidth) / 2, playerScreenY - 5);
+            // Gambar teks sedikit di atas sprite pemain yang sudah diskalakan
+            // Jika drawY adalah posisi atas sprite yang diskalakan:
+            // int textY = playerTileScreenY + (TILE_SIZE - (player.spriteHeight * TILE_SIZE / player.spriteHeight)) - 5; // contoh jika drawY belum ada
+            // Karena drawY sudah ada:
+            int textY = playerTileScreenY + (TILE_SIZE - (int) ((double) TILE_SIZE / player.spriteHeight * player.spriteHeight)) - 5; // Ini adalah posisi Y atas dari tile
+                                                                                                           // kita perlu posisi Y atas dari sprite yg digambar
+            // Mari gunakan posisi Y sprite yang digambar (drawY dari atas) dikurangi sedikit offset
+            int drawYForText = playerTileScreenY + (TILE_SIZE - (int) ((double) TILE_SIZE / player.spriteHeight * player.spriteHeight)); // ini sama dengan drawY di atas
+            g.drawString(itemName, playerTileScreenX + (TILE_SIZE - stringWidth) / 2, drawYForText - 5);
         }
     }
 
@@ -1380,17 +1499,25 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
      * @param npcName The name of the NPC speaking.
      * @param dialogue The dialogue text.
      */
-    public void showNPCDialogue(String npcName, String dialogue) {
-        // JOptionPane.showMessageDialog(this, dialogue, npcName + " says:", JOptionPane.PLAIN_MESSAGE);
-        this.currentNpcName = npcName;
+    public void showNPCDialogue(NPC npc, String dialogue) { // Parameter diubah
+        if (npc == null) {
+            System.err.println("GamePanel.showNPCDialogue: Objek NPC null.");
+            this.isNpcDialogueActive = false; // Jangan tampilkan dialog jika NPC null
+            this.currentInteractingNPC = null;
+            repaint();
+            return;
+        }
+
+        this.currentInteractingNPC = npc; // Simpan objek NPC yang aktif
+        this.currentNpcName = npc.getName(); // Ambil nama dari objek NPC
         this.currentNpcDialogue = dialogue;
         this.isNpcDialogueActive = true;
 
-        // Update dialogue box dimensions based on current panel size
+        // ... (sisa kode untuk update dimensi dialog box, sama seperti sebelumnya)
         int panelWidth = getWidth();
         int panelHeight = getHeight();
 
-        if (panelWidth == 0 || panelHeight == 0) { // If panel not yet laid out, use preferred size
+        if (panelWidth == 0 || panelHeight == 0) { 
             panelWidth = getPreferredSize().width;
             panelHeight = getPreferredSize().height;
         }
@@ -1398,11 +1525,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         int dialogueBoxWidth = panelWidth * 3 / 4;
         int dialogueBoxHeight = panelHeight / 3;
         int dialogueBoxX = (panelWidth - dialogueBoxWidth) / 2;
-        int dialogueBoxY = panelHeight - dialogueBoxHeight - 20; // 20px from bottom of the entire panel
+        int dialogueBoxY = panelHeight - dialogueBoxHeight - 20; 
         
         npcDialogueBox = new Rectangle(dialogueBoxX, dialogueBoxY, dialogueBoxWidth, dialogueBoxHeight);
         
-        System.out.println("GamePanel: Activating NPC Dialogue - Name: " + npcName + ", Dialogue: " + dialogue);
+        System.out.println("GamePanel: Activating NPC Dialogue - Name: " + this.currentNpcName + ", Dialogue: " + this.currentNpcDialogue); //
         repaint();
     }
 
@@ -1560,44 +1687,143 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
     }
 
+    @Deprecated
+    // private void drawNpcDialogue(Graphics g) {
+    //     if (!isNpcDialogueActive) {
+    //         return;
+    //     }
+
+    //     Graphics2D g2d = (Graphics2D) g.create(); // Create a copy to not affect other drawings
+
+    //     // 1. Draw Dialogue Box Background
+    //     g2d.setColor(new Color(0, 0, 0, 200)); // Semi-transparent black
+    //     g2d.fill(npcDialogueBox);
+    //     g2d.setColor(Color.WHITE);
+    //     g2d.draw(npcDialogueBox);
+
+    //     // 2. Draw NPC Portrait (Placeholder)
+    //     int portraitX = npcDialogueBox.x + DIALOGUE_PADDING;
+    //     int portraitY = npcDialogueBox.y + DIALOGUE_PADDING;
+    //     g2d.drawImage(npcPortraitPlaceholder, portraitX, portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE, this);
+    //     g2d.setColor(Color.GRAY);
+    //     g2d.drawRect(portraitX,portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE);
+
+
+    //     // 3. Draw NPC Name
+    //     g2d.setFont(DIALOGUE_NAME_FONT);
+    //     FontMetrics nameFm = g2d.getFontMetrics();
+    //     int nameX = portraitX + PORTRAIT_SIZE + DIALOGUE_PADDING;
+    //     int nameY = npcDialogueBox.y + DIALOGUE_PADDING + nameFm.getAscent();
+    //     g2d.setColor(Color.YELLOW); // Or any color for the name
+    //     g2d.drawString(currentNpcName + " says:", nameX, nameY);
+
+    //     // 4. Draw Dialogue Text (with basic word wrapping)
+    //     g2d.setFont(DIALOGUE_TEXT_FONT);
+    //     g2d.setColor(Color.WHITE);
+    //     FontMetrics textFm = g2d.getFontMetrics();
+    //     int textBlockStartX = npcDialogueBox.x + DIALOGUE_PADDING + PORTRAIT_SIZE + DIALOGUE_PADDING;
+    //     int availableTextWidth = (npcDialogueBox.x + npcDialogueBox.width - DIALOGUE_PADDING) - textBlockStartX;
+        
+    //     List<String> lines = new ArrayList<>();
+    //     String[] words = currentNpcDialogue.split(" ");
+    //     StringBuilder currentLine = new StringBuilder();
+
+    //     for (String word : words) {
+    //         if (textFm.stringWidth(currentLine.toString() + word) < availableTextWidth) {
+    //             currentLine.append(word).append(" ");
+    //         } else {
+    //             lines.add(currentLine.toString().trim());
+    //             currentLine = new StringBuilder(word + " ");
+    //         }
+    //     }
+    //     lines.add(currentLine.toString().trim()); // Add the last line
+
+    //     int lineY = nameY + DIALOGUE_PADDING;
+    //     for (String line : lines) {
+    //         if (lineY + textFm.getHeight() > npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING) { // Check bounds
+    //             g2d.drawString("...", textBlockStartX, lineY); // Indicate more text if it overflows
+    //             break;
+    //         }
+    //         g2d.drawString(line, textBlockStartX, lineY);
+    //         lineY += textFm.getHeight();
+    //     }
+
+
+    //     // 5. Draw "Press Enter to continue" prompt
+    //     g2d.setFont(DIALOGUE_TEXT_FONT.deriveFont(Font.ITALIC));
+    //     String continuePrompt = "Press ENTER to continue...";
+    //     int promptWidth = textFm.stringWidth(continuePrompt); // Use textFm from DIALOGUE_TEXT_FONT
+    //     int promptX = npcDialogueBox.x + npcDialogueBox.width - promptWidth - DIALOGUE_PADDING;
+    //     int promptY = npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING;
+    //     g2d.setColor(Color.LIGHT_GRAY);
+    //     g2d.drawString(continuePrompt, promptX, promptY);
+
+    //     g2d.dispose();
+    // }
+
     private void drawNpcDialogue(Graphics g) {
-        if (!isNpcDialogueActive) {
+        if (!isNpcDialogueActive) { 
             return;
         }
 
-        Graphics2D g2d = (Graphics2D) g.create(); // Create a copy to not affect other drawings
+        Graphics2D g2d = (Graphics2D) g.create();
 
-        // 1. Draw Dialogue Box Background
-        g2d.setColor(new Color(0, 0, 0, 200)); // Semi-transparent black
+        g2d.setColor(new Color(0, 0, 0, 200)); 
         g2d.fill(npcDialogueBox);
         g2d.setColor(Color.WHITE);
         g2d.draw(npcDialogueBox);
 
-        // 2. Draw NPC Portrait (Placeholder)
+        Image npcPortraitToDraw = null;
+        int actualPortraitWidthDrawn = PORTRAIT_SIZE; 
+        int actualPortraitHeightDrawn = PORTRAIT_SIZE;
+        String npcNameToDisplay = (this.currentNpcName != null) ? this.currentNpcName : "???"; // Fallback name
+
+        if (this.currentInteractingNPC != null) { 
+            npcPortraitToDraw = this.currentInteractingNPC.getDefaultPortrait();
+            npcNameToDisplay = this.currentInteractingNPC.getName(); // Gunakan nama dari objek NPC
+            if (npcPortraitToDraw != null) { 
+                actualPortraitWidthDrawn = this.currentInteractingNPC.portraitWidth;
+                actualPortraitHeightDrawn = this.currentInteractingNPC.portraitHeight;
+            }
+        }
+        
         int portraitX = npcDialogueBox.x + DIALOGUE_PADDING;
         int portraitY = npcDialogueBox.y + DIALOGUE_PADDING;
-        g2d.drawImage(npcPortraitPlaceholder, portraitX, portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE, this);
-        g2d.setColor(Color.GRAY);
-        g2d.drawRect(portraitX,portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE);
 
+        if (npcPortraitToDraw != null) {
+            g2d.drawImage(npcPortraitToDraw, portraitX, portraitY,
+                          actualPortraitWidthDrawn,
+                          actualPortraitHeightDrawn,
+                          this);
+        } else {
+            g2d.setColor(Color.LIGHT_GRAY);
+            g2d.fillRect(portraitX, portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE);
+            g2d.setColor(Color.BLACK);
+            String initial = (npcNameToDisplay != null && !npcNameToDisplay.isEmpty()) 
+                             ? npcNameToDisplay.substring(0,1) 
+                             : "?"; 
+            g2d.drawString(initial, portraitX + PORTRAIT_SIZE/2 - 5, portraitY + PORTRAIT_SIZE/2 + 5);
+        }
+        g2d.setColor(Color.GRAY); 
+        g2d.drawRect(portraitX, portraitY, actualPortraitWidthDrawn, actualPortraitHeightDrawn);
 
-        // 3. Draw NPC Name
         g2d.setFont(DIALOGUE_NAME_FONT);
         FontMetrics nameFm = g2d.getFontMetrics();
-        int nameX = portraitX + PORTRAIT_SIZE + DIALOGUE_PADDING;
+        int nameX = portraitX + actualPortraitWidthDrawn + DIALOGUE_PADDING;
         int nameY = npcDialogueBox.y + DIALOGUE_PADDING + nameFm.getAscent();
-        g2d.setColor(Color.YELLOW); // Or any color for the name
-        g2d.drawString(currentNpcName + " says:", nameX, nameY);
+        g2d.setColor(Color.YELLOW); 
+        g2d.drawString(npcNameToDisplay + " says:", nameX, nameY); // Gunakan npcNameToDisplay
 
-        // 4. Draw Dialogue Text (with basic word wrapping)
+        // ... (sisa kode untuk menggambar teks dialog dan prompt, sama seperti sebelumnya)
         g2d.setFont(DIALOGUE_TEXT_FONT);
         g2d.setColor(Color.WHITE);
         FontMetrics textFm = g2d.getFontMetrics();
-        int textBlockStartX = npcDialogueBox.x + DIALOGUE_PADDING + PORTRAIT_SIZE + DIALOGUE_PADDING;
+        int textBlockStartX = nameX;
         int availableTextWidth = (npcDialogueBox.x + npcDialogueBox.width - DIALOGUE_PADDING) - textBlockStartX;
         
         List<String> lines = new ArrayList<>();
-        String[] words = currentNpcDialogue.split(" ");
+        String dialogueText = (currentNpcDialogue != null) ? currentNpcDialogue : " ";
+        String[] words = dialogueText.split(" ");
         StringBuilder currentLine = new StringBuilder();
 
         for (String word : words) {
@@ -1608,23 +1834,23 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 currentLine = new StringBuilder(word + " ");
             }
         }
-        lines.add(currentLine.toString().trim()); // Add the last line
+        if (currentLine.length() > 0) {
+             lines.add(currentLine.toString().trim()); 
+        }
 
         int lineY = nameY + DIALOGUE_PADDING;
         for (String line : lines) {
-            if (lineY + textFm.getHeight() > npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING) { // Check bounds
-                g2d.drawString("...", textBlockStartX, lineY); // Indicate more text if it overflows
+            if (lineY + textFm.getHeight() > npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING - textFm.getHeight()) { 
+                g2d.drawString("...", textBlockStartX, lineY); 
                 break;
             }
             g2d.drawString(line, textBlockStartX, lineY);
             lineY += textFm.getHeight();
         }
 
-
-        // 5. Draw "Press Enter to continue" prompt
         g2d.setFont(DIALOGUE_TEXT_FONT.deriveFont(Font.ITALIC));
         String continuePrompt = "Press ENTER to continue...";
-        int promptWidth = textFm.stringWidth(continuePrompt); // Use textFm from DIALOGUE_TEXT_FONT
+        int promptWidth = textFm.stringWidth(continuePrompt); 
         int promptX = npcDialogueBox.x + npcDialogueBox.width - promptWidth - DIALOGUE_PADDING;
         int promptY = npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING;
         g2d.setColor(Color.LIGHT_GRAY);

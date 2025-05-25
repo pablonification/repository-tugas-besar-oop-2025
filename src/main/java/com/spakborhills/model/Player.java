@@ -68,6 +68,10 @@ import java.util.List;
 import java.util.Map;
 import java.awt.Point;
 import java.util.ArrayList;
+import java.awt.Image; // Impor Image
+import java.awt.image.BufferedImage; // Impor BufferedImage
+import javax.imageio.ImageIO; // Impor ImageIO
+import java.io.IOException; // Impor IOException
 
 // Import kelas/enum lain yang dibutuhkan (Pastikan path benar!)
 import com.spakborhills.model.Enum.Gender;
@@ -96,6 +100,7 @@ import com.spakborhills.model.Util.ShippingBin; // Pastikan ada
 import com.spakborhills.model.Item.Equipment; // Pastikan import Equipment ada
 import com.spakborhills.model.Util.EndGameStatistics; // Pastikan import EndGameStatistics ada
 
+
 public class Player {
     // --- Konstanta ---
     public static final int MAX_ENERGY = 100;
@@ -122,6 +127,11 @@ public class Player {
     private Item selectedItem; // Ditambahkan
     private int engagementDay;
 
+    // Atribut untuk sprite pemain
+    private String spritesheetPath;
+    private transient BufferedImage fullSpritesheet;
+    public int defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight; 
+
     /**
      * Konstruktor untuk kelas Player.
      * Menginisialisasi state pemain di awal permainan.
@@ -134,7 +144,9 @@ public class Player {
      * @param startY        Koordinat Y awal.
      * @param itemRegistry  Sebuah Map yang merepresentasikan registri item (String nama -> objek Item).
      */
-    public Player(String name, Gender gender, String farmName, MapArea startMap, int startX, int startY, Map<String, Item> itemRegistry) {
+    public Player(String name, Gender gender, String farmName, MapArea startMap, int startX, int startY, 
+                  Map<String, Item> itemRegistry, String spritesheetPath, 
+                  int defaultSpriteX, int defaultSpriteY, int spriteWidth, int spriteHeight) {
         this.name = name;
         this.gender = gender;
         this.farmName = farmName;
@@ -148,6 +160,14 @@ public class Player {
         this.partner = null; // Mulai single
         this.selectedItem = null; // Inisialisasi selectedItem
         this.engagementDay = -1; // Inisialisasi engagementDay
+
+        // Inisialisasi sprite
+        this.spritesheetPath = spritesheetPath;
+        this.defaultSpriteX = defaultSpriteX;
+        this.defaultSpriteY = defaultSpriteY;
+        this.spriteWidth = spriteWidth;
+        this.spriteHeight = spriteHeight;
+        loadSpritesheet();
 
         // Inisialisasi inventory dengan item default (Halaman 23)
         if (itemRegistry != null) {
@@ -231,6 +251,35 @@ public class Player {
         } else {
             System.err.println("PERINGATAN: ItemRegistry (Map) null. Inventory tidak diinisialisasi.");
         }
+    }
+
+    private void loadSpritesheet() {
+        try {
+            if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
+                this.fullSpritesheet = ImageIO.read(getClass().getResourceAsStream(this.spritesheetPath));
+                if (this.fullSpritesheet == null) {
+                    System.err.println("Gagal memuat spritesheet Pemain: " + this.name + " dari path: " + this.spritesheetPath);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error saat memuat spritesheet untuk Pemain " + this.name + ": " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error path spritesheet tidak valid untuk Pemain " + this.name + ": " + e.getMessage());
+        }
+    }
+
+    public Image getCurrentSpriteFrame() {
+        if (this.fullSpritesheet == null) {
+            if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
+                loadSpritesheet(); 
+            }
+            if (this.fullSpritesheet == null) return null; 
+        }
+        if (defaultSpriteX + spriteWidth > fullSpritesheet.getWidth() || defaultSpriteY + spriteHeight > fullSpritesheet.getHeight()) {
+            System.err.println("Koordinat atau dimensi sprite default untuk Pemain " + name + " di luar batas spritesheet.");
+            return null; 
+        }
+        return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
     }
 
     // --- Getters ---

@@ -7,8 +7,26 @@ import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Player;
 public class Emily extends NPC {
+    private static final String EMILY_SPRITESHEET_PATH = "/assets/sprites/npc/emily.png";
+    // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
+    // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
+    private static final int DEFAULT_SPRITE_X = 1;     // Koordinat X frame di spritesheet
+    private static final int DEFAULT_SPRITE_Y = 4;     // Koordinat Y frame di spritesheet
+    private static final int SPRITE_WIDTH = 15;        // Lebar satu frame sprite
+    private static final int SPRITE_HEIGHT = 28;       // Tinggi satu frame sprite
+
+    // Untuk potret di dialog (misal, potret netral pertama)
+    private static final int DEFAULT_PORTRAIT_X = 68; // Koordinat X potret di spritesheet
+    private static final int DEFAULT_PORTRAIT_Y = 195;   // Koordinat Y potret di spritesheet
+    private static final int PORTRAIT_WIDTH = 55;      // Lebar satu potret
+    private static final int PORTRAIT_HEIGHT = 61;     // Tinggi satu potret
     public Emily() {
-        super("Emily", LocationType.STORE, false);
+        super("Emily",
+        LocationType.STORE,
+        false,
+        EMILY_SPRITESHEET_PATH,
+        DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
+        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT);
         this.likedItems.addAll(Arrays.asList("Catfish", "Salmon", "Sardine"));
         this.hatedItems.addAll(Arrays.asList("Coal", "Wood"));
     }

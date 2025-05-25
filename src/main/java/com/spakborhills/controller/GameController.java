@@ -1458,18 +1458,16 @@ public class GameController {
 
         if (player == null || gameTime == null) {
             System.err.println("GameController: Player or GameTime is null. Cannot handle chat request.");
-            gamePanel.displayMessage("Error: Player atau GameTime tidak siap.");
+            if (gamePanel != null) gamePanel.displayMessage("Error: Player atau GameTime tidak siap.");
             return;
         }
 
-        // 1. Find a nearby NPC
-        NPC targetNPC = findNearbyNPCForChat(player);
+        NPC targetNPC = findNearbyNPCForChat(player); 
 
         if (targetNPC == null) {
             return;
         }
 
-        // Special handling for Emily
         if (targetNPC.getName().equals("Emily")) {
             String[] options = {"Chat", "Open Store"};
             int choice = gamePanel.showOptionDialog(
@@ -1483,43 +1481,34 @@ public class GameController {
                 boolean chatSuccess = player.chat(targetNPC, gameTime, npcCurrentMap);
                 if (chatSuccess) {
                     String dialogue = targetNPC.getDialogue(player);
-                    gamePanel.showNPCDialogue(targetNPC.getName(), dialogue);
+                    // KOREKSI DI SINI: Kirim objek NPC, bukan hanya nama
+                    gamePanel.showNPCDialogue(targetNPC, dialogue); 
                 } else {
-                    // Chat failed, check if it was due to energy for non-Emily NPCs
-                    // Player.chat() prints its own specific messages to console for other failures like distance.
                     if (player.getEnergy() < Player.CHAT_ENERGY_COST) {
                         gamePanel.displayMessage(player.getName() + " tidak punya cukup energi untuk berbicara (butuh " + Player.CHAT_ENERGY_COST + ").");
-                    } else {
-                        // For other failures like distance, Player.chat() already printed to console.
-                        // GamePanel already showed "Tidak ada NPC di dekatmu..." if findNearbyNPCForChat returned null.
-                        // So, no additional generic message here is needed unless we want to explicitly state chat failed without specific reason.
                     }
                 }
             } else if (choice == 1) { // Open Store
                 gamePanel.openStoreDialog();
             }
         } else {
-            // Existing chat logic for other NPCs
             MapArea npcCurrentMap = player.getCurrentMap();
             boolean chatSuccess = player.chat(targetNPC, gameTime, npcCurrentMap);
 
             if (chatSuccess) {
                 String dialogue = targetNPC.getDialogue(player);
-                gamePanel.showNPCDialogue(targetNPC.getName(), dialogue);
+                // KOREKSI DI SINI: Kirim objek NPC, bukan hanya nama
+                gamePanel.showNPCDialogue(targetNPC, dialogue); 
             } else {
-                // Chat failed, check if it was due to energy for non-Emily NPCs
-                // Player.chat() prints its own specific messages to console for other failures like distance.
                 if (player.getEnergy() < Player.CHAT_ENERGY_COST) {
                     gamePanel.displayMessage(player.getName() + " tidak punya cukup energi untuk berbicara (butuh " + Player.CHAT_ENERGY_COST + ").");
-                } else {
-                    // For other failures like distance, Player.chat() already printed to console.
-                    // GamePanel already showed "Tidak ada NPC di dekatmu..." if findNearbyNPCForChat returned null.
-                    // So, no additional generic message here is needed unless we want to explicitly state chat failed without specific reason.
                 }
             }
         }
-        gamePanel.updatePlayerInfoPanel();
-        gamePanel.updateGameRender();
+        if (gamePanel != null) { 
+            gamePanel.updatePlayerInfoPanel();
+            gamePanel.updateGameRender();
+        }
     }
 
     /**
@@ -1530,7 +1519,7 @@ public class GameController {
      * @return The found NPC, or null if no NPC is in range.
      */
     private NPC findNearbyNPCForChat(Player player) {
-        if (farmModel == null || farmModel.getNPCs() == null || gamePanel == null || player == null) { // Added player null check
+        if (farmModel == null || farmModel.getNPCs() == null || gamePanel == null || player == null) { 
             System.err.println("GameController.findNearbyNPCForChat: Critical component is null.");
             if (gamePanel != null) gamePanel.displayMessage("Error internal: Tidak bisa mencari NPC.");
             return null;
@@ -1548,32 +1537,16 @@ public class GameController {
 
         Optional<NPC> nearbyNPCOptional = farmModel.getNPCs().stream()
             .filter(npc -> {
-                // Check 1: Is the NPC supposed to be on the player's current map?
-                // This assumes NPCs are generally found at their homeLocation.
-                // More complex roaming would require NPCs to store their current actual map.
                 MapArea npcMapContext = farmModel.getMapArea(npc.getHomeLocation());
                 if (npcMapContext != playerMap) {
-                    // Special case: If player is on FarmMap, NPCs might visit.
-                    // This needs a more robust "NPC is currently on X map" flag or list.
-                    // For now, if homeLocation doesn't match player's map, we assume they are not there for chat,
-                    // UNLESS the player is on a generic map and the NPC is somewhere specific (e.g. Emily in Store)
-                    // OR if we add logic for NPCs visiting the FarmMap.
-                    // A simple initial rule: if the player is on a specific NPC_HOME map, only that NPC is findable.
-                    // If player is on FARM_MAP, any NPC *could* be there if their coordinates are updated for FarmMap.
-                    // This current filter is strict: NPC must reside on the map player is currently on.
                     return false; 
                 }
-
-                // Check 2: Proximity on that map
-                int npcX = npc.getCurrentTileX(); // These are coordinates within their npcMapContext
+                int npcX = npc.getCurrentTileX(); 
                 int npcY = npc.getCurrentTileY();
-                
                 int distance = Math.abs(playerX - npcX) + Math.abs(playerY - npcY);
                 return distance <= Player.CHAT_MAX_DISTANCE;
             })
-            .min(Comparator.comparingInt(npc -> { // Find the closest one
-                // Distance calculation needs to be relative to the common map (playerMap)
-                // NPC coordinates (npc.getCurrentTileX/Y) are assumed to be valid for playerMap if npcMapContext == playerMap
+            .min(Comparator.comparingInt(npc -> { 
                 int npcX = npc.getCurrentTileX();
                 int npcY = npc.getCurrentTileY();
                 return Math.abs(playerX - npcX) + Math.abs(playerY - npcY);
@@ -1606,14 +1579,13 @@ public class GameController {
             return;
         }
 
-        // Check energy first before proceeding
         final int GIFT_ENERGY_COST = 5;
         if (player.getEnergy() < GIFT_ENERGY_COST) {
             gamePanel.displayMessage("Energi tidak cukup untuk memberi hadiah (butuh " + GIFT_ENERGY_COST + ", punya " + player.getEnergy() + ").");
             return;
         }
 
-        NPC targetNPC = findNearbyNPCForChat(player); // Reuse for finding gift target
+        NPC targetNPC = findNearbyNPCForChat(player); 
 
         if (targetNPC == null) {
             gamePanel.displayMessage("Tidak ada NPC di dekatmu untuk diberi hadiah.");
@@ -1637,10 +1609,12 @@ public class GameController {
 
         if (gifted) {
             String reaction = targetNPC.reactToGift(itemToGift, player);
-            gamePanel.showNPCDialogue(targetNPC.getName(), reaction); 
+            // KOREKSI DI SINI: Kirim objek NPC, bukan hanya nama
+            gamePanel.showNPCDialogue(targetNPC, reaction);  
             System.out.println("Gift successful. NPC: " + targetNPC.getName() + ", Item: " + itemToGift.getName());
         } else {
-            System.out.println("Gifting failed. See Player.gift() logs for details.");
+            // Pesan kegagalan gifting biasanya sudah dihandle di dalam player.gift() atau oleh gamePanel
+            System.out.println("Gifting failed. See Player.gift() logs for details (e.g., energy, distance, item possession).");
         }
         
         if (gamePanel != null) {

@@ -7,8 +7,26 @@ import com.spakborhills.model.Player;
 import com.spakborhills.model.Item.Item;
 
 public class Dasco extends NPC {
+    private static final String DASCO_SPRITESHEET_PATH = "/assets/sprites/npc/dasco.png";
+    // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
+    // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
+    private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
+    private static final int DEFAULT_SPRITE_Y = 1;     // Koordinat Y frame di spritesheet
+    private static final int SPRITE_WIDTH = 16;        // Lebar satu frame sprite
+    private static final int SPRITE_HEIGHT = 31;       // Tinggi satu frame sprite
+
+    // Untuk potret di dialog (misal, potret netral pertama)
+    private static final int DEFAULT_PORTRAIT_X = 66; // Koordinat X potret di spritesheet
+    private static final int DEFAULT_PORTRAIT_Y = 0;   // Koordinat Y potret di spritesheet
+    private static final int PORTRAIT_WIDTH = 65;      // Lebar satu potret
+    private static final int PORTRAIT_HEIGHT = 64;     // Tinggi satu potret
     public Dasco() {
-        super("Dasco", LocationType.DASCO_HOME, false);
+        super("Dasco",
+        LocationType.DASCO_HOME,
+        false,
+        DASCO_SPRITESHEET_PATH,
+        DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
+        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT);
         this.lovedItems.addAll(Arrays.asList("The Legends of Spakbor", "Cooked Pig's Head", "Wine", "Fugu", "Spakbor Salad"));
         this.likedItems.addAll(Arrays.asList("Fish Sandwich", "Fish Stew", "Baguette", "Fish n' Chips"));
         this.hatedItems.addAll(Arrays.asList("Legend", "Grape", "Cauliflower", "Wheat", "Pufferfish", "Salmon"));
