@@ -67,6 +67,7 @@ class Player {
 import java.util.List;
 import java.util.Map;
 import java.awt.Point;
+import java.util.ArrayList;
 
 // Import kelas/enum lain yang dibutuhkan (Pastikan path benar!)
 import com.spakborhills.model.Enum.Gender;
@@ -76,19 +77,24 @@ import com.spakborhills.model.Enum.RelationshipStatus;
 import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Item.Item;
+import com.spakborhills.model.Enum.Season;
 // import com.spakborhills.model.Item.Crop;
 import com.spakborhills.model.Item.EdibleItem;
 import com.spakborhills.model.Item.Seed;
 // import com.spakborhills.model.Item.Equipment; // Pastikan ada
 import com.spakborhills.model.Item.ProposalRing;
+import com.spakborhills.model.Item.Fish;
 import com.spakborhills.model.NPC.NPC; // Pastikan ada
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
+import com.spakborhills.model.Map.FarmMap; // Impor FarmMap
 import com.spakborhills.model.Util.GameTime;
 // import com.spakborhills.model.Util.GameTime; // Anda mungkin perlu ini di Controller
 import com.spakborhills.model.Util.Inventory;
 import com.spakborhills.model.Util.Recipe; // Pastikan ada
 import com.spakborhills.model.Util.ShippingBin; // Pastikan ada
+import com.spakborhills.model.Item.Equipment; // Pastikan import Equipment ada
+import com.spakborhills.model.Util.EndGameStatistics; // Pastikan import EndGameStatistics ada
 
 public class Player {
     // --- Konstanta ---
@@ -96,6 +102,10 @@ public class Player {
     public static final int MIN_ENERGY = -20;
     public static final int LOW_ENERGY_THRESHOLD = 10;
     private static final int DEFAULT_STARTING_GOLD = 500; 
+    public static final int CHAT_MAX_DISTANCE = 1;
+    public static final int CHAT_ENERGY_COST = 10;
+    private static final int CHAT_TIME_ADVANCE_MINUTES = 10;
+    private static final int CHAT_HEART_POINTS_GAIN = 10;
 
     // --- Atribut ---
     private final String name;
@@ -109,6 +119,8 @@ public class Player {
     private int currentTileX;
     private int currentTileY;
     private String favoriteItemName;
+    private Item selectedItem; // Ditambahkan
+    private int engagementDay;
 
     /**
      * Konstruktor untuk kelas Player.
@@ -134,20 +146,87 @@ public class Player {
         this.currentTileY = startY;
         this.favoriteItemName = ""; // Default kosong
         this.partner = null; // Mulai single
+        this.selectedItem = null; // Inisialisasi selectedItem
+        this.engagementDay = -1; // Inisialisasi engagementDay
 
         // Inisialisasi inventory dengan item default (Halaman 23)
         if (itemRegistry != null) {
             Item parsnipSeeds = itemRegistry.get("Parsnip Seeds");
+            // Khusus debug gift aja
+            // Legend fish untuk MayorTadi
+            Item legendFish = itemRegistry.get("Legend");
+            Item proposalRing = itemRegistry.get("Proposal Ring");
+            Item coal = itemRegistry.get("Coal");
+            Item firewood = itemRegistry.get("Firewood");
+
+            // Potato untuk Caroline
+            Item potato = itemRegistry.get("Potato");
+            Item stone = itemRegistry.get("Stone");
+            Item wheat = itemRegistry.get("Wheat");
             Item hoe = itemRegistry.get("Hoe");
             Item wateringCan = itemRegistry.get("Watering Can");
             Item pickaxe = itemRegistry.get("Pickaxe");
             Item fishingRod = itemRegistry.get("Fishing Rod");
 
             if (parsnipSeeds != null) this.inventory.addItem(parsnipSeeds, 15); else System.err.println("PERINGATAN: Parsnip Seeds tidak ditemukan di registry.");
-            if (hoe != null) this.inventory.addItem(hoe, 1); else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
-            if (wateringCan != null) this.inventory.addItem(wateringCan, 1); else System.err.println("PERINGATAN: Watering Can tidak ditemukan di registry.");
-            if (pickaxe != null) this.inventory.addItem(pickaxe, 1); else System.err.println("PERINGATAN: Pickaxe tidak ditemukan di registry.");
-            if (fishingRod != null) this.inventory.addItem(fishingRod, 1); else System.err.println("PERINGATAN: Fishing Rod tidak ditemukan di registry.");
+            if (hoe != null) {
+                this.inventory.addItem(hoe, 1);
+                if (this.selectedItem == null) { // Set Hoe sebagai default jika belum ada
+                    this.selectedItem = hoe;
+                }
+            } else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
+            if (coal != null) this.inventory.addItem(coal, 10); else System.err.println("PERINGATAN: Coal tidak ditemukan di registry.");
+            if (firewood != null) this.inventory.addItem(firewood, 10); else System.err.println("PERINGATAN: Firewood tidak ditemukan di registry.");
+            if (legendFish != null) this.inventory.addItem(legendFish, 2); else System.err.println("PERINGATAN: Legend Fish tidak ditemukan di registry.");
+            if (proposalRing != null) this.inventory.addItem(proposalRing, 1); else System.err.println("PERINGATAN: Proposal Ring tidak ditemukan di registry.");
+            if (potato != null) this.inventory.addItem(potato, 10); else System.err.println("PERINGATAN: Potato tidak ditemukan di registry.");
+            if (stone != null) this.inventory.addItem(stone, 10); else System.err.println("PERINGATAN: Stone tidak ditemukan di registry.");
+            if (wheat != null) this.inventory.addItem(wheat, 10); else System.err.println("PERINGATAN: Wheat tidak ditemukan di registry.");
+            if (wateringCan != null) {
+                this.inventory.addItem(wateringCan, 1);
+                if (this.selectedItem == null || !(this.selectedItem instanceof Equipment && ((Equipment)this.selectedItem).getToolType().equals("WateringCan"))) { // Prioritaskan WateringCan jika ada
+                    // Atau jika selectedItem bukan watering can, ganti dengan watering can
+                    // Jika ingin Hoe jadi default utama, tukar logika ini atau set selectedItem ke hoe setelah semua item ditambah
+                     if (this.selectedItem == null && hoe == null) { // Jika Hoe tidak ada dan selectedItem masih null
+                        this.selectedItem = wateringCan;
+                    } else if (hoe != null && this.selectedItem == hoe) { 
+                        // Jika selectedItem sudah Hoe, biarkan. Jika ingin selalu ganti ke WateringCan jika ada, hapus kondisi ini.
+                        // Untuk sekarang, jika ada Hoe dan Watering Can, Hoe akan jadi selected default.
+                        // Jika ingin WC jadi default, maka set this.selectedItem = wateringCan di sini.
+                        // Saya akan set Hoe sebagai default jika ada, baru WC jika Hoe tidak ada.
+                    } else if (hoe == null) { // Jika Hoe tidak ada, jadikan WC sebagai default
+                         this.selectedItem = wateringCan;
+                    }
+                }
+            } else System.err.println("PERINGATAN: Watering Can tidak ditemukan di registry.");
+            if (pickaxe != null) {
+                this.inventory.addItem(pickaxe, 1);
+                 if (this.selectedItem == null && hoe == null && wateringCan == null) { // Jika belum ada tool terpilih
+                    this.selectedItem = pickaxe;
+                }
+            } else System.err.println("PERINGATAN: Pickaxe tidak ditemukan di registry.");
+            if (fishingRod != null) {
+                this.inventory.addItem(fishingRod, 1);
+                if (this.selectedItem == null && hoe == null && wateringCan == null && pickaxe == null) { // Jika belum ada tool terpilih
+                    this.selectedItem = fishingRod;
+                }
+            } else System.err.println("PERINGATAN: Fishing Rod tidak ditemukan di registry.");
+            
+            // Fallback: jika setelah semua item default dicek dan selectedItem masih null (misal semua item tool gagal di-load)
+            // coba ambil item pertama dari inventory jika ada.
+            if (this.selectedItem == null && !this.inventory.getItems().isEmpty()) {
+                for (Item itemInInventory : this.inventory.getItems().keySet()) {
+                    if (itemInInventory instanceof Equipment) {
+                        this.selectedItem = itemInInventory;
+                        break;
+                    }
+                }
+                // Jika masih null, ambil item apapun
+                if (this.selectedItem == null) {
+                     this.selectedItem = this.inventory.getItems().keySet().iterator().next();
+                }
+            }
+
 
         } else {
             System.err.println("PERINGATAN: ItemRegistry (Map) null. Inventory tidak diinisialisasi.");
@@ -167,12 +246,23 @@ public class Player {
     public int getCurrentTileY() { return currentTileY; }
     public Point getPosition() { return new Point(currentTileX, currentTileY); }
     public String getFavoriteItemName() { return favoriteItemName; }
+    public Item getSelectedItem() { return selectedItem; } // Ditambahkan
+    public int getEngagementDay() { return engagementDay; } // Ditambahkan
+    public void setEngagementDay(int engagementDay) { this.engagementDay = engagementDay; } // Ditambahkan
 
     // --- Setters ---
     public void setPartner(NPC partner) { this.partner = partner; }
     public void setPosition(int x, int y) { this.currentTileX = x; this.currentTileY = y; }
     public void setCurrentMap(MapArea map) { this.currentMap = map; }
     public void setFavoriteItemName(String itemName) { this.favoriteItemName = itemName; }
+    public void setSelectedItem(Item item) { // Ditambahkan
+        // Opsional: Cek apakah item ada di inventory sebelum di-set
+        // if (inventory.hasItem(item, 1) || item == null) { // item bisa null jika ingin "unequip"
+             this.selectedItem = item;
+        // } else {
+        //     System.err.println("Error: Mencoba memilih item yang tidak ada di inventory.");
+        // }
+    }
 
     // --- Pengubah State ---
     public void changeEnergy(int amount) {
@@ -255,21 +345,38 @@ public class Player {
      * @return true jika pencangkulan berhasil, false jika gagal.
      */
     public boolean till(Tile targetTile) {
+        // Validasi dasar
         if (targetTile == null) {
-            System.out.println("Target tile tidak boleh null untuk mencangkul.");
+            System.out.println("Tidak ada tile target untuk dicangkul.");
             return false;
         }
-        if (!inventory.hasTool("Hoe")) {
-            System.out.println("Kamu butuh cangkul (Hoe)!");
+
+        // Periksa apakah pemain memiliki Hoe dan sedang dipilih
+        boolean hasHoe = false;
+        if (selectedItem instanceof Equipment) {
+            Equipment currentTool = (Equipment) selectedItem;
+            if (currentTool.getToolType().equalsIgnoreCase("Hoe")) {
+                hasHoe = true;
+            }
+        }
+
+        if (!hasHoe) {
+            System.out.println("Kamu membutuhkan Hoe untuk mencangkul tanah dan Hoe harus dipilih.");
+            // Bisa juga cek inventory.hasTool("Hoe") jika selectedItem bukan Hoe tapi ada di inv
             return false;
         }
+        
+        // Periksa apakah tile bisa dicangkul
         if (!targetTile.canBeTilled()) {
-            System.out.println("Tanah ini tidak bisa dicangkul.");
+            System.out.println("Tile ini tidak bisa dicangkul.");
+            // (Misalnya sudah dicangkul, ada objek, atau tipe yang tidak bisa dicangkul)
             return false;
         }
+
+        // Lakukan aksi pencangkulan (mengubah tipe Tile)
         targetTile.setType(TileType.TILLED);
-        changeEnergy(-5); // hanya untuk testing
-        return true;
+        System.out.println("Tanah berhasil dicangkul!");
+        return true; // Berhasil
     }
 
     /**
@@ -282,16 +389,25 @@ public class Player {
      * @return true jika pemulihan berhasil, false jika gagal.
      */
     public boolean recoverLand(Tile targetTile) {
-        if (!inventory.hasTool("Pickaxe")) {
-            System.out.println("Kamu butuh beliung (Pickaxe)!");
+        boolean hasPickaxe = false;
+        if (selectedItem instanceof Equipment) {
+            Equipment currentTool = (Equipment) selectedItem;
+            if (currentTool.getToolType().equalsIgnoreCase("Pickaxe")) {
+                hasPickaxe = true;
+            }
+        }
+
+        if (!hasPickaxe) {
+            System.out.println("[Player.recoverLand] Action failed: Pickaxe is not selected. Selected: " + (selectedItem != null ? selectedItem.getName() : "None"));
             return false;
         }
+
         if (targetTile == null || !targetTile.canBeRecovered()) {
-            System.out.println("Tidak ada yang bisa dipulihkan di sini.");
+            System.out.println("[Player.recoverLand] Action failed: Nothing to recover or tile is null. Tile type: " + (targetTile != null ? targetTile.getType() : "null"));
             return false;
         }
         targetTile.setType(TileType.TILLABLE);
-        System.out.println("Kamu memulihkan tanah.");
+        System.out.println("[Player.recoverLand] Action success: Land recovered.");
         return true;
     }
 
@@ -308,20 +424,53 @@ public class Player {
      * @return true jika penanaman berhasil, false jika gagal.
      */
     public boolean plant(Seed seedToPlant, Tile targetTile, GameTime currentTime) {
-        if (seedToPlant == null || targetTile == null || currentTime == null) {
-            System.out.println("Input tidak valid untuk menanam.");
+        if (seedToPlant == null) {
+            System.out.println("[Player.plant] Error: Seed to plant is null.");
             return false;
         }
-        if (!inventory.hasItem(seedToPlant, 1)) {
-            System.out.println("Kamu tidak punya benih " + seedToPlant.getName() + ".");
+        if (targetTile == null) {
+            System.out.println("[Player.plant] Error: Target tile is null.");
             return false;
         }
-        boolean success = targetTile.setPlantedSeed(seedToPlant, currentTime.getCurrentSeason());
-        if (success) {
-            inventory.removeItem(seedToPlant, 1);
-            System.out.println("Kamu menananm " + seedToPlant.getName() + ".");
+        if (currentTime == null) {
+            System.out.println("[Player.plant] Error: GameTime (currentTime) is null.");
+            return false;
         }
-        return success;
+
+        if (targetTile.getType() != TileType.TILLED) { 
+            System.out.println("[Player.plant] Action failed: Tile is not tilled. Tile type: " + targetTile.getType());
+            return false;
+        }
+
+        if (targetTile.getPlantedSeed() != null) {
+            System.out.println("[Player.plant] Action failed: Tile already has a plant.");
+            return false;
+        }
+
+        // Corrected season check using getTargetSeason() and direct comparison
+        Season currentSeasonValue = currentTime.getCurrentSeason();
+        Season seedTargetSeasonValue = seedToPlant.getTargetSeason();
+        if (seedTargetSeasonValue != Season.ANY && seedTargetSeasonValue != currentSeasonValue) {
+            System.out.println("[Player.plant] Action failed: " + seedToPlant.getName() + " cannot be planted in " + currentSeasonValue + ". Required season: " + seedTargetSeasonValue + ".");
+            return false;
+        }
+
+        if (inventory.hasItem(seedToPlant, 1)) {
+            // Menggunakan metode setPlantedSeed dari Tile.java yang menerima Seed dan Season
+            boolean plantSuccess = targetTile.setPlantedSeed(seedToPlant, currentSeasonValue); 
+            if (plantSuccess) {
+                inventory.removeItem(seedToPlant, 1);
+                System.out.println("[Player.plant] Action success: " + seedToPlant.getName() + " planted.");
+                return true;
+            } else {
+                // Pesan error spesifik dari Tile.setPlantedSeed() jika ada, atau pesan ini jika gagal karena alasan lain di sana
+                System.out.println("[Player.plant] Action failed: Tile.setPlantedSeed returned false (check Tile's internal logic, e.g. season check there too).");
+                return false;
+            }
+        } else {
+            System.out.println("[Player.plant] Action failed: Player does not have " + seedToPlant.getName() + ".");
+            return false;
+        }
     }
 
     /**
@@ -331,20 +480,49 @@ public class Player {
      * Biaya waktu (5 menit) ditangani oleh Controller.
      *
      * @param targetTile Objek Tile yang akan disiram.
-     * @param currentWeather Objek Weather untuk mendapatkan weather saat ini.
-     * @return true jika penyiraman berhasil, false jika gagal.
+     * @return true jika berhasil menyiram, false jika gagal.
      */
-    public boolean water(Tile targetTile, Weather currentWeather) {
-        if (!inventory.hasTool("Watering Can")) {
-            System.out.println("Kamu butuh penyiram tanaman (Watering Can)!");
+    public boolean water(Tile targetTile, Weather currentWeather) { // currentWeather tidak digunakan di sini karena Tile.markAsWatered() tidak memerlukannya secara langsung
+                                                                    // Tile.updateDaily() yang akan menghandle efek hujan
+        if (targetTile == null) {
+            System.out.println("[Player.water] Error: Target tile is null.");
             return false;
         }
-        if (targetTile == null || !targetTile.needsWatering(currentWeather)) {
-            System.out.println("Tidak perlu menyiram petak ini.");
+
+        boolean hasWateringCan = false;
+        if (selectedItem instanceof Equipment) {
+            Equipment currentTool = (Equipment) selectedItem;
+            String actualToolType = currentTool.getToolType(); // Get the tool type
+            System.out.println("[Player.water] Debug: Selected item is Equipment. Name: " + currentTool.getName() + ", Actual ToolType: '" + actualToolType + "'"); 
+            
+            if (actualToolType != null && actualToolType.equalsIgnoreCase("WateringCan")) {
+                hasWateringCan = true;
+            } else {
+                System.out.println("[Player.water] Debug: ToolType mismatch or null. Expected 'WateringCan' (case-insensitive), got '" + actualToolType + "'. Comparison result: " + (actualToolType != null && actualToolType.equalsIgnoreCase("WateringCan")) );
+            }
+        } else if (selectedItem != null) {
+            System.out.println("[Player.water] Debug: Selected item '" + selectedItem.getName() + "' is NOT an instance of Equipment. It is: " + selectedItem.getClass().getName());
+        } else {
+            System.out.println("[Player.water] Debug: selectedItem is null.");
+        }
+
+        if (!hasWateringCan) {
+            System.out.println("[Player.water] Action failed because hasWateringCan is false. (Original log message was: Watering Can is not selected or current item is not Equipment). Selected: " + (selectedItem != null ? selectedItem.getName() : "None"));
             return false;
         }
+
+        if (!targetTile.canBeWateredInternalCheck()) {
+            System.out.println("[Player.water] Action failed: Tile cannot be watered (not TILLED or PLANTED). Tile type: " + targetTile.getType());
+            return false;
+        }
+        
+        if (targetTile.isWatered()) {
+            System.out.println("[Player.water] Info: Tile is already watered.");
+            return false; 
+        }
+
         targetTile.markAsWatered();
-        System.out.println("Kamu menyiram tanaman.");
+        System.out.println("[Player.water] Action success: Tile watered!");
         return true;
     }
 
@@ -356,49 +534,105 @@ public class Player {
      *
      * @param targetTile Objek Tile tempat memanen.
      * @param itemRegistry Referensi ke database item untuk mendapatkan objek Crop.
+     * @param statistics Referensi ke EndGameStatistics untuk mencatat panen.
      * @return true jika panen berhasil, false jika gagal.
      */
-    public boolean harvest(Tile targetTile, Map<String, Item> itemRegistry) {
-        if (targetTile == null || !targetTile.isHarvestable()) {
-            System.out.println("Tidak ada yang bisa dipanen di sini.");
+    public boolean harvest(Tile targetTile, Map<String, Item> itemRegistry, EndGameStatistics statistics) {
+        // TODO: Implementasi lebih detail terkait item spesifik dari tanaman
+        if (targetTile == null || !targetTile.isHarvestable() || targetTile.getPlantedSeed() == null) {
+            System.out.println("Player.harvest: Tidak ada yang bisa dipanen atau tile tidak valid.");
             return false;
         }
-        List<Item> harvestedItems = targetTile.processHarvest(itemRegistry);
-        if (harvestedItems != null && !harvestedItems.isEmpty()) {
-            for (Item crop : harvestedItems) {
-                inventory.addItem(crop, 1);
+        // Diasumsikan Tile.harvest() akan mengembalikan daftar Item hasil panen atau null/kosong jika gagal
+        List<Item> harvestedProduce = targetTile.processHarvest(itemRegistry); // processHarvest HARUS mereset tile
+
+        if (harvestedProduce != null && !harvestedProduce.isEmpty()) {
+            boolean allAdded = true;
+            for(Item item : harvestedProduce){
+                if (item != null) { // Pastikan item tidak null sebelum menambahkannya
+                    this.inventory.addItem(item, 1); // Untuk sekarang, asumsikan setiap hasil panen adalah 1 unit
+                    System.out.println("Player memanen: " + item.getName());
+                    // Mencatat panen ke statistik
+                    if (statistics != null) {
+                        statistics.recordHarvest(item.getName(), 1); // Asumsi quantity 1 per item dari list
+                    }
+                } else {
+                    allAdded = false; // Tandai jika ada item null dalam hasil panen
+                }
             }
-            System.out.println("Kamu memanen " + harvestedItems.get(0).getName() + "!");
+            if (!allAdded) {
+                System.err.println("Peringatan: Beberapa item hasil panen null dan tidak ditambahkan.");
+            }
+            // Tidak ada biaya energi eksplisit untuk panen di spesifikasi,
+            // namun controller akan tetap memanggil changeEnergy(-5) sebagai contoh.
+            // Jika ingin panen gratis energi, hapus changeEnergy di controller atau buat nol.
             return true;
         } else {
-            System.out.println("Gagal memanen.");
+            System.out.println("Player.harvest: Gagal memanen atau tidak ada hasil dari tile.");
             return false;
         }
     }
 
     /**
-     * Mencoba memakan sebuah Item (yang harusnya EdibleItem).
-     * Mengasumsikan Controller menyediakan objek Item yang benar.
-     * Biaya waktu (5 menit) ditangani oleh Controller.
-     *
-     * @param itemToEat Item yang akan dikonsumsi.
-     * @return true jika berhasil dimakan, false jika gagal.
+     * Pemain mencoba memakan item yang dipilih.
+     * Hanya item yang mengimplementasikan EdibleItem yang bisa dimakan.
+     * Memulihkan energi dan mengurangi item dari inventory.
+     * @param itemToEat Item yang akan dimakan.
+     * @return true jika item berhasil dimakan, false jika tidak.
      */
     public boolean eat(Item itemToEat) {
-        if (itemToEat == null) return false;
-        if (!(itemToEat instanceof EdibleItem)) {
-            System.out.println(itemToEat.getName() + " tidak bisa dimakan.");
+        if (itemToEat == null) {
+            System.out.println("Player.eat: Tidak ada item yang dipilih untuk dimakan.");
             return false;
         }
+
+        if (itemToEat instanceof EdibleItem) {
+            // Cek dulu apakah pemain punya item tersebut sebelum mencoba mengurangi
         if (!inventory.hasItem(itemToEat, 1)) {
-            System.out.println("Kamu tidak punya " + itemToEat.getName() + ".");
+                System.out.println("Player.eat: Pemain tidak memiliki " + itemToEat.getName() + " untuk dimakan.");
+                return false; // Seharusnya tidak terjadi jika itemToEat adalah selectedItem yang valid dari inventory
+            }
+
+            EdibleItem edible = (EdibleItem) itemToEat;
+            int energyRestored = edible.getEnergyRestore();
+
+            if (this.energy >= MAX_ENERGY && energyRestored > 0) {
+                System.out.println("Player.eat: Energi sudah penuh, tidak bisa makan " + itemToEat.getName() + " untuk memulihkan energi.");
+                // Pertimbangkan apakah tetap mengonsumsi item jika energi sudah penuh.
+                // Untuk saat ini, jika energi penuh dan item memberi energi positif, makan dibatalkan untuk hemat item.
+                // Jika item memberi energi negatif (poison?), mungkin tetap dikonsumsi.
+                // Untuk simplicity, kita batalkan jika energi penuh & restore positif.
             return false;
         }
-        boolean success = itemToEat.use(this, null);
-        if (success) {
-            inventory.removeItem(itemToEat, 1);
+            
+            // Hapus item dari inventory DULU, baru tambah energi.
+            // Ini mencegah situasi di mana energi bertambah tapi item gagal dihapus (meskipun kecil kemungkinannya di sini).
+            boolean removed = inventory.removeItem(itemToEat, 1);
+            if (removed) {
+                changeEnergy(energyRestored);
+                System.out.println(this.name + " memakan " + itemToEat.getName() + ". Energi pulih: " + energyRestored + ". Energi sekarang: " + this.energy);
+                // Jika item adalah Equipment setelah dimakan (misal potion dengan efek sementara),
+                // selectedItem mungkin perlu di-clear atau diganti.
+                // Untuk EdibleItem biasa (Crop, Food), selectedItem akan menjadi null jika stack habis,
+                // dan Player/Controller harus menangani pemilihan item berikutnya.
+                // Jika itemToEat adalah selectedItem dan jumlahnya jadi 0, selectedItem harus di-update.
+                // Logic ini sebaiknya ada di Controller atau setelah pemanggilan eat()
+                if (inventory.getItemCount(itemToEat) == 0 && itemToEat.equals(this.selectedItem)) {
+                    // Jika item yang dimakan adalah selectedItem dan habis, selectedItem jadi null
+                    // Controller akan perlu logika untuk memilih item berikutnya atau handle selectedItem null.
+                    // this.setSelectedItem(null); // Player tidak seharusnya mengatur selected itemnya sendiri secara langsung berdasarkan aksi ini.
+                                              // Controller yang harusnya mengelola selectedItem.
+                }
+                return true;
+            } else {
+                // Ini seharusnya tidak terjadi jika hasItem(itemToEat, 1) true.
+                System.err.println("Player.eat: Gagal menghapus " + itemToEat.getName() + " dari inventory meskipun awalnya terdeteksi.");
+                return false;
+            }
+        } else {
+            System.out.println("Player.eat: " + itemToEat.getName() + " tidak bisa dimakan.");
+            return false;
         }
-        return success;
     }
 
     /**
@@ -411,75 +645,140 @@ public class Player {
      */
     public void sleep(int energyBeforeSleep, boolean usedBonusBed) {
         int targetEnergy;
-        boolean applyPenalty = energyBeforeSleep <= 0;
+        // Penalty condition: energy < 10% * MAX_ENERGY (which is LOW_ENERGY_THRESHOLD)
+        boolean applyPenalty = energyBeforeSleep < LOW_ENERGY_THRESHOLD;
 
         if (applyPenalty) {
             targetEnergy = MAX_ENERGY / 2;
-            System.out.println("Kamu tidur kelelahan... Energi pulih setengah.");
+            System.out.println("Kamu tidur dengan energi rendah... Energi hanya pulih setengah.");
         } else {
             targetEnergy = MAX_ENERGY;
             System.out.println("Kamu tidur nyenyak. Energi pulih sepenuhnya.");
         }
 
-        if (energyBeforeSleep == 0) {
-            targetEnergy += 10;
-             System.out.println("Bonus energi +10!");
+        // Bonus bed logic (currently 'usedBonusBed' will be false for normal sleep)
+        // The specification for Action #7 (Sleeping) does not mention how a bonus bed affects
+        // the standard sleep energy recovery. This section can be expanded if bonus beds
+        // have a defined interaction with normal sleep beyond just being a different action trigger.
+        if (usedBonusBed) {
+            // Example: If a bonus bed doubled recovery and was used with low energy:
+            // if (applyPenalty) { targetEnergy = MAX_ENERGY; } // Full recovery instead of half
+            // else { targetEnergy = MAX_ENERGY + 20; } // Or some other bonus
+            System.out.println("Menggunakan tempat tidur bonus! (Logika spesifik akan diimplementasikan dengan fitur furnitur)");
+            // For now, no change to targetEnergy from usedBonusBed for Action #7 to stick to spec.
+            // The original code had: if (usedBonusBed && energyBeforeSleep < LOW_ENERGY_THRESHOLD) targetEnergy *= 2;
+            // This could be re-added if that's the desired interaction.
         }
 
-        if (usedBonusBed && energyBeforeSleep < LOW_ENERGY_THRESHOLD) {
-            targetEnergy *= 2;
-            System.out.println("Bonus tempat tidur aktif! Pemulihan energi digandakan.");
+        // Clamp energy to MAX_ENERGY
+        if (targetEnergy > MAX_ENERGY) {
+            targetEnergy = MAX_ENERGY;
         }
-
-        if (targetEnergy > MAX_ENERGY) targetEnergy = MAX_ENERGY;
-        if (targetEnergy < MIN_ENERGY) targetEnergy = MIN_ENERGY;
-
+        // It's unlikely to go below MIN_ENERGY with sleep, but good to keep clamp.
+        if (targetEnergy < MIN_ENERGY) { // Should not be reachable with sleep logic
+            targetEnergy = MIN_ENERGY;
+        }
         this.energy = targetEnergy;
     }
 
     /**
-     * Mencoba memasak resep menggunakan bahan bakar.
-     * Membutuhkan pengecekan bahan dan bahan bakar di inventory.
-     * Biaya energi (-10 per percobaan) ditangani oleh Controller.
-     * Biaya waktu (1 jam pasif) ditangani oleh Controller.
+     * Mencoba memulai proses memasak berdasarkan resep dan bahan bakar.
+     * Metode ini akan mengurangi bahan dan bahan bakar dari inventory jika valid.
+     * Pengurangan energi dan pemajuan waktu (termasuk 1 jam pasif) akan dihandle oleh Controller.
      *
      * @param recipe Resep yang akan dimasak.
-     * @param fuelItem Item bahan bakar (Coal atau Firewood) yang digunakan.
-     * @param itemRegistry Untuk mendapatkan objek Makanan hasil.
-     * @return true jika persiapan memasak valid (bahan/bahan bakar ada), false jika gagal.
-     *         Penambahan item hasil terjadi setelah waktu pasif.
+     * @param fuelItem Item bahan bakar yang digunakan (Coal atau Firewood).
+     * @param itemRegistry Untuk mendapatkan objek Item dari nama.
+     * @return String berisi nama item hasil jika persiapan berhasil, atau pesan error jika gagal.
      */
-    public boolean cook(Recipe recipe, Item fuelItem, Map<String, Item> itemRegistry) {
-        if (recipe == null || fuelItem == null || itemRegistry == null) return false;
+    public String cook(Recipe recipe, Item fuelItem, Map<String, Item> itemRegistry) {
+        if (recipe == null) {
+            return "Resep tidak valid.";
+        }
+        if (fuelItem == null) {
+            return "Bahan bakar tidak valid.";
+        }
+        if (itemRegistry == null) {
+            return "Item registry tidak tersedia.";
+        }
 
-        if (!fuelItem.getName().equals("Coal") && !fuelItem.getName().equals("Firewood")) {
-            System.out.println("Bahan bakar tidak valid.");
-            return false;
+        // Validasi bahan bakar
+        String fuelName = fuelItem.getName();
+        if (!fuelName.equals("Coal") && !fuelName.equals("Firewood")) {
+            return "Bahan bakar tidak valid. Gunakan Coal atau Firewood.";
         }
         if (!inventory.hasItem(fuelItem, 1)) {
-            System.out.println("Kamu tidak punya " + fuelItem.getName() + ".");
-            return false;
+            return "Kamu tidak punya " + fuelName + " yang cukup.";
         }
+
+        // Validasi bahan-bahan resep
+        List<Item> fishItemsToRemove = new ArrayList<>(); // Untuk menampung ikan yang akan dihapus nanti
+        int anyFishRequired = 0;
+        int anyFishFound = 0;
 
         for (Map.Entry<String, Integer> entry : recipe.getIngredients().entrySet()) {
             String ingredientName = entry.getKey();
             int requiredQty = entry.getValue();
-            Item ingredient = itemRegistry.get(ingredientName);
-            if (ingredient == null || !inventory.hasItem(ingredient, requiredQty)) {
-                System.out.println("Kamu kekurangan bahan: " + requiredQty + " " + ingredientName);
-                return false;
+
+            if (ingredientName.equals("Any Fish")) {
+                anyFishRequired = requiredQty;
+                for (Map.Entry<Item, Integer> invEntry : inventory.getItems().entrySet()) {
+                    if (invEntry.getKey() instanceof Fish) {
+                        anyFishFound += invEntry.getValue();
+                    }
+                }
+                if (anyFishFound < anyFishRequired) {
+                    return "Kamu kekurangan bahan: " + anyFishRequired + " Any Fish (kamu punya " + anyFishFound + ").";
+                }
+                // Validasi untuk "Any Fish" selesai di sini untuk tahap pengecekan
+            } else {
+                Item ingredient = itemRegistry.get(ingredientName);
+                if (ingredient == null) {
+                return "Bahan '" + ingredientName + "' tidak dikenal dalam sistem.";
+            }
+            if (!inventory.hasItem(ingredient, requiredQty)) {
+                return "Kamu kekurangan bahan: " + requiredQty + " " + ingredientName + ".";
+                }
             }
         }
 
+        // Jika semua valid, kurangi bahan bakar dan bahan-bahan dari inventory
         inventory.removeItem(fuelItem, 1);
+
         for (Map.Entry<String, Integer> entry : recipe.getIngredients().entrySet()) {
-            inventory.removeItem(itemRegistry.get(entry.getKey()), entry.getValue());
+            String ingredientName = entry.getKey();
+            int requiredQty = entry.getValue();
+
+            if (ingredientName.equals("Any Fish")) {
+                int fishRemovedCount = 0;
+                // Iterasi ulang untuk mengumpulkan dan menghapus ikan
+                // Membuat salinan keyset untuk menghindari ConcurrentModificationException
+                List<Item> currentInventoryKeys = new ArrayList<>(inventory.getItems().keySet());
+                for (Item invItem : currentInventoryKeys) {
+                    if (invItem instanceof Fish) {
+                        int countInStack = inventory.getItemCount(invItem);
+                        int canRemoveFromStack = Math.min(countInStack, requiredQty - fishRemovedCount);
+                        
+                        inventory.removeItem(invItem, canRemoveFromStack);
+                        fishRemovedCount += canRemoveFromStack;
+                        
+                        if (fishRemovedCount >= requiredQty) {
+                            break; 
+                        }
+                    }
+                }
+            } else {
+                Item ingredient = itemRegistry.get(ingredientName);
+                // Kita sudah validasi ingredient != null sebelumnya, jadi aman
+            inventory.removeItem(ingredient, entry.getValue());
+            }
         }
 
-        System.out.println("Kamu mulai memasak " + recipe.getResultItemName() + "...");
-        changeEnergy(-10); // hanya untuk testing
+        // System.out.println("Kamu mulai memasak " + recipe.getResultItemName() + "...");
+        // Pengurangan energi (-10) akan dihandle oleh Controller
+        // Penambahan item hasil dan advance time 1 jam juga akan dihandle Controller
 
-        return true;
+        return recipe.getResultItemName(); // Kembalikan nama item hasil jika persiapan sukses
     }
 
     /**
@@ -500,49 +799,44 @@ public class Player {
 
     /**
      * Mencoba melamar seorang NPC. Membutuhkan Proposal Ring.
-     * Biaya energi (-10 jika diterima, -20 jika ditolak) ditangani oleh Controller.
-     * Biaya waktu (1 jam) ditangani oleh Controller.
      *
      * @param npcTarget NPC yang akan dilamar.
-     * @param ring Item ProposalRing.
-     * @return true jika percobaan lamaran dilakukan (cincin ada), false jika gagal.
-     *         Logika sukses/gagal sebenarnya kompleks dan kemungkinan di Controller.
+     * @param ring Item ProposalRing (untuk konfirmasi item dipegang).
+     * @param currentTotalDaysPlayed Total hari yang telah dimainkan, untuk mencatat tanggal pertunangan.
+     * @return String pesan error jika gagal, atau null jika berhasil.
      */
-    public boolean propose(NPC npcTarget, ProposalRing ring) {
-        
+    public String propose(NPC npcTarget, ProposalRing ring, int currentTotalDaysPlayed) {
         if (npcTarget == null || ring == null) {
-            System.out.println("Target NPC atau cincin tidak valid untuk melamar.");
-            return false;
+            return "Target NPC atau cincin tidak valid untuk melamar.";
         }
 
-        // Panggil ProposalRing.use() untuk efek awal / pesan (meski saat ini hanya validasi dasar)
-        // Sebenarnya, Player.propose yang harusnya memegang semua logika inti.
-        // ring.use(this, npcTarget); // Ini hanya print pesan, tidak krusial untuk logika di sini
+        // 1. Cek dulu apakah pemain sudah menikah
+        if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE) {
+            return "Kamu sudah menikah dengan " + this.partner.getName() + "! Tidak bisa melamar siapapun lagi.";
+        }
 
-        System.out.println(this.getName() + " mengeluarkan Proposal Ring dan mencoba melamar " + npcTarget.getName() + "...");
-
+        // 2. Jika belum menikah, baru cek apakah sudah bertunangan
+        if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.FIANCE) {
+            if (this.partner == npcTarget) { // Mencoba melamar tunangan sendiri lagi
+                return "Kamu sudah bertunangan dengan " + npcTarget.getName() + ".";
+            } else { // Sudah punya tunangan, tapi mencoba melamar NPC lain
+                return "Kamu sudah bertunangan dengan " + this.partner.getName() + " dan tidak bisa melamar " + npcTarget.getName() + ".";
+            }
+        }
+        
         if (!npcTarget.isBachelor()) {
-            System.out.println(npcTarget.getName() + " tidak bisa dilamar (bukan bachelor/bachelorette).");
-            changeEnergy(-5); // Misal, energi tetap berkurang untuk usaha
-            return false;
+            return npcTarget.getName() + " tidak bisa dilamar (bukan bachelor/bachelorette).";
         }
 
-        // Asumsi proposal memerlukan poin hati maksimal untuk bachelor/bachelorette
         if (npcTarget.getHeartPoints() < npcTarget.getMaxHeartPoints()) {
-            System.out.println("Sayangnya, " + npcTarget.getName() + " merasa hubungan kalian belum cukup dekat untuk lamaran.");
-            changeEnergy(-10); // Energi berkurang lebih banyak jika ditolak karena hati
-            return false;
+            return "Sayangnya, " + npcTarget.getName() + " merasa hubungan kalian belum cukup dekat untuk lamaran. (Hati: " + npcTarget.getHeartPoints() + "/" + npcTarget.getMaxHeartPoints() + ")";
         }
 
-        // Lamaran berhasil!
-        System.out.println(npcTarget.getName() + " menerima lamaranmu dengan bahagia!");
         npcTarget.setRelationshipStatus(RelationshipStatus.FIANCE);
-        this.setPartner(npcTarget); // Pemain kini punya tunangan
-        changeEnergy(-15); // Energi berkurang untuk lamaran sukses
-        // Hapus ProposalRing jika itemnya consumable, atau biarkan jika reusable
-        // Berdasarkan spek Hal 27, ProposalRing tidak hilang.
-        // inventory.removeItem(ring, 1); 
-        return true;
+        this.setPartner(npcTarget); 
+        this.setEngagementDay(currentTotalDaysPlayed); 
+        
+        return null; // Mengindikasikan sukses
     }
 
     /**
@@ -552,23 +846,52 @@ public class Player {
      * @param npcTarget NPC yang akan dinikahi.
      * @return true jika kondisi pernikahan terpenuhi di awal, false jika gagal.
      */
-    public boolean marry(NPC npcTarget) {
+    /**
+     * Mencoba menikahi seorang NPC (harus tunangan dan minimal 1 hari setelah tunangan).
+     *
+     * @param npcTarget NPC yang akan dinikahi.
+     * @param currentTotalDaysPlayed Total hari yang telah dimainkan saat ini.
+     * @return String pesan error jika gagal, atau null jika berhasil.
+     */
+    public String marry(NPC npcTarget, int currentTotalDaysPlayed) { 
         if (npcTarget == null ) {
-            System.out.println("Target NPC tidak valid untuk menikah.");
-            return false;
+            return "Target NPC tidak valid untuk menikah.";
         }
-        if (this.partner != npcTarget || npcTarget.getRelationshipStatus() != RelationshipStatus.FIANCE) {
-            System.out.println("Kamu hanya bisa menikahi tunanganmu saat ini, " + (this.partner != null ? this.partner.getName() : "belum ada") + ".");
-            if (npcTarget.getRelationshipStatus() != RelationshipStatus.FIANCE) {
-                 System.out.println(npcTarget.getName() + " belum menjadi tunanganmu.");
-            }
-            return false;
+
+        // Prioritas #1: Cek apakah pemain sudah menikah DENGAN TARGET INI
+        if (this.partner != null && this.partner == npcTarget && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE) {
+            return "Kamu sudah menikah dengan " + npcTarget.getName() + "!";
+        }
+
+        // Prioritas #2: Cek apakah pemain sudah menikah DENGAN ORANG LAIN
+        if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE && this.partner != npcTarget) {
+            return "Kamu sudah menikah dengan " + this.partner.getName() + " dan tidak bisa menikah dengan " + npcTarget.getName() + ".";
         }
         
-        System.out.println("Hari pernikahan dengan " + npcTarget.getName() + " telah tiba! Selamat!");
+        // Prioritas #3: Cek kondisi pertunangan jika belum menikah
+        if (this.partner == null) { // Belum punya partner sama sekali (belum tunangan)
+            return "Kamu belum bertunangan dengan siapapun. Lamar dulu " + npcTarget.getName() + "!";
+        }
+        
+        if (this.partner != npcTarget) { // Punya tunangan, tapi targetnya beda orang
+            return npcTarget.getName() + " bukanlah tunanganmu saat ini. Tunanganmu adalah " + this.partner.getName() + ".";
+        }
+
+        // Jika sampai sini, berarti this.partner == npcTarget. Sekarang cek statusnya.
+        if (npcTarget.getRelationshipStatus() != RelationshipStatus.FIANCE) {
+            // Partner adalah target, tapi statusnya bukan FIANCE (misal, masih SINGLE karena bug, atau sudah SPOUSE tapi lolos cek #1)
+             return "Status hubunganmu dengan " + npcTarget.getName() + " adalah " + npcTarget.getRelationshipStatus() + ". Kamu hanya bisa menikahi seorang FIANCE.";
+        }
+
+        // Pengecekan minimal 1 hari setelah tunangan
+        if (this.engagementDay < 0 || currentTotalDaysPlayed <= this.engagementDay) {
+            return "Kamu harus menunggu setidaknya satu hari setelah bertunangan untuk menikah. ";
+        }
+        
+        // Pernikahan berhasil
         npcTarget.setRelationshipStatus(RelationshipStatus.SPOUSE);
-        // Energi dan waktu diatur oleh GameController/Farm.
-        return true; 
+        
+        return null; // Mengindikasikan sukses 
     }
 
     /**
@@ -602,86 +925,245 @@ public class Player {
     }
 
     /**
-     * Berbicara dengan seorang NPC.
-     * Mengasumsikan Controller menyediakan target NPC.
-     * Biaya energi (-10) ditangani oleh Controller.
-     * Biaya waktu (10 menit atau berdasarkan dialog) ditangani oleh Controller.
+     * Attempts to chat with the specified NPC.
+     * Checks energy, distance, and updates game state if successful.
+     * This method assumes the GameController has identified a potential NPC target
+     * and provides the MapArea instance where the NPC is currently located.
      *
-     * @param npcTarget NPC yang diajak bicara.
-     * @return true (aksi berbicara selalu mungkin jika NPC bisa ditarget).
+     * @param npcTarget The NPC to attempt to chat with.
+     * @param gameTime  The current GameTime object to advance time.
+     * @param npcActualMap The MapArea instance where the npcTarget is currently located.
+     * @return true if chat was successful, false otherwise.
      */
-    public boolean chat(NPC npcTarget) {
-        if (npcTarget == null) return false;
-        npcTarget.interact(this); // NPC menampilkan dialog
-        npcTarget.addHeartPoints(10); // Player menambahkan poin
+    public boolean chat(NPC npcTarget, GameTime gameTime, MapArea npcActualMap) {
+        if (npcTarget == null) {
+            System.out.println("Tidak ada NPC yang ditargetkan untuk diajak bicara.");
+            return false;
+        }
+         if (npcActualMap == null) {
+            System.out.println("Informasi map NPC tidak tersedia untuk chat.");
+            return false;
+        }
+        if (this.currentMap == null) {
+            System.out.println(this.name + " tidak berada di map yang valid untuk chat.");
+            return false;
+        }
+
+        // Check 1: Player energy
+        if (this.energy < CHAT_ENERGY_COST) {
+            System.out.println(this.name + " tidak punya cukup energi untuk berbicara (butuh " + CHAT_ENERGY_COST + ", punya " + this.energy + ").");
+            return false;
+        }
+
+        // Check 2: Player must be on the same map as the NPC
+        if (this.currentMap != npcActualMap) {
+            System.out.println(this.name + " tidak berada di map yang sama dengan " + npcTarget.getName() + ".");
+            System.out.println("Player di: " + this.currentMap.getName() + 
+                               ", " + npcTarget.getName() + " berada di: " + npcActualMap.getName());
+            return false;
+        }
+        
+        // Check 3: Proximity on that map
+        // Assumes npcTarget.getCurrentTileX() and getCurrentTileY() are their coords on npcActualMap
+        int distance = Math.abs(this.currentTileX - npcTarget.getCurrentTileX()) + 
+                       Math.abs(this.currentTileY - npcTarget.getCurrentTileY());
+
+        if (distance > CHAT_MAX_DISTANCE) {
+            System.out.println(this.name + " terlalu jauh dari " + npcTarget.getName() + " untuk berbicara. Jarak: " + distance + ", Maks: " + CHAT_MAX_DISTANCE);
+            return false;
+        }
+
+        // All checks passed
+        this.changeEnergy(-CHAT_ENERGY_COST);
+        if (gameTime != null) {
+            gameTime.advance(CHAT_TIME_ADVANCE_MINUTES);
+        } else {
+            System.err.println("Player.chat: GameTime is null, waktu tidak dimajukan.");
+        }
+        
+        npcTarget.addHeartPoints(CHAT_HEART_POINTS_GAIN);
+        
+        // The actual dialogue display will be handled by the View (GamePanel)
+        // using the dialogue string fetched by GameController from npcTarget.getDialogue(this).
+        // System.out.println(this.name + " berhasil berbicara dengan " + npcTarget.getName() + ". (Energi: " + this.energy + ", Hati " + npcTarget.getName() + ": " + npcTarget.getHeartPoints() + ")");
+        //  if (gameTime != null) {
+        //      System.out.println("Waktu saat ini: " + gameTime.getTimeString());
+        // }
         return true;
     }
 
     /**
-     * Memberikan hadiah item kepada seorang NPC.
-     * Mengasumsikan Controller menyediakan target NPC dan Item.
-     * Biaya energi (-5) ditangani oleh Controller.
-     * Biaya waktu (10 menit) ditangani oleh Controller.
-     *
-     * @param npcTarget NPC yang diberi hadiah.
-     * @param itemToGift Item yang diberikan.
-     * @return true jika pemberian hadiah berhasil (item ada), false jika gagal.
+     * Gifts an item to the specified NPC.
+     * Checks energy, proximity, and item validity. Updates game state if successful.
+     * @param npcTarget The NPC to gift to.
+     * @param itemToGift The Item to gift.
+     * @param gameTime The current GameTime.
+     * @param npcActualMap The MapArea instance where the npcTarget is located.
+     * @return true if gifting was successful, false otherwise.
      */
-    public boolean gift(NPC npcTarget, Item itemToGift) {
-        if (npcTarget == null || itemToGift == null) {
-            System.out.println("NPC target or item to gift cannot be null.");
+    public boolean gift(NPC npcTarget, Item itemToGift, GameTime gameTime, MapArea npcActualMap) { // Added npcActualMap
+        if (npcTarget == null) {
+            System.out.println("Tidak ada NPC yang ditargetkan untuk diberi hadiah.");
             return false;
         }
-        if (!inventory.hasItem(itemToGift, 1)) {
-            System.out.println("Kamu tidak punya " + itemToGift.getName() + " untuk diberikan.");
+        if (itemToGift == null) {
+            System.out.println("Tidak ada item yang dipilih untuk diberikan.");
             return false;
         }
-        int pointsChange = npcTarget.checkGiftPreference(itemToGift);
-        npcTarget.addHeartPoints(pointsChange);
-        System.out.println("Kamu memberikan " + itemToGift.getName() + " kepada " + npcTarget.getName() + ".");
-        inventory.removeItem(itemToGift, 1);
+        if (npcActualMap == null) {
+            System.out.println("Informasi map NPC tidak tersedia untuk memberi hadiah.");
+            return false;
+        }
+        if (this.currentMap == null) {
+            System.out.println(this.name + " tidak berada di map yang valid.");
+            return false;
+        }
+
+        // Constants for gifting (can be moved to top of class)
+        final int GIFT_ENERGY_COST = 5;
+        final int GIFT_TIME_ADVANCE_MINUTES = 10;
+        final int GIFT_MAX_DISTANCE = 1; // Same as chat
+
+        // Check 1: Player energy
+        if (this.energy < GIFT_ENERGY_COST) {
+            System.out.println(this.name + " tidak punya cukup energi untuk memberi hadiah (butuh " + GIFT_ENERGY_COST + ", punya " + this.energy + ").");
+            return false;
+        }
+
+        // Check 2: Player must be on the same map as the NPC
+        if (this.currentMap != npcActualMap) {
+            System.out.println(this.name + " tidak berada di map yang sama dengan " + npcTarget.getName() + " untuk memberi hadiah.");
+            return false;
+        }
+
+        // Check 3: Proximity
+        int distance = Math.abs(this.currentTileX - npcTarget.getCurrentTileX()) +
+                       Math.abs(this.currentTileY - npcTarget.getCurrentTileY());
+
+        if (distance > GIFT_MAX_DISTANCE) {
+            System.out.println(this.name + " terlalu jauh dari " + npcTarget.getName() + " untuk memberi hadiah.");
+            return false;
+        }
+
+        // Check 4: Player has the item
+        if (!this.inventory.hasItem(itemToGift, 1)) {
+            System.out.println(this.name + " tidak memiliki " + itemToGift.getName() + " untuk diberikan.");
+            return false;
+        }
+
+        // All checks passed
+        this.changeEnergy(-GIFT_ENERGY_COST);
+        if (gameTime != null) {
+            gameTime.advance(GIFT_TIME_ADVANCE_MINUTES);
+        } else {
+            System.err.println("Player.gift: GameTime is null, waktu tidak dimajukan.");
+        }
+
+        this.inventory.removeItem(itemToGift, 1);
+        int heartChange = npcTarget.checkGiftPreference(itemToGift);
+        npcTarget.addHeartPoints(heartChange);
+
+        System.out.println(this.name + " memberikan " + itemToGift.getName() + " kepada " + npcTarget.getName() + ".");
+        System.out.println(npcTarget.getName() + " bereaksi... (Hati berubah: " + heartChange + ", Total Hati: " + npcTarget.getHeartPoints() + ")");
+        // NPC-specific reaction dialogue could be triggered here or in GameController.
+        // npcTarget.reactToGift(itemToGift, this); 
+        
+        if (this.selectedItem != null && this.selectedItem.equals(itemToGift) && this.inventory.getItemCount(itemToGift) == 0) {
+            setSelectedItem(null); // Clear selected item if it was the last one gifted
+        }
+
+
         return true;
     }
 
     /**
-     * Menambahkan item ke shipping bin untuk dijual.
-     * Mengasumsikan Controller menyediakan Item dan kuantitas.
-     * Biaya waktu (15 menit setelah selesai) ditangani oleh Controller.
+     * Mencoba menjual item ke Shipping Bin.
+     * Memeriksa apakah pemain memiliki item yang cukup.
+     * Tidak langsung mengubah gold pemain (itu terjadi di akhir hari).
      *
-     * @param itemToSell Item yang dimasukkan ke bin.
-     * @param quantity Jumlah yang dimasukkan ke bin.
+     * @param itemToSell  Item yang akan dijual.
+     * @param quantity    Jumlah item yang akan dijual.
      * @param shippingBin Objek ShippingBin.
-     * @return true jika item berhasil ditambahkan, false jika gagal.
+     * @param currentDay  Hari saat ini dalam game, untuk validasi canSellToday.
+     * @return true jika item berhasil ditaruh di bin, false jika gagal.
      */
-    public boolean sellItemToBin(Item itemToSell, int quantity, ShippingBin shippingBin) {
-         // Validasi input dasar
-         if (itemToSell == null || quantity <= 0 || shippingBin == null) {
-             System.out.println("Input tidak valid untuk menjual item.");
+    public boolean sellItemToBin(Item itemToSell, int quantity, ShippingBin shippingBin, int currentDay) {
+        if (itemToSell == null || quantity <= 0) {
+            System.err.println(this.name + " mencoba menjual item tidak valid atau kuantitas nol.");
+            return false;
+        }
+        if (shippingBin == null) {
+            System.err.println("ShippingBin tidak boleh null untuk menjual item.");
              return false;
          }
 
-         // 1. Periksa apakah pemain memiliki cukup item
-         if (!inventory.hasItem(itemToSell, quantity)) {
-              System.out.println("Kamu tidak punya cukup " + itemToSell.getName() + " untuk dijual.");
+        // Validasi apakah bisa menjual hari ini - Panggil canSellToday() tanpa argumen
+        if (!shippingBin.canSellToday()) { // Removed currentDay argument
+            System.out.println(this.name + ": Sudah melakukan penjualan via Shipping Bin hari ini. Coba lagi besok.");
              return false;
          }
 
-         // 2. Coba tambahkan item ke Shipping Bin
-         // Mengasumsikan metode addItem di ShippingBin mengembalikan boolean
-         // (true jika berhasil, false jika gagal, misal karena bin penuh untuk item unik itu)
-         boolean added = shippingBin.addItem(itemToSell, quantity);
+        if (!this.inventory.hasItem(itemToSell, quantity)) {
+            System.out.println(this.name + " tidak punya cukup " + itemToSell.getName() + " (" + quantity + ") untuk dijual. Hanya punya: " + this.inventory.getItemCount(itemToSell));
+            return false;
+        }
 
-         if (added) {
-             // 3. Jika berhasil ditambahkan ke bin, hapus dari inventory pemain
-             inventory.removeItem(itemToSell, quantity);
-             System.out.println("Kamu memasukkan " + quantity + " " + itemToSell.getName() + " ke Shipping Bin.");
-             // Controller akan menangani biaya waktu setelah pemain selesai sesi penjualan.
+        // Coba hapus dari inventory dulu
+        if (this.inventory.removeItem(itemToSell, quantity)) {
+            // Jika berhasil dihapus dari inventory, coba tambahkan ke bin
+            if (shippingBin.addItem(itemToSell, quantity)) {
+                System.out.println(this.name + " menaruh " + quantity + " " + itemToSell.getName() + " ke Shipping Bin.");
+                // Tidak ada pengurangan energi atau perubahan gold di sini
+                // Efek waktu 15 menit akan ditangani Controller jika relevan
              return true;
          } else {
-             // Pesan error jika gagal ditambahkan (misalnya, bin penuh)
-             System.out.println("Tidak bisa menambahkan " + itemToSell.getName() + " ke Shipping Bin. Mungkin sudah penuh?");
+                // Gagal menambahkan ke bin (misal, bin penuh slot unik), kembalikan item ke inventory
+                this.inventory.addItem(itemToSell, quantity); // Rollback
+                System.out.println(this.name + ": Gagal menaruh item ke Shipping Bin (mungkin penuh slot unik). Item dikembalikan ke inventory.");
+                return false;
+            }
+        } else {
+            // Seharusnya tidak sampai sini jika hasItem() dan logika removeItem() benar
+            System.err.println(this.name + ": Gagal menghapus " + itemToSell.getName() + " dari inventory meskipun pengecekan awal berhasil.");
              return false;
          }
+    } 
+
+    /**
+     * Menangani kondisi pemain pingsan.
+     * Energi diatur setengah, hari diproses, dan pendapatan dari hari itu dikembalikan.
+     * @param farm Referensi ke Farm model untuk memproses hari berikutnya.
+     * @return int pendapatan dari penjualan pada hari berikutnya.
+     */
+    public int passOut(Farm farm) { // Farm model needed to trigger nextDay
+        System.out.println(getName() + " pingsan karena kelelahan!");
+        
+        int targetEnergy = MAX_ENERGY / 2;
+        int currentEnergy = getEnergy();
+        changeEnergy(targetEnergy - currentEnergy); // Gunakan changeEnergy untuk mengatur ke target
+
+        int income = farm.forceSleepAndProcessNextDay(); 
+        System.out.println("Bangun keesokan harinya dengan energi: " + getEnergy() + "."); // Tambahkan titik di akhir
+        return income;
+    }
+
+    /**
+     * Memeriksa apakah posisi pemain saat ini berada di salah satu entry/exit point
+     * pada peta saat ini.
+     * @return true jika pemain berada di entry point map saat ini, false jika tidak atau map tidak punya entry points.
+     */
+    public boolean isOnEntryPoint() {
+        if (this.currentMap == null || this.currentMap.getEntryPoints() == null) {
+            return false;
+        }
+        List<Point> entryPoints = this.currentMap.getEntryPoints();
+        Point playerPosition = new Point(this.currentTileX, this.currentTileY);
+        for (Point entryPoint : entryPoints) {
+            if (entryPoint.equals(playerPosition)) {
+                return true;
+            }
+        }
+        return false;
     } 
 
     // Anda bisa menambahkan metode helper lain di sini jika diperlukan

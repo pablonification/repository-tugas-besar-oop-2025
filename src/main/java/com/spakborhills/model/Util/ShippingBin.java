@@ -15,29 +15,37 @@ import java.util.Map;
 public class ShippingBin {
 
     private final Map<Item, Integer> itemsToSell;
-    private static final int MAX_UNIQUE_SLOTS = 16; // hal 23
+    public static final int MAX_UNIQUE_SLOTS = 16; // hal 23 - Made public
 
-    // Untuk melacak hari terakhir penjualan dilakukan, mencegah >1x penjualan per hari (Halaman 23)
-    private int lastSellDay;
+    // private int lastSellDay; // Replaced by hasSoldToday for immediate effect
+    private boolean hasSoldToday;
 
     /**
      * Konstruktor untuk ShippingBin.
-     * Menginisialisasi bin kosong dan lastSellDay (misal ke 0 atau -1 agar penjualan pertama valid).
+     * Menginisialisasi bin kosong dan hasSoldToday (misal ke false agar penjualan pertama valid).
      */
     public ShippingBin() {
         this.itemsToSell = new HashMap<>();
-        this.lastSellDay = 0; // atau -1, agar biar di hari pertama (day 1) bisa dilakukan
+        // this.lastSellDay = 0; 
+        this.hasSoldToday = false; // Initialize to false, can sell on day 1
     }
 
     /**
      * Memeriksa apakah pemain dapat melakukan penjualan pada hari ini.
-     * Pemain hanya bisa melakukan penjualan sekali sehari (Halaman 23).
+     * Pemain hanya bisa melakukan penjualan sekali sehari.
      *
-     * @param currentDay Hari saat ini dalam game.
      * @return true jika pemain bisa menjual hari ini, false jika sudah menjual.
      */
-    public boolean canSellToday(int currentDay) {
-        return currentDay > this.lastSellDay;
+    public boolean canSellToday() { // currentDay parameter no longer needed here for this logic
+        return !this.hasSoldToday;
+    }
+
+    /**
+     * Menandai bahwa penjualan telah terjadi untuk hari ini.
+     * Dipanggil setelah item berhasil ditambahkan ke bin.
+     */
+    private void markSaleOccurredForToday() {
+        this.hasSoldToday = true;
     }
 
     /**
@@ -54,14 +62,17 @@ public class ShippingBin {
             return false;
         }
 
-        // Cek apakah item sudah ada di bin atau apakah masih ada slot
+        // Logic for canSellToday should be checked by the caller (Player/Controller) before calling addItem
+        // However, if we want an absolute guarantee here, we could re-check, but it might be redundant.
+        // For now, assume caller checks canSellToday().
+
         if (!itemsToSell.containsKey(item) && itemsToSell.size() >= MAX_UNIQUE_SLOTS) {
             System.out.println("Shipping Bin sudah penuh untuk jenis item baru (maks " + MAX_UNIQUE_SLOTS + " jenis item unik).");
             return false;
         }
 
         itemsToSell.put(item, itemsToSell.getOrDefault(item, 0) + quantity);
-        // System.out.println(quantity + " " + item.getName() + " ditambahkan ke Shipping Bin."); // Feedback bisa di Player/Controller
+        markSaleOccurredForToday(); // Mark that a sale has happened today
         return true;
     }
 
@@ -77,6 +88,7 @@ public class ShippingBin {
      */
     public int processSales(EndGameStatistics statistics, PriceList priceList, int currentDay, Season currentSeason) {
         if (itemsToSell.isEmpty()) {
+            this.hasSoldToday = false; // Reset for next day even if nothing was sold
             return 0;
         }
 
@@ -84,29 +96,27 @@ public class ShippingBin {
         System.out.println("Memproses penjualan dari Shipping Bin...");
 
         for (Map.Entry<Item, Integer> entry : itemsToSell.entrySet()) {
-            Item item = entry.getKey();
-            int quantity = entry.getValue();
-            int sellPricePerUnit = priceList.getSellPrice(item); 
+            Item currentItem = entry.getKey(); // Renamed to avoid conflict
+            int currentQuantity = entry.getValue(); // Renamed to avoid conflict
+            int sellPricePerUnit = priceList.getSellPrice(currentItem); 
 
             if (sellPricePerUnit < 0) { 
-                System.err.println("ERROR: Item '" + item.getName() + "' tidak memiliki harga jual valid atau tidak bisa dijual.");
+                System.err.println("ERROR: Item '" + currentItem.getName() + "' tidak memiliki harga jual valid atau tidak bisa dijual.");
                 continue;
             }
 
-            int itemIncome = sellPricePerUnit * quantity;
+            int itemIncome = sellPricePerUnit * currentQuantity;
             totalIncomeToday += itemIncome;
 
-            System.out.println("  - Menjual " + quantity + " " + item.getName() + " seharga " + itemIncome + "g (" + sellPricePerUnit + "g/unit)");
-
-            // Catat ke statistik (jika perlu detail per item)
-            // statistics.recordItemSold(item.getName(), quantity, itemIncome, currentSeason);
+            System.out.println("  - Menjual " + currentQuantity + " " + currentItem.getName() + " seharga " + itemIncome + "g (" + sellPricePerUnit + "g/unit)");
         }
 
         if (totalIncomeToday > 0 && statistics != null) {
-            statistics.recordIncome(totalIncomeToday, currentSeason); // Catat total pendapatan harian
+            statistics.recordIncome(totalIncomeToday, currentSeason); 
         }
 
-        this.lastSellDay = currentDay; 
+        // this.lastSellDay = currentDay; // Not strictly needed if hasSoldToday is primary
+        this.hasSoldToday = false; // Reset for the next day
         // clearBin(); // Pengosongan bin dilakukan setelah pemanggilan ini di Farm.nextDay()
         return totalIncomeToday;
     }

@@ -21,6 +21,7 @@ public class Tile {
     private int growthDays;
     private DeployedObject associatedObject;
     private static final int WATERING_INTERVAL_HOT_WEATHER = 2;
+    private static final int MAX_DAYS_WITHOUT_WATER_BEFORE_DEATH = 3;
 
     public Tile(TileType type) {
         this.type = type;
@@ -114,7 +115,7 @@ public class Tile {
             if (cropBase instanceof Crop){
                 List<Item> harvestedItems = new ArrayList<>();
                 for (int i = 0; i < quantity; i++){
-                    harvestedItems.add(new Crop(cropBase.getName(), cropBase.getBuyPrice(), cropBase.getSellPrice()));
+                    harvestedItems.add(cropBase);
                 }
                 return harvestedItems;
             } else {
@@ -156,38 +157,59 @@ public class Tile {
      * @param currentSeason Musim saat ini.
      */
     public void updateDaily(Weather weather, Season currentSeason){
-        // Siram otomatis jika hujan
-        if(weather == Weather.RAINY && canBeWateredInternalCheck()){
-            isWatered = true;
-            daysSinceLastWatered = 0;
+        // Determine if the tile is effectively watered for today's growth calculation.
+        // 'this.isWatered' here reflects if it was manually watered by the player before nextDay() was called.
+        boolean effectivelyWateredForGrowth = this.isWatered;
+
+        if (weather == Weather.RAINY && canBeWateredInternalCheck()) {
+            effectivelyWateredForGrowth = true; // Rain makes it watered for today's growth regardless of prior manual watering.
         }
 
         // Update pertumbuhan tanaman
-        if(this.type == TileType.PLANTED && this.plantedSeed != null){
-            if(this.plantedSeed.getTargetSeason() != Season.ANY && this.plantedSeed.getTargetSeason() != currentSeason){
+        if (this.type == TileType.PLANTED && this.plantedSeed != null) {
+            // Check for season mismatch first
+            if (this.plantedSeed.getTargetSeason() != Season.ANY && this.plantedSeed.getTargetSeason() != currentSeason) {
                 System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena perubahan musim.");
-                this.setType(TileType.TILLABLE);
+                this.setType(TileType.TILLABLE); // Reset tile
+                this.isWatered = false; // Ensure isWatered is also reset before returning
                 return;
             }
 
-            if(this.isWatered){
-                if(!isHarvestable()){
+            // Now, apply growth logic based on whether it was effectively watered
+            if (effectivelyWateredForGrowth) {
+                if (!isHarvestable()) { // Only increment growthDays if not already harvestable
                     this.growthDays++;
                 }
-                this.daysSinceLastWatered = 0;
+                this.daysSinceLastWatered = 0; // Reset counter because it got water
             } else {
+                // Was not watered by player before nextDay() AND it did not rain today (implicitly weather == Weather.SUNNY)
                 this.daysSinceLastWatered++;
-                // Check for hot weather watering condition to "use" daysSinceLastWatered
+                System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") tidak disiram hari ini. DaysSinceLastWatered: " + this.daysSinceLastWatered + ", Cuaca: " + weather);
+
+                // Check for death due to hot weather rule first
                 if (weather == Weather.SUNNY && this.daysSinceLastWatered >= WATERING_INTERVAL_HOT_WEATHER) {
-                    // Plant is not growing anyway (due to being in this 'else' block).
-                    // This check explicitly uses daysSinceLastWatered.
-                    // A log message could be added here for debugging or future features, e.g.:
-                    // System.out.println("INFO: Plant " + this.plantedSeed.getName() + " at risk: " + this.daysSinceLastWatered + " days dry in SUNNY weather.");
+                    System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena tidak disiram selama " + this.daysSinceLastWatered + " hari saat cuaca panas.");
+                    this.setType(TileType.TILLED); // Kembali jadi tanah olahan kering
+                    this.isWatered = false; 
+                    return; 
+                }
+                
+                // If not dead from hot weather rule, check general death rule
+                if (this.daysSinceLastWatered > MAX_DAYS_WITHOUT_WATER_BEFORE_DEATH) {
+                    System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena tidak disiram terlalu lama (" + this.daysSinceLastWatered + " hari).");
+                    this.setType(TileType.TILLED); // Kembali jadi tanah olahan kering
+                    this.isWatered = false;
+                    return; 
                 }
             }
         } else {
+            // Not a planted tile, or no seed, so reset watering counters.
             this.daysSinceLastWatered = 0;
         }
+
+        // CRUCIAL: Reset the 'isWatered' flag for the *next* day cycle.
+        // This flag indicates if the player manually watered it on *their* turn.
+        // It should be false at the start of the next player's turn, unless they water it again.
         this.isWatered = false;
     }
     

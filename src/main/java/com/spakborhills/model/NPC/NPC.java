@@ -39,6 +39,8 @@ public abstract class NPC {
     protected RelationshipStatus relationshipStatus;
     protected LocationType homeLocation;
     protected boolean isBachelor;
+    protected int currentTileX;
+    protected int currentTileY;
 
     // Konstruktor untuk NPC
     protected NPC(String name, LocationType homeLocation, boolean isBachelor) {
@@ -54,6 +56,9 @@ public abstract class NPC {
         this.lovedItems = new ArrayList<>();
         this.likedItems = new ArrayList<>();
         this.hatedItems = new ArrayList<>();
+        
+        this.currentTileX = 5;
+        this.currentTileY = 5;
     }
 
     public String getName() {
@@ -106,6 +111,23 @@ public abstract class NPC {
         return maxHeartPoints;
     }    
 
+    public int getCurrentTileX() {
+        return currentTileX;
+    }
 
-    public abstract void interact(Player player);
+    public void setCurrentTileX(int currentTileX) {
+        this.currentTileX = currentTileX;
+    }
+
+    public int getCurrentTileY() {
+        return currentTileY;
+    }
+
+    public void setCurrentTileY(int currentTileY) {
+        this.currentTileY = currentTileY;
+    }
+
+    public abstract String getDialogue(Player player);
+
+    public abstract String reactToGift(Item item, Player player);
 }

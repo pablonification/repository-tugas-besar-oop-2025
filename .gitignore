@@ -3,6 +3,7 @@
 build/
 gradle-app.setting
 !gradle-wrapper.jar
+build.gradle
 
 # IDE files
 .idea/

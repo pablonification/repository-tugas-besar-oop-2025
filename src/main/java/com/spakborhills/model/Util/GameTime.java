@@ -28,6 +28,7 @@ public class GameTime {
 
     private int rainyDaysThisSeason;
     private final Random randomGenerator;
+    private boolean isPaused; // New field for pausing time
 
     /**
      * Konstruktor untuk GameTime.
@@ -43,6 +44,7 @@ public class GameTime {
         this.totalDaysPlayed = 1; // Mulai dari hari pertama
         this.randomGenerator = new Random();
         this.rainyDaysThisSeason = 0;
+        this.isPaused = false; // Initialize to not paused
         determineInitialWeather();
         System.out.println("GameTime diinisialisasi: Hari " + dayOfMonth + " " + currentSeason +
                            ", " + String.format("%02d:%02d", hour, minute) + ", Cuaca: " + currentWeather);
@@ -113,6 +115,38 @@ public class GameTime {
         }
     }
 
+    /**
+     * Mengatur musim saat ini secara manual (untuk cheat).
+     * Juga mereset rainyDaysThisSeason karena musim berubah.
+     * @param newSeason Musim baru.
+     */
+    public void setSeason(Season newSeason) {
+        if (newSeason != null && newSeason != Season.ANY) {
+            this.currentSeason = newSeason;
+            this.rainyDaysThisSeason = 0; // Reset counter hujan saat musim diubah manual
+            // Pertimbangkan apakah dayOfMonth juga perlu direset ke 1 atau dibiarkan
+            // Untuk cheat, mungkin lebih baik membiarkannya agar tidak terlalu disruptif
+            // atau tambahkan parameter lain jika perlu kontrol lebih.
+            System.out.println("CHEAT: Musim diubah menjadi: " + this.currentSeason);
+        } else {
+            System.err.println("CHEAT: Gagal mengubah musim ke nilai yang tidak valid: " + newSeason);
+        }
+    }
+
+    /**
+     * Sets the game time directly (for cheats).
+     * @param newHour The hour to set (0-23).
+     * @param newMinute The minute to set (0-59).
+     */
+    public void setTime(int newHour, int newMinute) {
+        if (newHour >= 0 && newHour < HOURS_IN_DAY && newMinute >= 0 && newMinute < MINUTES_IN_HOUR) {
+            this.hour = newHour;
+            this.minute = newMinute;
+            System.out.println("CHEAT: Waktu diubah menjadi: " + getTimeString());
+        } else {
+            System.err.println("CHEAT: Gagal mengubah waktu ke nilai yang tidak valid: " + newHour + ":" + newMinute);
+        }
+    }
 
     /**
      * Memajukan waktu game sebanyak menit tertentu.
@@ -124,7 +158,7 @@ public class GameTime {
      * @return true jika penambahan menit ini menyebabkan pergantian hari, false jika tidak.
      */
     public void advance(int minutesToAdd) {
-        if (minutesToAdd <= 0) return;
+        if (isPaused || minutesToAdd <= 0) return; // Check pause status here
 
         this.minute += minutesToAdd;
         // boolean dayChanged = false;
@@ -138,6 +172,20 @@ public class GameTime {
         }
         // System.out.println("Waktu maju ke: " + getTimeString()); // Feedback
         // return dayChanged;
+    }
+
+    /**
+     * Sets the pause state of the game time.
+     * When paused, the advance() method will not progress time.
+     * @param paused true to pause time, false to resume.
+     */
+    public void setPaused(boolean paused) {
+        this.isPaused = paused;
+        if (isPaused) {
+            System.out.println("GameTime Paused");
+        } else {
+            System.out.println("GameTime Resumed");
+        }
     }
 
     /**
@@ -224,4 +272,9 @@ public class GameTime {
         }
     }
 
+    /**
+     * Memprediksi cuaca untuk hari berikutnya tanpa mengubah state saat ini.
+     * Berguna untuk fitur seperti ramalan cuaca di TV.
+     * @return Weather yang diprediksi untuk besok.
+     */
 }

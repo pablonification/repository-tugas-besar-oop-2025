@@ -1,2 +1,295 @@
 todo:
 fix worldmap (FOREST_RIVER, NPC_HOME, Ocean, MOUNTAIN_LAKE) blm di implement
+
+Roadmap Integrasi Model ke GUI Swing "Spakbor Hills"
+Fase 1: Interaksi Dasar & Pertanian (Sebagian Besar Sudah/Sedang Dikerjakan)
+[SELESAI] Setup Dasar GUI: GameFrame, GamePanel, render map dasar & pemain.
+[SELESAI] Info Panel Pemain: Nama, Energi, Gold, Waktu, Musim, Cuaca, Item Terpilih.
+[SELESAI] Gerakan Pemain: WASD/Arrow keys.
+[SELESAI] Pemilihan Item dari Inventory: Menggunakan tombol (misal, 1 dan 2) untuk mengganti selectedItem dari semua item di inventory.
+Aksi Pertanian Dasar:
+[SELESAI] Tilling (Mencangkul): Tombol 'E' jika Hoe dipilih.
+[SELESAI] Watering (Menyiram): Tombol 'E' jika Watering Can dipilih (atau 'R').
+[SELESAI] Planting (Menanam): Tombol 'E' jika Seed dipilih.
+[SELESAI] *Memastikan tile sudah TILLED (tidak perlu isWatered sebelum tanam).
+[SELESAI] *Mengurangi bibit dari inventory.
+[SELESAI] Harvesting (Memanen): Tombol 'E' sebagai fallback atau jika tanaman siap panen.
+[SELESAI] *Menambahkan hasil panen ke inventory.
+[SELESAI] Recover Land (Memulihkan Lahan): Tombol 'E' jika Pickaxe dipilih.
+[SELESAI] Pertumbuhan Tanaman:
+[SELESAI] *Logika Tile.updateDaily() untuk pertumbuhan berdasarkan penyiraman/hujan dan musim.
+[SELESAI] *Aturan "siram setiap 2 hari sekali saat cuaca panas" (IMPLEMENTED in Tile.updateDaily).
+[SELESAI] *Visualisasi Tile & Tanaman (di GamePanel.drawFarmMap):
+[SELESAI] Warna dasar untuk tile type (grass, tillable, tilled, planted, watered).
+[SELESAI] Visualisasi Pertumbuhan Tanaman:
+[SELESAI] Mengubah tampilan tile PLANTED berdasarkan growthDays relatif terhadap daysToHarvest (perubahan warna dari hijau muda ke hijau tua, lalu kuning saat siap panen).
+[SELESAI] Indikasi jelas jika tanaman siap panen (isHarvestable()) dengan warna kuning.
+Aksi Makan (Eating):
+[SELESAI] Input Pemain: Tombol 'F' digunakan.
+[SELESAI] GameController.requestEatSelectedItem():
+Memanggil player.eat() jika selectedItem adalah EdibleItem dan valid.
+Menyesuaikan energi pemain (berdasarkan EdibleItem.getEnergyRestore()).
+Memajukan waktu permainan (5 menit).
+Item dikonsumsi dari inventory.
+Menangani kasus energi penuh (makan dibatalkan jika item memberi energi positif).
+Menangani kasus item habis setelah dimakan (selectedItem di-update oleh controller).
+[SELESAI] Feedback Visual/Audio: Konfirmasi via perubahan energi di info panel dan log konsol.
+Fase 2: Ekonomi & Interaksi Dunia Luar
+Toko (Store):
+[IMPLEMENTED] GUI Toko (Beli): Panel in-game dasar via tombol 'T' sudah berfungsi. Menampilkan item dari Store.java.
+    - Lokasi: Hanya bisa diakses jika player.getCurrentMap().getName() adalah "STORE".
+    - Navigasi: Keyboard (Up/Down pilih item, E/Enter pilih/konfirmasi, Esc/T tutup).
+    - Tampilan: Daftar item & harga, gold pemain.
+    - Pembelian: Input kuantitas (Up/Down/Angka), konfirmasi pembelian.
+    - Feedback: [SEBAGIAN SUDAH] Pesan sukses/gagal beli sudah in-UI via setStoreFeedback. Pesan pra-pembukaan toko (misal, "belum di lokasi", "toko kosong") masih via JOptionPane (GamePanel.displayMessage).
+[IMPLEMENTED] Menampilkan harga beli dari PriceList.
+[IMPLEMENTED] Pembelian Item (via GUI Toko):
+    - Input jumlah dari pemain (via in-game UI).
+    - Memvalidasi gold pemain (dilakukan oleh Store.sellToPlayer dan dicek di GameController).
+    - Menambahkan item ke inventory pemain (dilakukan oleh Store.sellToPlayer).
+    - Mengurangi gold pemain (dilakukan oleh Player.spendGold via Store.sellToPlayer).
+    - Tidak ada penggunaan waktu.
+[IMPLEMENTED] Item yang dijual sesuai spesifikasi (Seeds, beberapa Food, Crops tertentu, Koran).
+[IMPLEMENTED] Harga item sesuai PriceList.csv.
+Shipping Bin:
+[IMPLEMENTED] GUI Shipping Bin: Panel in-game dasar via tombol 'B' sudah berfungsi. Menampilkan item dari inventory pemain yang bisa dijual (Crop, Fish, Food, MiscItem). Menggantikan JOptionPane.
+[IMPLEMENTED] Penjualan Item:
+Input jumlah.
+Memindahkan item dari inventory ke "bin" (logika di ShippingBin.java).
+Pembatasan 16 slot item unik.
+Penjualan hanya sekali sehari.
+[IMPLEMENTED] Pemrosesan Akhir Hari (Farm.nextDay()):
+Menghitung total penjualan dari ShippingBin berdasarkan PriceList.
+Menambahkan gold ke pemain.
+Mengosongkan ShippingBin.
+[SELESAI] Feedback yang Jelas: Pesan bahwa gold akan diterima besok (saat item ditaruh) dan dialog JOptionPane di awal hari berikutnya (via GamePanel.showEndOfDayMessage) jika ada penjualan atau kejadian pingsan. (Catatan: Feedback saat item ditaruh kini via in-game UI, bukan JOptionPane).
+Gold & Inventory Display:
+[SELESAI] Sudah ditampilkan di Info Panel, pastikan selalu update setelah transaksi.
+Visiting (Pindah Map):
+[SEBAGIAN SUDAH] Logika Pemicu: Pemain bergerak ke tepi Farm Map (tile tipe ENTRY_POINT). Player.isOnEntryPoint() mendeteksi ini.
+[SELESAI] GUI Pemilihan Lokasi: GamePanel.showWorldMapSelectionDialog() menampilkan JOptionPane dengan daftar tujuan dari LocationType saat pemain di entry point. Pilihan SEKARANG memicu perpindahan map via GameController.
+[CATATAN] Akses Toko (Store): Saat ini Toko bisa diakses via tombol 'T' langsung. Rencana jangka panjang adalah Toko diakses sebagai salah satu tujuan dari GUI Pemilihan Lokasi setelah pemain mencapai Entry Point di FarmMap dan memilih 'STORE'. Tombol 'T' bisa dipertimbangkan untuk dihapus atau menjadi shortcut khusus jika desain akhir memungkinkan.
+[SELESAI] GameController.requestVisit(destination):
+[SELESAI] Memanggil player.visit().
+[SELESAI] Mengubah currentMap di Player dan FarmModel.
+[SELESAI] Memuat dan merender peta baru di GamePanel. (GamePanel kini render player.getCurrentMap() dengan camera).
+[SELESAI] Representasi World Map: Bisa berupa peta visual sederhana atau hanya daftar lokasi. (Daftar lokasi berfungsi, peta generik dirender, tampilan unik per area belum ada).
+Fase 3: Aksi Lanjutan & Interaksi NPC
+Fishing (Memancing):
+[IMPLEMENTED] Kondisi Memancing: Pemain di dekat tile air (Pond, Forest River, Mountain Lake, Ocean) dan Fishing Rod dipilih.
+[IMPLEMENTED] Input Pemain: Tombol 'E' (atau tombol khusus).
+[IMPLEMENTED] GameController.requestFish():
+Memulai logika memancing di Player.fish().
+Mengurangi energi.
+[IMPLEMENTED] Minigame Memancing:
+Implementasi RNG untuk menentukan ikan dan tebakan angka via GUI dialog.
+Menambahkan ikan ke inventory jika berhasil.
+[IMPLEMENTED] Feedback Visual/Audio via dialog boxes dan debug info.
+NPC & Interaksi:
+[SEBAGIAN SUDAH] Penempatan NPC di Peta Dunia/Rumah NPC (Data model dan map NPC home dibuat, NPC tahu home location & koordinat default, NPC digambar di petanya).
+[IMPLEMENTED] Chatting:
+[IMPLEMENTED] Input pemain (Tombol 'X') jika berada di dekat NPC.
+[IMPLEMENTED] GameController.handleChatRequest() -> player.chat(npc, gameTime, npcMap).
+[IMPLEMENTED] Menampilkan dialog NPC via JOptionPane di GamePanel (NPC.getDialogue() menyediakan teks, GamePanel.showNPCDialogue menampilkannya).
+[IMPLEMENTED] Update heartPoints (di Player.chat).
+Gifting:
+[IMPLEMENTED] Input pemain untuk memilih item dari inventory untuk diberikan ke NPC.
+[IMPLEMENTED] GameController.requestGift(npc, item) -> player.gift(npc, item).
+[IMPLEMENTED] Update heartPoints berdasarkan preferensi.
+[IMPLEMENTED] Feedback dari NPC.
+[IMPLEMENTED] Dialog peringatan energi tidak cukup untuk gifting.
+Proposing & Marrying:
+[IMPLEMENTED] Memerlukan ProposalRing.
+[IMPLEMENTED] Kondisi heartPoints maksimal, status NPC.
+[IMPLEMENTED] Input pemain -> Controller -> Model.
+[IMPLEMENTED] Feedback dan perubahan status.
+[IMPLEMENTED] Efek Marry (time skip, dll.).
+Cooking (Memasak):
+[SELESAI] Kondisi Memasak: Pemain di tile House object di FarmMap (passable). (Bonus: dekat Stove di interior rumah jika diimplementasikan nanti).
+[IMPLEMENTED] GUI Memasak:
+Menampilkan daftar resep yang diketahui/bisa dibuat.
+Menunjukkan bahan yang dibutuhkan vs. yang dimiliki.
+Memilih bahan bakar (Coal, Firewood).
+[IMPLEMENTED] Input Pemain -> GameController.requestCook(recipe, fuel) -> player.cook():
+[IMPLEMENTED] Mengurangi bahan, bahan bakar, energi.
+[IMPLEMENTED] Penanganan aksi pasif (1 jam) -> makanan muncul di inventory setelahnya. (Ini perlu mekanisme timer/event).
+Sleeping (Tidur Normal):
+[IMPLEMENTED] Interaksi dengan Tempat Tidur di Rumah: Aksi umum via tombol 'L' jika pemain berada di tile House object di FarmMap. (Interaksi dengan objek Bed spesifik adalah BONUS - UNTUK DILAKUKAN, begitu juga dengan interior rumah terpisah untuk furniture).
+[IMPLEMENTED] Input Pemain -> GameController.requestSleep():
+  [IMPLEMENTED] Memanggil player.sleep().
+  [IMPLEMENTED] Memanggil farmModel.nextDay().
+  [IMPLEMENTED] Memulihkan energi penuh (atau setengah jika ada penalti energi rendah sebelum tidur, berbeda dari pass-out).
+Fase 4: Waktu, Cuaca, dan Sistem Lainnya
+Sistem Waktu & Pergantian Hari/Musim:
+[IMPLEMENTED] GameTime menghitung waktu, hari, musim. Farm.nextDay() memproses pergantian.
+[IMPLEMENTED] Cheat untuk mengubah Musim (spring, summer, fall, winter) via input dialog (tombol C).
+[UNTUK DILAKUKAN] Efek visual/audio untuk pergantian waktu (misal, warna langit meredup di malam hari di GamePanel).
+    Detail Tint Waktu (Sebelumnya Pernah Diimplementasi):
+    - Night (22:00 - 04:59): Dark blue/purple tint (new Color(0, 0, 70, 100))
+    - Dusk (18:00 - 21:59): Orange-ish tint (new Color(200, 100, 0, 70))
+    - Dawn (05:00 - 06:59): Light orange/peach tint (new Color(255, 204, 153, 60))
+    - Daytime (07:00 - 17:59): No tint
+[IMPLEMENTED] Sinkronisasi Waktu Nyata vs Game: (Spesifikasi: "1 detik di dunia nyata = 5 menit di dunia permainan"). GamePanel Timer meng-tick GameTime.advance(5) setiap 1 detik.
+Cuaca:
+[IMPLEMENTED] GameTime punya currentWeather. Tile.updateDaily() menggunakan info hujan.
+[IMPLEMENTED] Cheat untuk mengubah Cuaca (sunny, rainy) via input dialog (tombol C).
+[UNTUK DILAKUKAN] Efek Visual Cuaca: Partikel hujan di GamePanel.
+[IMPLEMENTED] Watching TV: Aksi via tombol 'V' jika di dalam rumah untuk mengetahui cuaca HARI INI (GameTime.getCurrentWeather(), GameController.requestWatchTV()). Waktu maju 15 menit, energi berkurang 5.
+End Game Statistics:
+[IMPLEMENTED] Pemicu Tampilan Statistik: Mencapai salah satu milestone (gold >= 17209 atau menikah). Timer di GamePanel cek Farm.checkEndConditions(), panggil GameController.requestShowStatistics() sekali.
+[IMPLEMENTED] GUI untuk Menampilkan Statistik: GamePanel.showStatisticsDialog() menampilkan EndGameStatistics.getSummary() via JOptionPane dengan JTextArea. Timer game dihentikan.
+Fase 5: Menu dan Fitur Tambahan (Sesuai Spesifikasi Bonus)
+Menu Game Utama (CLI atau GUI Awal):
+[IMPLEMENTED] Main Menu on Startup (JOptionPane in Main.java): New Game, Help, Credits, Exit.
+[UNTUK DILAKUKAN] Load Game (Bonus).
+[IMPLEMENTED] Help Dialog: Basic game description and controls.
+[IMPLEMENTED] Credits Dialog: Placeholder for team name.
+[IMPLEMENTED] View Player Info (In-Game via 'I' key): GamePanel.showPlayerInfoDialog() displays Name, Gender, Energy, Gold, Partner.
+[IMPLEMENTED] Statistics (In-Game via 'O' key): Calls existing GameController.requestShowStatistics().
+Implementasi Bonus (jika dikerjakan):
+Furnitures (Termasuk interior rumah yang lebih besar dan detail seperti Stove, Bed), Keyboard/Mouse Input (sudah sebagian), Free Market, Gambling, Save/Load, NPC Easter Egg. Masing-masing akan punya sub-task sendiri.
+
+
+
+Fase 6: Penyempurnaan GUI & Audio (Harvest Moon Style)
+
+GUI Enhancements:
+[SEBAGIAN SUDAH] Penghilangan Seluruh Window/Dialog Eksternal:
+    - Semua interaksi (toko, shipping bin, dialog NPC, konfirmasi, input, dsb) akan digantikan dengan panel/jendela in-game yang terintegrasi di dalam tampilan utama game (tidak ada lagi JOptionPane atau window terpisah).
+      - [IMPLEMENTED] Dialog NPC utama sudah in-game.
+      - [IMPLEMENTED] Toko (Store) sekarang menggunakan panel in-game dasar (navigasi keyboard, pemilihan item, input kuantitas dasar).
+      - [IMPLEMENTED] Feedback Toko: Semua pesan terkait toko (pra-pembukaan dan sukses/gagal beli) kini sepenuhnya in-UI.
+      - [IMPLEMENTED] Shipping Bin sekarang menggunakan panel in-game dasar (termasuk feedback interaktifnya).
+      - [IMPLEMENTED] Dialog konfirmasi (Ya/Tidak), pesan info umum lainnya perlu diganti ke in-UI.
+        - [IMPLEMENTED] Cheat input (via 'C') kini menggunakan panel in-game.
+        - [IMPLEMENTED] End of Day Summary (tidur/pingsan) kini menggunakan panel in-game.
+        - [UNTUK DILAKUKAN] World Map selection dialog (saat di entry point).
+    - Navigasi dan interaksi dilakukan sepenuhnya dengan keyboard/controller/mouse di dalam game window, mirip main menu.
+    - Tampilan panel-panel ini akan konsisten dengan style main menu (warna, font, animasi, dsb).
+[UNTUK DILAKUKAN] Main Menu In-Game (Lanjutan):
+    - Latar belakang visual (misal, gambar pemandangan desa/kebun seperti contoh Harvest Moon).
+    - Kursor/highlight pilihan menu yang lebih menarik (misal, ikon tangan atau animasi).
+    - Integrasikan input Nama Pemain & Nama Kebun ke dalam alur "New Game" dari menu ini, bukan via JOptionPane di awal.
+
+[UNTUK DILAKUKAN] Kustomisasi Dialog In-Game:
+    - Ganti semua JOptionPane (Shipping Bin, Chat NPC sisa feedback, Konfirmasi Ya/Tidak, Pesan Info umum) dengan panel/jendela kustom yang terintegrasi dalam tampilan game.
+    - Penyempurnaan UI Toko: Input kuantitas yang lebih baik, feedback pembelian/kegagalan sepenuhnya in-game tanpa JOptionPane, ikon item.
+    - Tampilkan potret karakter saat dialog dengan NPC.
+
+[UNTUK DILAKUKAN] Penyempurnaan HUD/Info Panel Pemain:
+    - Representasi grafis untuk bar energi.
+    - Ikon untuk item yang sedang dipilih/dipegang.
+    - Tampilan yang lebih menarik (font, layout) untuk waktu, tanggal, musim, cuaca, dan gold.
+
+[UNTUK DILAKUKAN] Peningkatan Visual Dunia Game:
+    - Grafis berbasis sprite untuk pemain, NPC, hewan (jika ada), dan item di tanah.
+    - Animasi untuk tile tertentu (misal, air mengalir, api di perapian).
+    - Tile-set yang lebih detail dan beragam untuk setiap area peta (Kebun, Hutan, Desa, Pantai, dll.).
+    - Efek visual saat menggunakan alat (animasi mencangkul, menyiram, memancing, dll.).
+    - Efek visual cuaca yang lebih imersif (partikel hujan lebih baik, salju, daun berguguran, kabut).
+
+Audio Enhancements:
+[UNTUK DILAKUKAN] Background Music (BGM):
+    - Musik berbeda untuk setiap musim (Spring, Summer, Fall, Winter) di kebun.
+    - Musik berbeda untuk lokasi-lokasi utama (Desa, Hutan, Pantai, Toko, Rumah NPC).
+    - Musik khusus untuk event penting atau festival.
+    - Musik untuk Main Menu.
+
+[UNTUK DILAKUKAN] Sound Effects (SFX):
+    - Aksi Pemain: Langkah kaki (berbeda untuk jenis tile), suara penggunaan alat (ayunan, benturan, siram), makan, memancing (lempar, tarik).
+    - Interaksi UI: Navigasi menu, pilih opsi, buka/tutup dialog.
+    - Suara Ambient: Kicau burung di pagi hari, suara sungai/ombak, jangkrik di malam hari, angin.
+    - Interaksi NPC: Suara singkat saat memulai dialog atau memberikan respons.
+    - Suara Hewan (jika ada ternak/hewan liar).
+    - Efek suara untuk event penting (mendapatkan item langka, naik level pertemanan, dll.).
+
+Polish Umum:
+[UNTUK DILAKUKAN] Transisi Layar:
+    - Efek fade-in/fade-out untuk perpindahan peta.
+    - Transisi khusus saat tidur atau memulai hari baru.
+
+[UNTUK DILAKUKAN] Tipografi:
+    - Pemilihan font yang tematik dan konsisten di seluruh UI game.
+
+
+Hotkey:
+T: Toko/Store
+E: Action seperti Cangkul, nanam, siram, harvest
+F: Makan
+B: ShippingBin (Jual)
+P: Proposal
+M: Marry
+K: Cooking
+L: Sleeping
+X: Chat
+V: Watch TV (Today's Weather)
+I: View Player Info
+O: View Statistics
+1, 2: Swap Tools
+C: Cheat weather dan season
+X: Chat dengan NPC terdekat
+G: Gifting ke NPC
+
+
+Question:
+Store bukannya di WorldMap ya?
+
+HOUSE HARUS PASSABLE, DIA BISA DILALUI DAN MASAK TUH BUKAN DI SEKITAR TAPI EMG DIDALEM HOUSENYA
+
+[IMPLEMENTED] HOUSE PASSABLE: Player bisa masuk ke area 6x6 House di FarmMap. Cooking dan Sleeping dilakukan di tile House tersebut. Interior rumah yang lebih besar untuk furniture adalah fitur bonus dan ditunda.
+
+---
+Asset Wishlist for Harvest Moon Style GUI (Based on Itch.io search)
+
+I. World & Environment Assets:
+    [ ] Tilesets (Top-Down):
+        [ ] Farm Tiles: Grass, tillable soil, tilled soil, watered soil, crop growth stages, paths.
+        [ ] Seasonal Variations: Spring, Summer, Fall, Winter versions.
+        [ ] Farm Structures: Player's House (exterior), Shipping Bin, Barn, Coop, Fences.
+        [ ] Exterior Environment Tiles: Forest, River/Pond/Lake, Ocean/Beach, Mountain, Town/Village.
+        [ ] Interior Tiles: Floors, walls, furniture (Bed, Stove, TV, tables, chairs, decorations).
+    [ ] Animated Tiles:
+        [ ] Water (flowing, sparkling).
+        [ ] Fire (fireplace, stove).
+
+II. Character & Object Assets:
+    [ ] Player Character Sprites (Top-Down):
+        [ ] Walking animations (4/8-directional).
+        [ ] Action animations (tools, planting, eating, gifting).
+        [ ] Idle animations.
+    [ ] NPC Sprites (Top-Down):
+        [ ] Walking animations.
+        [ ] Idle animations.
+        [ ] Unique designs.
+    [ ] Character Portraits/Busts:
+        [ ] For dialogue (player & NPCs).
+        [ ] Multiple expressions.
+    [ ] Item Sprites/Icons:
+        [ ] Crops, seeds, tools, cooked food, fish, forageables, crafted items, gold.
+    [ ] Animals (Optional, for later):
+        [ ] Farm animals, wild animals.
+
+III. User Interface (UI) Assets:
+    [ ] UI Frames & Borders:
+        [ ] For dialogue boxes, menus, HUD.
+    [ ] Buttons & Icons:
+        [ ] Navigation, menu options, HUD icons (energy, time, season, weather).
+    [ ] Fonts:
+        [ ] Pixel-art friendly, readable.
+    [ ] HUD Elements:
+        [ ] Graphical energy bar, time/clock, calendar, weather icons.
+    [ ] Cursors:
+        [ ] Hand icon or similar for selection.
+
+IV. Effects & Miscellaneous:
+    [ ] Visual Effects (VFX):
+        [ ] Tool use, weather particles, level up/achievement indicators, cooking effects.
+    [ ] Backgrounds:
+        [ ] Main Menu, event cutscenes.
+
+Tips for Itch.io Search:
+*   Keywords: "pixel art", "top-down", "RPG", "farming", "tileset", "sprites", "UI pack", "16x16", "32x32".
+*   Look for "asset packs".
+*   Check licenses.
+*   Prioritize style consistency.
+---
