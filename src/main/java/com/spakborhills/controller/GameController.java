@@ -1,5 +1,6 @@
 package com.spakborhills.controller;
 
+import java.awt.Point;
 import java.util.ArrayList; // For creating list of items
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,7 +19,7 @@ import com.spakborhills.model.Enum.FishRarity;
 // GameTime might be needed if Farm.nextDay() isn't comprehensive enough for all time updates
 // import com.spakborhills.model.GameTime; 
 import com.spakborhills.model.Enum.LocationType;
-import com.spakborhills.model.Enum.RelationshipStatus;
+// import com.spakborhills.model.Enum.RelationshipStatus;
 import com.spakborhills.model.Enum.Season;
 import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
@@ -632,7 +633,7 @@ public class GameController {
 
             // Check if the bought item unlocks a recipe
             if (itemToBuy instanceof Food) { // Recipes bought from store are Food items
-                String normalizedItemName = itemName.toUpperCase().replace(" ", "_");
+                // String normalizedItemName = itemName.toUpperCase().replace(" ", "_");
                 String eventKey = null;
 
                 if (itemName.equalsIgnoreCase("Fish n' Chips")) {
@@ -806,6 +807,44 @@ public class GameController {
         return tools;
     }
 
+    private Point findSafeSpawnPoint(MapArea map, int preferredX, int preferredY) {
+        if (map == null) {
+            System.err.println("findSafeSpawnPoint: Map is null, returning preferred coordinates as fallback.");
+            return new Point(preferredX, preferredY);
+        }
+
+        // Check preferred point first
+        Tile preferredTile = map.getTile(preferredX, preferredY);
+        if (preferredTile != null && preferredTile.getType() != TileType.WATER && preferredTile.getType() != TileType.OBSTACLE && preferredTile.getAssociatedObject() == null) {
+            return new Point(preferredX, preferredY);
+        }
+
+        // Search adjacent tiles in a defined order (e.g., N, S, E, W, NE, NW, SE, SW)
+        int[][] offsets = {
+            {0, -1}, {0, 1}, {1, 0}, {-1, 0}, // N, S, E, W
+            {1, -1}, {-1, -1}, {1, 1}, {-1, 1}  // NE, NW, SE, SW
+        };
+
+        for (int[] offset : offsets) {
+            int checkX = preferredX + offset[0];
+            int checkY = preferredY + offset[1];
+
+            if (map.isWithinBounds(checkX, checkY)) {
+                Tile adjacentTile = map.getTile(checkX, checkY);
+                if (adjacentTile != null && adjacentTile.getType() != TileType.WATER && adjacentTile.getType() != TileType.OBSTACLE && adjacentTile.getAssociatedObject() == null) {
+                    System.out.println("Safe spawn found at adjacent tile: (" + checkX + ", " + checkY + ") for preferred: (" + preferredX + ", " + preferredY + ") on map " + map.getName());
+                    return new Point(checkX, checkY);
+                }
+            }
+        }
+
+        System.err.println("findSafeSpawnPoint: No safe adjacent tile found for (" + preferredX + ", " + preferredY + ") on map " + map.getName() + ". Returning preferred as last resort.");
+        // As a last resort, if no safe spot is found nearby, return the original preferred (with a warning already printed)
+        // or a map-specific default safe spot if available (e.g., map.getDefaultSafeSpawn()).
+        // For now, returning preferred to avoid null, but this could lead to being stuck if preferred itself is bad.
+        return new Point(preferredX, preferredY); 
+    }
+
     /**
      * Handles the player's request to visit a new location.
      * 
@@ -849,8 +888,43 @@ public class GameController {
             if (entryY >= targetMap.getSize().height) entryY = Math.max(0, targetMap.getSize().height - 1);
         }
 
+        // Tentukan titik masuk default berdasarkan tipe map tujuan
+        // Ini adalah logika yang SANGAT disederhanakan dan perlu diperbaiki
+        // Seharusnya setiap MapArea punya daftar entry point yang lebih spesifik
+        // atau setidaknya spawn point default yang aman.
+        int targetX = targetMap.getSize().width / 2; // Contoh: tengah horizontal
+        int targetY = targetMap.getSize().height - 1; // Contoh: paling bawah
 
-        boolean visited = player.visit(targetMap, entryX, entryY);
+        if (destination == LocationType.FARM) { // Jika kembali ke Farm
+            // Coba tempatkan pemain di salah satu entry point FarmMap jika ada
+            // atau di posisi terakhirnya di FarmMap jika disimpan
+            // Untuk sekarang, kita pakai contoh sederhana lagi:
+            targetX = player.getCurrentTileX(); // Kembali ke X terakhir di map sebelumnya
+            targetY = player.getCurrentTileY(); // Kembali ke Y terakhir di map sebelumnya
+            // Pastikan X,Y ini valid untuk FarmMap
+            if (targetX >= farmModel.getFarmMap().getSize().width) targetX = farmModel.getFarmMap().getSize().width -1;
+            if (targetY >= farmModel.getFarmMap().getSize().height) targetY = farmModel.getFarmMap().getSize().height -1;
+            if (targetX < 0) targetX = 0;
+            if (targetY < 0) targetY = 0;
+        } else if (player.getCurrentMap() instanceof FarmMap) {
+            // Jika berasal dari FarmMap, tentukan entry point berdasarkan sisi mana pemain keluar
+            if (player.getCurrentTileX() == 0) { // Keluar dari kiri Farm
+                targetX = targetMap.getSize().width -1; targetY = targetMap.getSize().height / 2;
+            } else if (player.getCurrentTileX() >= player.getCurrentMap().getSize().width -1) { // Keluar dari kanan Farm
+                targetX = 0; targetY = targetMap.getSize().height / 2;
+            } else if (player.getCurrentTileY() == 0) { // Keluar dari atas Farm
+                targetX = targetMap.getSize().width / 2; targetY = targetMap.getSize().height -1;
+            } else if (player.getCurrentTileY() >= player.getCurrentMap().getSize().height -1) { // Keluar dari bawah Farm
+                targetX = targetMap.getSize().width / 2; targetY = 0;
+            }
+        } // Logika entry point lain bisa ditambahkan untuk transisi antar WorldMap areas
+
+        // Gunakan findSafeSpawnPoint untuk mendapatkan koordinat yang aman
+        Point safeSpawn = findSafeSpawnPoint(targetMap, targetX, targetY);
+        targetX = safeSpawn.x;
+        targetY = safeSpawn.y;
+
+        boolean visited = player.visit(targetMap, targetX, targetY);
 
         if (visited) {
             System.out.println("Player visited " + destination + ". New map: " + targetMap.getName());
@@ -1328,7 +1402,7 @@ public class GameController {
         }
 
         // --- BAGIAN UI UNTUK MEMILIH BAHAN BAKAR (Contoh dengan JOptionPane) ---
-        String[] fuelOptions = {"Coal", "Firewood"};
+        // String[] fuelOptions = {"Coal", "Firewood"};
         // Filter fuel yang dimiliki pemain
         List<String> availableFuelOptions = new ArrayList<>();
         Item coalItem = itemRegistry.get("Coal");

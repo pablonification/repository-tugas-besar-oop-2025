@@ -492,7 +492,6 @@ public class Player {
      * @param direction Arah untuk bergerak.
      * @return true jika perpindahan berhasil, false jika gagal.
      */
-    // @Override
     public boolean move(Direction direction) { //
         int nextX = currentTileX;
         int nextY = currentTileY;
@@ -512,6 +511,21 @@ public class Player {
             setMoving(false); // Berhenti bergerak jika menabrak batas
             return false;
         }
+        if (currentMap.isOccupied(nextX, nextY)) {
+            System.out.println("Jalan terhalang.");
+            setMoving(false); // Berhenti bergerak jika terhalang
+            return false;
+        }
+
+        // Tambahan: Cek apakah tile tujuan adalah WATER
+        Tile destinationTile = currentMap.getTile(nextX, nextY);
+        if (destinationTile != null && destinationTile.getType() == TileType.WATER) {
+            System.out.println("Player cannot move onto WATER tile.");
+            return false; // Mencegah pindah ke tile WATER
+        }
+
+        // Cek apakah tile tujuan adalah DEPLOYED_OBJECT (misalnya House, Pond, dll.)
+        // atau apakah di luar batas map
         if (currentMap.isOccupied(nextX, nextY)) {
             System.out.println("Jalan terhalang.");
             setMoving(false); // Berhenti bergerak jika terhalang
