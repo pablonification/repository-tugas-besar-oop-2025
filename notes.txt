@@ -186,10 +186,8 @@ GUI Enhancements:
     - [IMPLEMENTED] Efek visual cuaca yang lebih imersif (partikel hujan lebih baik, salju, daun berguguran, kabut).
 
 Audio Enhancements:
-[UNTUK DILAKUKAN] Background Music (BGM):
-    - Musik berbeda untuk setiap musim (Spring, Summer, Fall, Winter) di kebun.
-    - Musik berbeda untuk lokasi-lokasi utama (Desa, Hutan, Pantai, Toko, Rumah NPC).
-    - Musik untuk Main Menu.
+[IMPLEMENTED] Background Music (BGM):
+    - [IMPLEMENTED] Musik untuk Main Menu.
 
 [UNTUK DILAKUKAN] Sound Effects (SFX):
     - Aksi Pemain: Langkah kaki (berbeda untuk jenis tile), suara penggunaan alat (ayunan, benturan, siram), makan, memancing (lempar, tarik).
