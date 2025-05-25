@@ -712,17 +712,10 @@ public class GameController {
      * @return List dari Item, atau list kosong jika tidak ada.
      */
     public List<Item> getPlayerInventoryItems() {
-        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getPlayer().getInventory() == null) {
-            return new ArrayList<>();
+        if (farmModel != null && farmModel.getPlayer() != null && farmModel.getPlayer().getInventory() != null) {
+            return new ArrayList<>(farmModel.getPlayer().getInventory().getItems().keySet()); // Returns a list of unique item types
         }
-        Player player = farmModel.getPlayer();
-        // Mengambil semua item unik dari inventory
-        List<Item> items = new ArrayList<>(player.getInventory().getItems().keySet());
-        
-        // Urutkan item berdasarkan nama untuk konsistensi tampilan/pemilihan
-        // Bisa juga diurutkan berdasarkan kategori atau kriteria lain jika perlu
-        Collections.sort(items, Comparator.comparing(Item::getName));
-        return items;
+            return new ArrayList<>();
     }
 
     /**
@@ -1893,50 +1886,36 @@ public class GameController {
     }
 
     /**
-     * Requests the display of end-game statistics.
+     * Requests the display of end-of-game statistics.
      * This will fetch the summary from EndGameStatistics and tell GamePanel to show it.
      * It will also stop the game timer in GamePanel.
      */
     public void requestShowStatistics() {
-        if (farmModel == null || gamePanel == null || farmModel.getStatistics() == null) {
-            System.err.println("GameController: Cannot show statistics due to null components.");
-            return;
+        if (farmModel != null && farmModel.getStatistics() != null) {
+            farmModel.setCurrentGameState(GameState.STATISTICS_VIEW);
+            // GamePanel will handle fetching info and drawing. GamePanel should also stop timer.
+            if (gamePanel != null) {
+                gamePanel.stopGameTimer(); // Ensure timer is stopped when stats are shown
+                gamePanel.repaint(); // Trigger repaint for UI
+            }
+            System.out.println("GameController: Statistics requested. GameState set to STATISTICS_VIEW.");
+        } else {
+            System.err.println("GameController: Cannot show statistics - model or statistics object is null.");
+            if (gamePanel != null) gamePanel.displayMessage("Error: Statistics not available.");
         }
-        String summary = farmModel.getStatistics().getSummary();
-        gamePanel.showStatisticsDialog(summary);
-        gamePanel.stopGameTimer(); // Stop the main game timer
-        System.out.println("Game Over - Statistics Displayed.");
     }
 
     /**
      * Gathers player information and requests GamePanel to display it.
      */
     public void requestViewPlayerInfo() {
-        if (farmModel == null || gamePanel == null || farmModel.getPlayer() == null) {
-            System.err.println("GameController: Cannot view player info due to null components.");
-            return;
-        }
-        Player player = farmModel.getPlayer();
-
-        StringBuilder infoBuilder = new StringBuilder();
-        infoBuilder.append("=== Player Information ===\\n\\n");
-        infoBuilder.append("Name: ").append(player.getName()).append("\\n");
-        infoBuilder.append("Gender: ").append(player.getGender().toString()).append("\\n");
-        infoBuilder.append("Energy: ").append(player.getEnergy()).append("/").append(Player.MAX_ENERGY).append("\\n");
-        infoBuilder.append("Gold: ").append(player.getGold()).append("g\\n");
-        
-        String partnerName = "None";
-        NPC partner = player.getPartner();
-        if (partner != null) {
-            partnerName = partner.getName() + " (" + partner.getRelationshipStatus().toString() + ")";
-        }
-        infoBuilder.append("Partner: ").append(partnerName).append("\\n");
-
-        // Favorite Item is not a standard Player attribute per Player.java/Specification
-        // infoBuilder.append("Favorite Item: ").append("TODO").append("\\n"); 
-
-        if (gamePanel != null) {
-            gamePanel.showPlayerInfoDialog(infoBuilder.toString());
+        if (farmModel != null && farmModel.getPlayer() != null) {
+            farmModel.setCurrentGameState(GameState.PLAYER_INFO_VIEW); 
+            // GamePanel will handle fetching info and drawing
+            if (gamePanel != null) gamePanel.repaint(); // Trigger repaint to show UI
+        } else {
+            System.err.println("GameController: Cannot view player info - model or player is null.");
+            if (gamePanel != null) gamePanel.displayMessage("Error: Player data not available.");
         }
     }
 
@@ -2051,6 +2030,18 @@ public class GameController {
             gamePanel.displayMessage("Items in bin will be sold overnight.");
         } else {
             gamePanel.displayMessage("Shipping bin closed.");
+        }
+    }
+
+    // Method to set the player's selected (held) item
+    public void setSelectedItem(Item item) {
+        if (farmModel != null && farmModel.getPlayer() != null) {
+            farmModel.getPlayer().setSelectedItem(item);
+            // Optionally, update GamePanel if it needs to know about this change immediately
+            // For instance, if the HUD needs to refresh. GamePanel.updatePlayerInfoPanel() or similar.
+            if (gamePanel != null) {
+                gamePanel.updatePlayerInfoPanel(); // Or a more general updateGameRender()
+            }
         }
     }
 

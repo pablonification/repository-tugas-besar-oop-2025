@@ -43,6 +43,13 @@ import java.util.ArrayList; // For creating list of sellable items
 import java.util.Map; // For iterating inventory
 import java.util.Set; // For alreadyDrawnLargeObjects
 import java.util.HashSet; // For alreadyDrawnLargeObjects
+import java.io.File; // For fallback file loading
+import java.io.InputStream; // For resource stream loading
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
 
@@ -182,9 +189,48 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private BufferedImage storeTileImage;
     // Add more BufferedImages for other tile types as needed
 
-    public GamePanel(Farm farmModel, GameController gameController) {
+    // Inventory View UI State
+    private static final int INVENTORY_COLS = 8; // Example: 8 columns
+    private static final int INVENTORY_ROWS = 4; // Example: 4 rows
+    private static final int INVENTORY_CELL_SIZE = 64; // Example: 64x64 pixels per cell
+    private static final int INVENTORY_PADDING = 10;
+    private Rectangle inventoryPanelRect;
+    private Rectangle inventoryGridRect;
+    private int currentInventoryCol = 0;
+    private int currentInventoryRow = 0;
+    private static final Font INVENTORY_FONT = new Font("Arial", Font.PLAIN, 16);
+    private static final Color INVENTORY_BG_COLOR = new Color(20, 20, 40, 230); // Dark blueish
+    private static final Color INVENTORY_CELL_COLOR = new Color(50, 50, 80, 200);
+    private static final Color INVENTORY_TEXT_COLOR = Color.WHITE;
+    private static final Color INVENTORY_HIGHLIGHT_COLOR = Color.ORANGE;
+
+    // Player Info View UI State
+    private Rectangle playerInfoPanelRect;
+    private static final Font PLAYER_INFO_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
+    private static final Font PLAYER_INFO_FONT_TEXT = new Font("Arial", Font.PLAIN, 20);
+    private static final Color PLAYER_INFO_BG_COLOR = new Color(70, 70, 100, 230); // Darker blue-purple
+    private static final Color PLAYER_INFO_TEXT_COLOR = Color.WHITE;
+
+    // Statistics View UI State
+    private Rectangle statisticsPanelRect;
+    private static final Font STATISTICS_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
+    // Font for text area will be set directly
+    private static final Color STATISTICS_BG_COLOR = new Color(100, 70, 70, 230); // Darker red-purple
+    private static final Color STATISTICS_TEXT_COLOR = Color.WHITE;
+
+    private GameFrame gameFrame; // Added to hold reference to the main frame
+
+    // Audio for Main Menu
+    private Clip menuMusicClip;
+    private boolean isMenuMusicPlaying = false;
+
+    private Clip inGameMusicClip; // Added for in-game music
+    private boolean isInGameMusicPlaying = false; // Added for in-game music
+
+    public GamePanel(Farm farmModel, GameController gameController, GameFrame gameFrame) { // Added GameFrame parameter
         this.farmModel = farmModel;
         this.gameController = gameController;
+        this.gameFrame = gameFrame; // Store GameFrame reference
 
         setPreferredSize(new Dimension(VIEWPORT_WIDTH_IN_TILES * TILE_SIZE, 
                                        VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT));
@@ -232,6 +278,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     if (farmModel.getCurrentGameState() == GameState.IN_GAME || 
                         farmModel.getCurrentGameState() == GameState.SHIPPING_BIN || // Tambahkan state UI lain jika perlu animasi player
                         farmModel.getCurrentGameState() == GameState.STORE_UI ||
+                        farmModel.getCurrentGameState() == GameState.NPC_DIALOGUE || // Added NPC_DIALOGUE
                         farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
                         
                         // Update animasi pemain
@@ -386,6 +433,44 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         int wmPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - wmPanelWidth) / 2;
         int wmPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - wmPanelHeight) / 2; // Centered
         worldMapPanelRect = new Rectangle(wmPanelX, wmPanelY, wmPanelWidth, wmPanelHeight);
+
+        // Initialize Inventory View UI Rectangles
+        int invPanelWidth = INVENTORY_COLS * (INVENTORY_CELL_SIZE + INVENTORY_PADDING) + INVENTORY_PADDING * 2;
+        int invPanelHeight = INVENTORY_ROWS * (INVENTORY_CELL_SIZE + INVENTORY_PADDING) + INVENTORY_PADDING * 2 + 50; // Extra space for title/instructions
+        int invPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - invPanelWidth) / 2;
+        int invPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - invPanelHeight) / 2;
+        inventoryPanelRect = new Rectangle(invPanelX, invPanelY, invPanelWidth, invPanelHeight);
+        inventoryGridRect = new Rectangle(
+            invPanelX + INVENTORY_PADDING,
+            invPanelY + INVENTORY_PADDING + 30, // Space for title
+            INVENTORY_COLS * (INVENTORY_CELL_SIZE + INVENTORY_PADDING),
+            INVENTORY_ROWS * (INVENTORY_CELL_SIZE + INVENTORY_PADDING)
+        );
+
+        // Initialize Player Info View UI Rectangles
+        int piPanelWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE * 2 / 3;
+        int piPanelHeight = VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE / 2;
+        int piPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - piPanelWidth) / 2;
+        int piPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - piPanelHeight) / 2;
+        playerInfoPanelRect = new Rectangle(piPanelX, piPanelY, piPanelWidth, piPanelHeight);
+
+        // Initialize Statistics View UI Rectangles and Components
+        int statsPanelWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE * 3 / 4; // Wider for text
+        int statsPanelHeight = VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE * 2 / 3;
+        int statsPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - statsPanelWidth) / 2;
+        int statsPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - statsPanelHeight) / 2;
+        statisticsPanelRect = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+
+        // Ensure layout is null if other components still use absolute positioning, 
+        // otherwise, it might not be necessary to set it to null explicitly if all UI is custom drawn.
+        if (this.getLayout() == null) { // Check if it was already set to null
+             // Only set to null if absolutely needed for other components, might be better to manage layouts properly.
+             // For now, assuming if it was set for JScrollPane, it might still be needed.
+             // If no other components rely on absolute positioning via setBounds, this.setLayout(null) can be removed.
+        }
+        initMenuMusic(); // Initialize menu music
+        initInGameMusic(); // Initialize in-game music
+        System.out.println("GamePanel Constructor: Initial GameState: " + (farmModel != null ? farmModel.getCurrentGameState() : "FarmModel is null")); // DEBUG
     }
 
     private void loadTileImages() {
@@ -462,7 +547,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     
     // Update method yang sudah ada untuk stop timer
     public void stopGameTimer() {
-        stopAllTimers(); // Ganti dengan method baru
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
     }
     
     // Jika ada method untuk restart/resume game, tambahkan ini:
@@ -509,10 +596,19 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             int msgWidth = fm.stringWidth(loadingMsg);
             g2d.drawString(loadingMsg, (getWidth() - msgWidth) / 2, getHeight() / 2);
             g2d.dispose();
-            return;
-        }
+                return;
+            }
 
         GameState currentState = farmModel.getCurrentGameState();
+
+        // Manage music based on state using revised methods
+        if (currentState == GameState.MAIN_MENU) {
+            // playMenuMusic() will stop inGameMusicClip if running, and start menuMusicClip if not running.
+            playMenuMusic();
+        } else { // For IN_GAME and all other non-MAIN_MENU states
+            // playInGameMusic() will stop menuMusicClip if running, and start/continue in-game music.
+            playInGameMusic();
+        }
 
         if (currentState == GameState.MAIN_MENU) {
             drawMainMenu(g2d);
@@ -542,6 +638,12 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 drawCheatInputUI(g2d);
             } else if (currentState == GameState.WORLD_MAP_SELECTION) { // Added new state
                 drawWorldMapSelectionUI(g2d);
+            } else if (currentState == GameState.INVENTORY_VIEW) { // Added inventory view
+                drawInventoryViewUI(g2d);
+            } else if (currentState == GameState.PLAYER_INFO_VIEW) { // Added player info view
+                drawPlayerInfoUI(g2d);
+            } else if (currentState == GameState.STATISTICS_VIEW) { // Added statistics view
+                drawStatisticsUI(g2d);
             }
         }
 
@@ -673,75 +775,211 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             return;
         }
         Player player = farmModel.getPlayer();
-        g.setColor(Color.BLACK);
-        g.fillRect(0, 0, getWidth(), INFO_PANEL_HEIGHT); // Background for info panel
+        Graphics2D g2d = (Graphics2D) g.create(); // Work with a copy
 
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 20)); // Increased font size and made it bold
+        // --- Panel Background ---
+        g2d.setColor(new Color(0, 0, 0, 200)); // Semi-transparent black
+        g2d.fillRect(0, 0, getWidth(), INFO_PANEL_HEIGHT);
 
-        // Baris 1: Nama, Energi, Gold
-        String playerStats = String.format("Name: %s | Energy: %d | Gold: %d G",
-                                    player.getName(), player.getEnergy(), player.getGold());
-        g.drawString(playerStats, 10, 20);
+        // --- Fonts ---
+        Font labelFont = new Font("PixelMix", Font.BOLD, 18);
+        Font valueFont = new Font("PixelMix", Font.PLAIN, 18);
+        // Fallback if PixelMix is not loaded (it might not be available during headless tests or if path is wrong)
+        if (labelFont.getFamily().equals("Dialog") || !labelFont.getFontName().toLowerCase().contains("pixelmix")) {
+            labelFont = new Font("Arial", Font.BOLD, 16);
+        }
+        if (valueFont.getFamily().equals("Dialog") || !valueFont.getFontName().toLowerCase().contains("pixelmix")) {
+            valueFont = new Font("Arial", Font.PLAIN, 16);
+        }
+        
+        FontMetrics labelFm = g2d.getFontMetrics(labelFont);
+        FontMetrics valueFm = g2d.getFontMetrics(valueFont);
 
-        // Baris 2: Waktu, Hari, Musim, Cuaca
-        String timeInfo = String.format("Time: %s | Day: %d | Season: %s | Weather: %s",
-                                    farmModel.getCurrentTime().getTimeString(),
-                                    farmModel.getCurrentTime().getCurrentDay(),
-                                    farmModel.getCurrentTime().getCurrentSeason(),
-                                    farmModel.getCurrentTime().getCurrentWeather());
-        g.drawString(timeInfo, 10, 40); // Adjusted Y position for larger font
+        Color textColor = Color.WHITE;
+        Color energyBarColor = new Color(70, 200, 70); // Green
+        Color energyBarBgColor = new Color(50, 50, 50); // Dark gray
 
-        // Baris 3: Selected Item
+        // --- Layout Constants ---
+        int padding = 8; // Reduced padding slightly
+        int V_SPACING_BETWEEN_ITEMS = valueFm.getHeight() + 4; // Vertical space for each line of info, using FontMetrics
+        int H_PADDING_LABEL_VALUE = 5; // Horizontal padding between a label and its value
+        int H_PADDING_COLUMNS = 15; // Horizontal padding between columns of info, reduced slightly
+
+        int energyBarHeight = 14;
+        int energyBarWidth = 100; // Reduced energy bar width
+
+        // --- Top Row ---
+        int topRowY = padding + valueFm.getAscent(); // Baseline for the first line of text
+
+        // Column 1: Name
+        int currentX = padding;
+        g2d.setFont(labelFont);
+        g2d.setColor(textColor);
+        g2d.drawString("Name:", currentX, topRowY);
+        currentX += labelFm.stringWidth("Name:") + H_PADDING_LABEL_VALUE;
+        g2d.setFont(valueFont);
+        g2d.drawString(player.getName(), currentX, topRowY);
+        currentX += valueFm.stringWidth(player.getName()) + H_PADDING_COLUMNS;
+
+        // Column 2: Gold
+        g2d.setFont(labelFont);
+        g2d.drawString("Gold:", currentX, topRowY);
+        currentX += labelFm.stringWidth("Gold:") + H_PADDING_LABEL_VALUE;
+        g2d.setFont(valueFont);
+        String goldStr = String.format("%d G", player.getGold());
+        g2d.drawString(goldStr, currentX, topRowY);
+        currentX += valueFm.stringWidth(goldStr) + H_PADDING_COLUMNS;
+        
+        // Column 3: Energy (Bar + Text)
+        g2d.setFont(labelFont);
+        g2d.drawString("Energy:", currentX, topRowY);
+        currentX += labelFm.stringWidth("Energy:") + H_PADDING_LABEL_VALUE;
+
+        int energyBarX = currentX;
+        // Center bar vertically with the text line
+        int energyBarY = topRowY - valueFm.getAscent() + (valueFm.getHeight() - energyBarHeight) / 2 ;
+
+        double energyPercent = (double) player.getEnergy() / Player.MAX_ENERGY;
+        energyPercent = Math.max(0, Math.min(1, energyPercent));
+        int currentEnergyWidth = (int) (energyBarWidth * energyPercent);
+
+        g2d.setColor(energyBarBgColor);
+        g2d.fillRect(energyBarX, energyBarY, energyBarWidth, energyBarHeight);
+        g2d.setColor(energyBarColor);
+        g2d.fillRect(energyBarX, energyBarY, currentEnergyWidth, energyBarHeight);
+        g2d.setColor(textColor.darker()); // Outline for the bar
+        g2d.drawRect(energyBarX, energyBarY, energyBarWidth, energyBarHeight);
+        currentX += energyBarWidth + H_PADDING_LABEL_VALUE;
+
+        g2d.setFont(valueFont);
+        String energyText = String.format("%d/%d", player.getEnergy(), Player.MAX_ENERGY);
+        g2d.drawString(energyText, currentX, topRowY);
+        currentX += valueFm.stringWidth(energyText) + H_PADDING_COLUMNS; 
+
+        // --- Middle Row ---
+        int middleRowY = topRowY + V_SPACING_BETWEEN_ITEMS;
+        currentX = padding; // Reset X for new row
+
+        // Column 1: Time
+        g2d.setFont(labelFont);
+        g2d.drawString("Time:", currentX, middleRowY);
+        currentX += labelFm.stringWidth("Time:") + H_PADDING_LABEL_VALUE;
+        g2d.setFont(valueFont);
+        String timeStr = farmModel.getCurrentTime().getTimeString();
+        g2d.drawString(timeStr, currentX, middleRowY);
+        currentX += valueFm.stringWidth(timeStr) + H_PADDING_COLUMNS;
+
+        // Column 2: Date & Season
+        g2d.setFont(labelFont);
+        g2d.drawString("Date:", currentX, middleRowY);
+        currentX += labelFm.stringWidth("Date:") + H_PADDING_LABEL_VALUE;
+        g2d.setFont(valueFont);
+        String dateSeasonText = String.format("Day %d, %s", farmModel.getCurrentTime().getCurrentDay(), farmModel.getCurrentTime().getCurrentSeason());
+        g2d.drawString(dateSeasonText, currentX, middleRowY);
+        currentX += valueFm.stringWidth(dateSeasonText) + H_PADDING_COLUMNS;
+
+        // Column 3: Weather
+        g2d.setFont(labelFont);
+        g2d.drawString("Weather:", currentX, middleRowY);
+        currentX += labelFm.stringWidth("Weather:") + H_PADDING_LABEL_VALUE;
+        g2d.setFont(valueFont);
+        g2d.drawString(farmModel.getCurrentTime().getCurrentWeather().toString(), currentX, middleRowY);
+
+        // --- Bottom Row: Selected Item & Hotbar ---
+        int bottomRowY = middleRowY + V_SPACING_BETWEEN_ITEMS;
+        currentX = padding;
+
+        // Selected Item (Text Only)
+        g2d.setFont(labelFont);
+        g2d.drawString("Holding:", currentX, bottomRowY);
+        currentX += labelFm.stringWidth("Holding:") + H_PADDING_LABEL_VALUE;
+        
         Item selectedItem = player.getSelectedItem();
         String selectedItemName = (selectedItem != null) ? selectedItem.getName() : "None";
-        g.drawString("Selected: " + selectedItemName, 10, 60); // Adjusted Y position for larger font
+        g2d.setFont(valueFont);
+        g2d.drawString(selectedItemName, currentX, bottomRowY);
+        currentX += valueFm.stringWidth(selectedItemName) + H_PADDING_COLUMNS + 10; // Extra padding before hotbar
 
-        // Baris 4: Inventory Hotbar (menggantikan Toolbelt)
+
+        // Hotbar (Text Only, improved logic)
+        int hotbarStartX = currentX; 
+        // Check if there's enough space for the hotbar label and at least one item
+        if (hotbarStartX < getWidth() - labelFm.stringWidth("Items: ") - 50) { // 50 is a rough estimate for one item
+            g2d.setFont(labelFont);
+            g2d.drawString("Items:", hotbarStartX, bottomRowY);
+            hotbarStartX += labelFm.stringWidth("Items:") + H_PADDING_LABEL_VALUE;
+            
+            g2d.setFont(valueFont);
         if (gameController != null) {
-            List<Item> allPlayerItems = gameController.getPlayerInventoryItems(); // Menggunakan metode baru
-            StringBuilder hotbarString = new StringBuilder("Items: ");
+                List<Item> allPlayerItems = gameController.getPlayerInventoryItems();
+                StringBuilder hotbarDisplayString = new StringBuilder();
+                int maxVisibleHotbarItems = 3; // Number of items to try to show in hotbar
+                int hotbarMaxWidth = getWidth() - hotbarStartX - padding; // Max width available for hotbar items string
+
             if (allPlayerItems.isEmpty()) {
-                hotbarString.append("Inventory Empty");
+                    hotbarDisplayString.append("Empty");
             } else {
-                // Tampilkan maksimal N item pertama untuk menghindari string terlalu panjang
-                // Atau bisa dibuat lebih canggih untuk menampilkan item di sekitar selectedItem
-                int displayLimit = 5; // Tampilkan maksimal 5 item di hotbar teks ini
-                for (int i = 0; i < allPlayerItems.size(); i++) {
-                    if (i >= displayLimit && !(selectedItem != null && allPlayerItems.get(i).equals(selectedItem))) {
-                        // Jika sudah mencapai batas dan item saat ini bukan yang terpilih, cek apakah selectedItem ada di sisa list
-                        boolean selectedItemFurther = false;
+                    int selectedIdx = -1;
                         if (selectedItem != null) {
-                            for (int j = i; j < allPlayerItems.size(); j++) {
-                                if (allPlayerItems.get(j).equals(selectedItem)) {
-                                    selectedItemFurther = true;
+                        for (int i = 0; i < allPlayerItems.size(); i++) {
+                            if (allPlayerItems.get(i).equals(selectedItem)) {
+                                selectedIdx = i;
                                     break;
                                 }
                             }
                         }
-                        if (!selectedItemFurther || i > displayLimit + 2) { // Beri sedikit ruang jika selected item jauh
-                            hotbarString.append("... (" + (allPlayerItems.size() - i) + " more)");
-                            break;
+
+                    int startDisplayIdx = 0;
+                    int endDisplayIdx = allPlayerItems.size();
+
+                    if (allPlayerItems.size() > maxVisibleHotbarItems) {
+                        if (selectedIdx != -1) {
+                            startDisplayIdx = Math.max(0, selectedIdx - (maxVisibleHotbarItems -1) / 2 ); // Try to center selected
+                            endDisplayIdx = Math.min(allPlayerItems.size(), startDisplayIdx + maxVisibleHotbarItems);
+                            // If centering pushes startDisplayIdx too far left, adjust
+                            if (endDisplayIdx - startDisplayIdx < maxVisibleHotbarItems && allPlayerItems.size() >= maxVisibleHotbarItems) {
+                                 endDisplayIdx = Math.min(allPlayerItems.size(), selectedIdx + (maxVisibleHotbarItems / 2) +1 );
+                                 startDisplayIdx = Math.max(0, endDisplayIdx - maxVisibleHotbarItems);
+                            }
+                        } else {
+                            endDisplayIdx = maxVisibleHotbarItems; // Show first few if no selection
                         }
                     }
 
-                    Item currentItem = allPlayerItems.get(i);
-                    boolean isSelected = (selectedItem != null && selectedItem.equals(currentItem));
-                    if (isSelected) {
-                        hotbarString.append("[");
+                    if (startDisplayIdx > 0) {
+                        hotbarDisplayString.append("...");
                     }
-                    hotbarString.append(currentItem.getName());
-                    if (isSelected) {
-                        hotbarString.append("]");
+
+                    for (int i = startDisplayIdx; i < endDisplayIdx; i++) {
+                        if (hotbarDisplayString.length() > 0 && !hotbarDisplayString.toString().equals("...")) {
+                             hotbarDisplayString.append(" | ");
+                        } else if (hotbarDisplayString.length() > 0 && i > startDisplayIdx) {
+                            hotbarDisplayString.append(" | "); // Add separator if it's not the very first element after "..."
+                        }
+
+                        Item currentHotbarItem = allPlayerItems.get(i);
+                        String itemName = currentHotbarItem.getName();
+                        // Abbreviate if too long, e.g., max 8 chars for hotbar item names
+                        if (itemName.length() > 8) {
+                            itemName = itemName.substring(0, 7) + ".";
+                        }
+                        // Check if adding this item exceeds hotbarMaxWidth
+                        String tempString = hotbarDisplayString.toString() + itemName;
+                        if (valueFm.stringWidth(tempString) > hotbarMaxWidth && i > startDisplayIdx) {
+                            hotbarDisplayString.append("...");
+                            break; // Stop adding items if it overflows
+                        }
+                        hotbarDisplayString.append(itemName);
                     }
-                    if (i < allPlayerItems.size() - 1 && (i < displayLimit -1 || (selectedItem !=null && allPlayerItems.get(i+1).equals(selectedItem) ) ) ) {
-                         // Hanya tambah separator jika belum item terakhir DAN (masih dalam batas ATAU item berikutnya adalah yg terpilih)
-                        hotbarString.append(" | ");
-                    }
+
+                    if (endDisplayIdx < allPlayerItems.size() && valueFm.stringWidth(hotbarDisplayString.toString() + " | ...") <= hotbarMaxWidth && !hotbarDisplayString.toString().endsWith("...")) {
+                         hotbarDisplayString.append(" | ...");
                 }
             }
-            g.drawString(hotbarString.toString(), 10, 80);
+                g2d.drawString(hotbarDisplayString.toString(), hotbarStartX, bottomRowY);
         }
+        }
+        g2d.dispose(); // Dispose of the graphics copy
     }
 
     private void drawCurrentMap(Graphics g) {
@@ -787,7 +1025,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     screenY + TILE_SIZE <= INFO_PANEL_HEIGHT || screenY >= getHeight()) {
                     continue;
                 }
-
+                
                 Tile currentTile = currentMap.getTile(col, row);
                 if (currentTile == null) {
                     // Draw a default color if tile is unexpectedly null
@@ -812,7 +1050,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                         imageToDraw = wallImage;
                     } else if (type == TileType.ENTRY_POINT) {
                         imageToDraw = portalImage;
-                    } else {
+                        } else {
                         // For most other tile types on the store map, use storeTileImage as the floor
                         imageToDraw = storeTileImage;
                     }
@@ -828,18 +1066,18 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                                 imageToDraw = plantWateredImage;
                             } else {
                                 imageToDraw = plantedImage;
-                            }
-                            break;
+                        }
+                        break;
                         case TILLED:
                             imageToDraw = tilledImage;
-                            break;
+                        break;
                         case TILLABLE:
                             imageToDraw = tillableImage;
                             break;
                         case GRASS:
                             imageToDraw = grassImage;
                             break;
-                        case OBSTACLE:
+                    case OBSTACLE:
                             imageToDraw = obstacleImage;
                             break;
                         case WATER:
@@ -888,7 +1126,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 } else { // Simplified fallback logic for tiles that genuinely don't have an image
                     // Fallback for unhandled tile types or if an image is missing.
                     g.setColor(new Color(128, 0, 128, 150)); // Semi-transparent Purple for fallback
-                    g.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                g.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                     g.setColor(Color.WHITE);
                     g.drawString(type.toString().substring(0, Math.min(type.toString().length(),3)), screenX + 5, screenY + 20);
                 }
@@ -1112,7 +1350,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
         if (farmModel.getCurrentGameState() == GameState.WORLD_MAP_SELECTION) {
             handleWorldMapSelectionInput(keyCode); // Pass only keyCode for navigation
-            repaint();
+                repaint();
             return;
         }
         if (farmModel.getCurrentGameState() == GameState.STORE_UI) { // Check before MAIN_MENU or IN_GAME
@@ -1131,9 +1369,10 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 // For now, directly closing here as a simple mechanism
                 isNpcDialogueActive = false; // This flag might become redundant if GameState is the primary driver
                 farmModel.setCurrentGameState(GameState.IN_GAME); // Or previous state if more complex
+                playInGameMusic(); // Resume in-game music
                 repaint();
             }
-            return;
+            return;     
         }
 
         // Non-modal UI states or main game states
@@ -1146,105 +1385,139 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (farmModel.getCurrentGameState() == GameState.END_OF_DAY_SUMMARY) {
             if (keyCode == KeyEvent.VK_ENTER) {
                 farmModel.setCurrentGameState(GameState.IN_GAME);
+                playInGameMusic(); // Play in-game music when summary is closed
                 startGameTimer(); 
             }
             repaint(); 
             return;
         }
 
+        if (farmModel.getCurrentGameState() == GameState.INVENTORY_VIEW) {
+            handleInventoryViewInput(keyCode);
+            repaint();
+            return;
+        }
+
+        if (farmModel.getCurrentGameState() == GameState.PLAYER_INFO_VIEW) {
+            handlePlayerInfoViewInput(keyCode);
+            repaint();
+            return;
+        }
+
+        if (farmModel.getCurrentGameState() == GameState.STATISTICS_VIEW) {
+            handleStatisticsViewInput(keyCode);
+            repaint();
+            return;
+        }
+
         // IN_GAME actions below - only if current state is IN_GAME
         if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
-            boolean actionTaken = false;
-            switch (keyCode) {
-                case KeyEvent.VK_W: case KeyEvent.VK_UP:
-                    actionTaken = gameController.requestPlayerMove(Direction.NORTH);
-                    break;
-                case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
-                    actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
-                    break;
-                case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
-                    actionTaken = gameController.requestPlayerMove(Direction.WEST);
-                    break;
-                case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
-                    actionTaken = gameController.requestPlayerMove(Direction.EAST);
-                    break;
-                case KeyEvent.VK_E: 
-                    actionTaken = tryGeneralAction();
-                    break;
-                case KeyEvent.VK_F: 
-                    actionTaken = gameController.requestEatSelectedItem();
-                    break;
-                case KeyEvent.VK_T: 
-                    openStoreDialog(); 
-                    actionTaken = true; 
-                    break;
-                case KeyEvent.VK_B: 
-                    actionTaken = tryOpenShippingBinDialog();
-                    break;
+        boolean actionTaken = false;
+        switch (keyCode) {
+            case KeyEvent.VK_W: case KeyEvent.VK_UP:
+                actionTaken = gameController.requestPlayerMove(Direction.NORTH);
+                break;
+            case KeyEvent.VK_S: case KeyEvent.VK_DOWN:
+                actionTaken = gameController.requestPlayerMove(Direction.SOUTH);
+                break;
+            case KeyEvent.VK_A: case KeyEvent.VK_LEFT:
+                actionTaken = gameController.requestPlayerMove(Direction.WEST);
+                break;
+            case KeyEvent.VK_D: case KeyEvent.VK_RIGHT:
+                actionTaken = gameController.requestPlayerMove(Direction.EAST);
+                break;
+            case KeyEvent.VK_E: 
+                actionTaken = tryGeneralAction();
+                break;
+            case KeyEvent.VK_F: 
+                actionTaken = gameController.requestEatSelectedItem();
+                break;
+            case KeyEvent.VK_T: 
+                stopInGameMusic(); // Example: Stop game music when opening store
+                openStoreDialog(); 
+                actionTaken = true; 
+                break;
+            case KeyEvent.VK_B: 
+                // stopInGameMusic(); // No longer needed here, paintComponent handles it
+                 actionTaken = tryOpenShippingBinDialog();
+                break;
                 case KeyEvent.VK_C:
+                    // stopInGameMusic(); // REMOVE THIS LINE
                     farmModel.setCurrentGameState(GameState.CHEAT_INPUT);
                     cheatInputString = ""; 
                     setGeneralGameMessage("Cheat mode activated. Enter code.", false);
                     actionTaken = true;
-                    break;
-                case KeyEvent.VK_1:
-                    gameController.selectPreviousItem();
-                    actionTaken = true;
-                    break;
-                case KeyEvent.VK_2:
-                    gameController.selectNextItem();
-                    actionTaken = true;
-                    break;
+                break;
+            case KeyEvent.VK_1:
+                gameController.selectPreviousItem();
+                actionTaken = true;
+                break;
+            case KeyEvent.VK_2:
+                gameController.selectNextItem();
+                actionTaken = true;
+                break;
                 case KeyEvent.VK_X:
                     gameController.handleChatRequest();
                     actionTaken = true;
-                    break;
+                break;
                 case KeyEvent.VK_G:
-                    System.out.println("G key pressed - Attempting Gift");
+                System.out.println("G key pressed - Attempting Gift");
                     gameController.handleGiftRequest();
-                    actionTaken = true;
-                    break;
+                actionTaken = true;
+                break;
                 case KeyEvent.VK_L:
                     gameController.requestNormalSleep();
                     actionTaken = true;
-                    break;
+                break;
                 case KeyEvent.VK_P:
-                    if (gameController != null) {
-                        gameController.handleProposeRequest();
+                if (gameController != null) {
+                    gameController.handleProposeRequest();
                         actionTaken = true;
-                    }
-                    break;
-                case KeyEvent.VK_M:
-                    if(gameController != null){
-                        gameController.handleMarryRequest();
-                        actionTaken = true;
-                    }
-                    break;
+                }
+                break;
+            case KeyEvent.VK_M:
+                if(gameController != null){
+                    gameController.handleMarryRequest();
+                    actionTaken = true;
+                }
+                break;
                 case KeyEvent.VK_K:
-                    if(gameController != null){
-                        gameController.handleCookRequest();
-                        actionTaken = true;
-                    }
-                    break;
+                if(gameController != null){
+                    gameController.handleCookRequest();
+                    actionTaken = true;
+                }
+                break;
                 case KeyEvent.VK_V:
-                    System.out.println("V key pressed - Attempting to Watch TV");
-                    gameController.requestWatchTV();
+                System.out.println("V key pressed - Attempting to Watch TV");
+                gameController.requestWatchTV();
+                actionTaken = true;
+                break;
+                case KeyEvent.VK_I: // New: Toggle Inventory View
+                    if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+                        // stopInGameMusic(); // REMOVE THIS LINE
+                        farmModel.setCurrentGameState(GameState.INVENTORY_VIEW);
+                        // Reset selection when opening
+                        currentInventoryCol = 0;
+                        currentInventoryRow = 0;
+                    } // Closing is handled by handleInventoryViewInput
                     actionTaken = true;
                     break;
-                case KeyEvent.VK_I:
-                    System.out.println("I key pressed - Viewing Player Info");
-                    gameController.requestViewPlayerInfo();
+                case KeyEvent.VK_J: // View Player Info Dialog
+                    System.out.println("J key pressed - Viewing Player Info");
+                // stopInGameMusic(); // REMOVE THIS LINE
+                gameController.requestViewPlayerInfo();
                     actionTaken = true;
-                    break;
+                break;
                 case KeyEvent.VK_O:
-                    System.out.println("O key pressed - Viewing Statistics");
-                    gameController.requestShowStatistics();
+                System.out.println("O key pressed - Viewing Statistics");
+                // stopInGameMusic(); // REMOVE THIS LINE
+                gameController.requestShowStatistics();
                     actionTaken = true;
-                    break;
+                break;
                 // Removed VK_H case for showWorldMapSelectionDialog()
-            }
+        }
 
-            if (actionTaken) {
+        if (actionTaken) {
                 repaint();
             }
         }
@@ -1261,9 +1534,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 setGeneralGameMessage("No cheat code entered.", true);
             }
             farmModel.setCurrentGameState(GameState.IN_GAME); // Return to game
+            playInGameMusic(); // Resume game music
             cheatInputString = ""; // Clear for next time
         } else if (keyCode == KeyEvent.VK_ESCAPE) {
             farmModel.setCurrentGameState(GameState.IN_GAME);
+            playInGameMusic(); // Resume game music
             setGeneralGameMessage("Cheat input cancelled.", false);
             cheatInputString = "";
         } else if (keyCode == KeyEvent.VK_BACK_SPACE) {
@@ -1604,7 +1879,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             this.currentWorldMapSelectionIndex = 0;
             farmModel.setCurrentGameState(GameState.WORLD_MAP_SELECTION);
             repaint();
-        } else {
+                } else {
              // This case should ideally be caught by the isEmpty check above and show general message
             setGeneralGameMessage("No destinations loaded for map selection.", true);
         }
@@ -1648,6 +1923,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         this.currentNpcName = npc.getName(); // Ambil nama dari objek NPC
         this.currentNpcDialogue = dialogue;
         this.isNpcDialogueActive = true;
+        if (farmModel != null) { // Add null check for farmModel
+            farmModel.setCurrentGameState(GameState.NPC_DIALOGUE); // <<< ADD THIS LINE
+        }
 
         // ... (sisa kode untuk update dimensi dialog box, sama seperti sebelumnya)
         int panelWidth = getWidth();
@@ -1685,22 +1963,19 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     /**
      * Displays the end-game statistics summary in a dialog.
      * @param statisticsSummary The formatted string of statistics.
+     * @deprecated This method uses JOptionPane and is obsolete. Statistics are now shown via an in-game panel triggered by GameState.STATISTICS_VIEW.
      */
+    @Deprecated
     public void showStatisticsDialog(String statisticsSummary) {
-        // For now, keep JOptionPane for this as it's a less frequent, game-ending dialog.
-        // Future: Could also be an in-game panel.
-        stopGameTimer(); // Stop the game timer when statistics are shown
-        // For better readability in JOptionPane, we can wrap the text in a JTextArea inside a JScrollPane.
-        JTextArea textArea = new JTextArea(statisticsSummary);
-        textArea.setEditable(false);
-        textArea.setFont(NPC_DIALOG_FONT); // Use a readable font
-        textArea.setLineWrap(true);
-        textArea.setWrapStyleWord(true);
-
-        JScrollPane scrollPane = new JScrollPane(textArea);
-        scrollPane.setPreferredSize(new Dimension(600, 400)); // Adjust size as needed
-
-        JOptionPane.showMessageDialog(this, scrollPane, "Current Progress", JOptionPane.INFORMATION_MESSAGE);
+        System.err.println("GamePanel.showStatisticsDialog() was called. This method is deprecated. Statistics should be displayed via the in-game UI panel.");
+        
+        if (farmModel != null && gameController != null) {
+            setGeneralGameMessage("Note: Statistics display uses new in-game panel.", false);
+            gameController.requestShowStatistics(); // Attempt to trigger the new system
+        } else {
+             // JOptionPane.showMessageDialog(this, "Deprecated statistics dialog called.\nPlease use the 'O' key or reach an end-game milestone to view statistics in the new panel.", "Deprecated Dialog", JOptionPane.WARNING_MESSAGE);
+             System.err.println("CRITICAL: Deprecated showStatisticsDialog called, but cannot redirect to new system (farmModel or gameController is null). Statistics will not be shown via this path.");
+        }
     }
 
     /**
@@ -1769,16 +2044,14 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         System.out.println("Main Menu item selected: " + selectedOption);
         switch (selectedOption) {
             case "New Game":
-                // The player name/gender prompt is still in Main.java
-                // For a true in-game menu, this prompt should also be moved to a GameState
-                // or handled after transitioning to IN_GAME.
-                // For now, we'll just switch state. Main.java already collected player info.
-                farmModel.setCurrentGameState(GameState.IN_GAME);
-                // Game timer is already created, ensure it starts/resumes if it was paused for menu
-                if (gameTimer != null && !gameTimer.isRunning()) {
-                    gameTimer.start();
-                }
-                // Reset statisticsShown flag for a new game
+                System.out.println("DEBUG: 'New Game' selected from menu.");
+                stopMenuMusic(); // Good to stop menu music explicitly here
+                // farmModel.setCurrentGameState(GameState.IN_GAME); // startGame() will handle this
+                // playInGameMusic(); // startGame() will lead to paintComponent handling this
+                // if (gameTimer != null && !gameTimer.isRunning()) { // startGame() handles timers
+                //     gameTimer.start();
+                // }
+                this.startGame(); // Call startGame to handle state, timers, and other initializations
                 statisticsShown = false; 
                 break;
             case "Load Game":
@@ -1950,11 +2223,33 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         g2d.setColor(Color.YELLOW); 
         g2d.drawString(npcNameToDisplay + " says:", nameX, nameY); // Gunakan npcNameToDisplay
 
+        // Display Heart Points
+        if (this.currentInteractingNPC != null) {
+            int currentHP = this.currentInteractingNPC.getHeartPoints();
+            // TODO: Retrieve maxHP dynamically, e.g. from npc.getMaxHeartPoints() or based on bachelor status
+            int maxHP = 150; // Using 150 as a general max for bachelors as per spec for proposal
+            // A more robust solution would involve checking NPC type or having a getMaxHP() method in NPC class.
+            // For example, if currentInteractingNPC.isBachelor() then maxHP = 150 else maxHP = 100;
+            
+            String heartString = String.format("Affection: %d / %d", currentHP, maxHP);
+            g2d.setFont(NPC_DIALOG_FONT.deriveFont(Font.ITALIC, 16f)); // Slightly smaller, italic font for HP
+            g2d.setColor(Color.PINK); // Pink color for affection
+            // Position it below the name
+            int heartY = nameY + nameFm.getHeight(); // Adjust spacing as needed
+            g2d.drawString(heartString, nameX, heartY);
+        }
+
         // ... (sisa kode untuk menggambar teks dialog dan prompt, sama seperti sebelumnya)
         g2d.setFont(DIALOGUE_TEXT_FONT);
         g2d.setColor(Color.WHITE);
         FontMetrics textFm = g2d.getFontMetrics();
         int textBlockStartX = nameX;
+        // Adjust textBlockStartY if heart points are displayed
+        int textBlockStartY = nameY + nameFm.getHeight() + DIALOGUE_PADDING; // Start dialogue text below name and heart points
+        if (this.currentInteractingNPC != null) { // If heart points were drawn, add more space
+            textBlockStartY += g2d.getFontMetrics(NPC_DIALOG_FONT.deriveFont(Font.ITALIC, 16f)).getHeight();
+        }
+
         int availableTextWidth = (npcDialogueBox.x + npcDialogueBox.width - DIALOGUE_PADDING) - textBlockStartX;
         
         List<String> lines = new ArrayList<>();
@@ -1974,7 +2269,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
              lines.add(currentLine.toString().trim()); 
         }
 
-        int lineY = nameY + DIALOGUE_PADDING;
+        int lineY = textBlockStartY; // Use the calculated start Y for dialogue text
         for (String line : lines) {
             if (lineY + textFm.getHeight() > npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING - textFm.getHeight()) { 
                 g2d.drawString("...", textBlockStartX, lineY); 
@@ -1996,7 +2291,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     }
 
     private void handleStoreInput(int keyCode) {
-        if (!isStoreUiActive) return;
+        if (farmModel.getCurrentGameState() != GameState.STORE_UI) {
+            return;
+        }
 
         if (storeInputMode.equals("selecting_item")) {
             switch (keyCode) {
@@ -2029,6 +2326,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 case KeyEvent.VK_T: // Allow T to also close the store
                     isStoreUiActive = false;
                     storeFeedbackMessage = ""; // Hapus feedback saat tutup toko
+                    if (farmModel != null) farmModel.setCurrentGameState(GameState.IN_GAME); // Explicitly set state
+                    this.requestFocusInWindow(); // <<<< ADD THIS
                     break;
             }
         } else if (storeInputMode.equals("inputting_quantity")) {
@@ -2064,6 +2363,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                             storeItemsForDisplay = gameController.getStoreItemsForDisplay(); 
                             if (storeItemsForDisplay == null || storeItemsForDisplay.isEmpty()) {
                                 isStoreUiActive = false; 
+                                if (farmModel != null) farmModel.setCurrentGameState(GameState.IN_GAME);
+                                this.requestFocusInWindow(); // <<<< ADD THIS (if store becomes empty and closes)
                             } else {
                                 currentStoreItemSelectionIndex = Math.min(currentStoreItemSelectionIndex, storeItemsForDisplay.size() - 1);
                                 if (currentStoreItemSelectionIndex <0) currentStoreItemSelectionIndex = 0;
@@ -2072,15 +2373,20 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                             setStoreFeedback(buyAttemptMessage, true); // Pesan error
                         }
                         storeInputMode = "selecting_item"; 
+                        // If not closing store, focus remains implicitly with panel (or should)
+                        // but if isStoreUiActive became false, then requestFocus is needed.
                     }
                     break;
                 case KeyEvent.VK_BACK_SPACE: // Go back to item selection without buying
                      storeInputMode = "selecting_item";
                      storeFeedbackMessage = "";
+                     // Focus should still be with GamePanel as store UI is technically active
                      break;
                 case KeyEvent.VK_ESCAPE:
                     isStoreUiActive = false;
                     storeFeedbackMessage = "";
+                    if (farmModel != null) farmModel.setCurrentGameState(GameState.IN_GAME);
+                    this.requestFocusInWindow(); // <<<< ADD THIS
                     break;
                  // Allow number input (basic, no text field yet)
                 case KeyEvent.VK_0: case KeyEvent.VK_NUMPAD0: updateQuantityInput(0); storeFeedbackMessage = ""; break;
@@ -2261,7 +2567,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     }
 
     private void handleShippingBinInput(int keyCode) {
-        if (farmModel.getCurrentGameState() != GameState.SHIPPING_BIN) return;
+        if (farmModel.getCurrentGameState() != GameState.SHIPPING_BIN) {
+            return;
+        }
 
         if (shippingBinInputMode.equals("inputting_quantity")) {
             if (keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9) {
@@ -2753,9 +3061,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     }
 
     private void handleWorldMapSelectionInput(int keyCode) {
-        if (farmModel.getCurrentGameState() != GameState.WORLD_MAP_SELECTION || worldMapDestinations == null || worldMapDestinations.isEmpty()) {
-            return;
-        }
+        if (farmModel.getCurrentGameState() != GameState.WORLD_MAP_SELECTION) return;
 
         switch (keyCode) {
             case KeyEvent.VK_UP:
@@ -2775,24 +3081,507 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     String chosenDestination = worldMapDestinations.get(currentWorldMapSelectionIndex);
                     try {
                         com.spakborhills.model.Enum.LocationType destinationEnum =
-                                com.spakborhills.model.Enum.LocationType.valueOf(chosenDestination.toUpperCase());
+                                com.spakborhills.model.Enum.LocationType.valueOf(chosenDestination.toUpperCase().replace(" ", "_")); // Ensure format matches enum
                         
                         // GameController will handle changing state back to IN_GAME after successful visit
-                        gameController.requestVisit(destinationEnum); 
-                        // UI will close automatically when state changes
+                        boolean travelSuccess = gameController.requestVisit(destinationEnum); 
+                        if (travelSuccess) {
+                            // Music transition is handled by paintComponent based on GameState change
+                            // farmModel.setCurrentGameState(GameState.IN_GAME); // This is done by requestVisit
+                            playInGameMusic(); // Explicitly play if IN_GAME is set by controller
+                        } else {
+                             setGeneralGameMessage("Cannot travel to " + chosenDestination + " at this time.", true);
+                             // Stay in WORLD_MAP_SELECTION or return to IN_GAME without music if travel fails and state changes
+                             // If it stays in WORLD_MAP_SELECTION, current music (likely none or menu) continues.
+                             // If it returns to IN_GAME (e.g. if requestVisit changes state even on fail), then play music
+                             if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+                                 playInGameMusic();
+                             }
+                        }
                     } catch (IllegalArgumentException ex) {
                         System.err.println("GamePanel: Invalid destination string chosen from UI: " + chosenDestination + " Error: " + ex.getMessage());
                         setGeneralGameMessage("Error: Invalid location '" + chosenDestination + "' selected.", true);
-                        // Optionally, revert to IN_GAME state if selection is fundamentally broken
                         // farmModel.setCurrentGameState(GameState.IN_GAME);
+                        // playInGameMusic(); // If returning to game after error
                     }
                 }
                 break;
             case KeyEvent.VK_ESCAPE:
                 farmModel.setCurrentGameState(GameState.IN_GAME);
-                // No specific message needed for cancel, just return to game
+                playInGameMusic(); // Resume in-game music
                 break;
         }
-        repaint(); // Repaint to reflect selection changes or UI closing
+        repaint();
+    }
+
+    public void startGame() { // New method to start the game logic and timers
+        if (farmModel != null && farmModel.getCurrentTime() != null) {
+            farmModel.setCurrentGameState(GameState.IN_GAME); // Ensure correct state
+        }
+        loadTileImages(); // Load images when game starts
+        requestFocusInWindow(); // Ensure panel has focus
+        startAllTimers(); // Start game timer and animation timer
+    }
+
+    // New method to draw the inventory view UI
+    private void drawInventoryViewUI(Graphics2D g2d) {
+        if (farmModel.getCurrentGameState() != GameState.INVENTORY_VIEW) {
+            return;
+        }
+
+        // Panel Background
+        g2d.setColor(INVENTORY_BG_COLOR);
+        g2d.fill(inventoryPanelRect);
+        g2d.setColor(INVENTORY_TEXT_COLOR.brighter());
+        g2d.draw(inventoryPanelRect);
+
+        // Title
+        g2d.setFont(DIALOG_FONT); // Reuse dialog font for title
+        g2d.setColor(INVENTORY_TEXT_COLOR);
+        String title = "Inventory";
+        FontMetrics fmTitle = g2d.getFontMetrics();
+        int titleWidth = fmTitle.stringWidth(title);
+        g2d.drawString(title, inventoryPanelRect.x + (inventoryPanelRect.width - titleWidth) / 2, inventoryPanelRect.y + 25);
+
+        // Instructions
+        g2d.setFont(INVENTORY_FONT.deriveFont(Font.ITALIC));
+        String instructions = "[Arrows] Navigate | [Enter/E] Select Item | [Esc/I] Close";
+        FontMetrics fmInstructions = g2d.getFontMetrics();
+        int instructionsWidth = fmInstructions.stringWidth(instructions);
+        g2d.drawString(instructions, inventoryPanelRect.x + (inventoryPanelRect.width - instructionsWidth) / 2, inventoryPanelRect.y + inventoryPanelRect.height - 15);
+
+
+        // Draw Inventory Grid
+        List<Item> playerItems = gameController.getPlayerInventoryItems(); // Assuming this gets all unique items
+
+        for (int row = 0; row < INVENTORY_ROWS; row++) {
+            for (int col = 0; col < INVENTORY_COLS; col++) {
+                int cellX = inventoryGridRect.x + col * (INVENTORY_CELL_SIZE + INVENTORY_PADDING);
+                int cellY = inventoryGridRect.y + row * (INVENTORY_CELL_SIZE + INVENTORY_PADDING);
+
+                g2d.setColor(INVENTORY_CELL_COLOR);
+                g2d.fillRect(cellX, cellY, INVENTORY_CELL_SIZE, INVENTORY_CELL_SIZE);
+                g2d.setColor(INVENTORY_TEXT_COLOR.darker());
+                g2d.drawRect(cellX, cellY, INVENTORY_CELL_SIZE, INVENTORY_CELL_SIZE);
+
+                int itemIndex = row * INVENTORY_COLS + col;
+                if (playerItems != null && itemIndex < playerItems.size()) {
+                    Item item = playerItems.get(itemIndex);
+                    if (item != null) {
+                        // Draw item image (placeholder for now)
+                        // BufferedImage itemImage = item.getSprite(); // Assuming Item has a getSprite()
+                        // if (itemImage != null) {
+                        //    g2d.drawImage(itemImage, cellX + (INVENTORY_CELL_SIZE - itemImage.getWidth()) / 2, cellY + (INVENTORY_CELL_SIZE - itemImage.getHeight()) / 2, this);
+                        // } else {
+                        g2d.setFont(INVENTORY_FONT);
+                        g2d.setColor(INVENTORY_TEXT_COLOR);
+                        String itemNameAbbrev = item.getName().length() > 7 ? item.getName().substring(0, 6) + "." : item.getName();
+                        FontMetrics itemFm = g2d.getFontMetrics();
+                        g2d.drawString(itemNameAbbrev, cellX + 5, cellY + itemFm.getAscent() + 5);
+                        // }
+
+                        // Draw quantity
+                        int quantity = farmModel.getPlayer().getInventory().getItemCount(item);
+                         if (quantity > 0) {
+                            g2d.setFont(INVENTORY_FONT.deriveFont(Font.BOLD));
+                            String qtyStr = "x" + quantity;
+                            FontMetrics qtyFm = g2d.getFontMetrics();
+                            g2d.drawString(qtyStr, cellX + INVENTORY_CELL_SIZE - qtyFm.stringWidth(qtyStr) - 5, cellY + INVENTORY_CELL_SIZE - qtyFm.getDescent() - 5);
+                        }
+                    }
+                }
+
+                // Highlight selected cell
+                if (row == currentInventoryRow && col == currentInventoryCol) {
+                    g2d.setColor(INVENTORY_HIGHLIGHT_COLOR);
+                    g2d.setStroke(new BasicStroke(2)); // Thicker border for highlight
+                    g2d.drawRect(cellX, cellY, INVENTORY_CELL_SIZE, INVENTORY_CELL_SIZE);
+                    g2d.setStroke(new BasicStroke(1)); // Reset stroke
+                }
+            }
+        }
+    }
+
+    // New method to handle input for the inventory view
+    private void handleInventoryViewInput(int keyCode) {
+        if (farmModel.getCurrentGameState() != GameState.INVENTORY_VIEW) {
+            return;
+        }
+
+        switch (keyCode) {
+            case KeyEvent.VK_UP:
+                if (currentInventoryRow > 0) currentInventoryRow--;
+                else currentInventoryRow = INVENTORY_ROWS - 1; // Wrap around
+                break;
+            case KeyEvent.VK_DOWN:
+                if (currentInventoryRow < INVENTORY_ROWS - 1) currentInventoryRow++;
+                else currentInventoryRow = 0; // Wrap around
+                break;
+            case KeyEvent.VK_LEFT:
+                if (currentInventoryCol > 0) currentInventoryCol--;
+                else currentInventoryCol = INVENTORY_COLS - 1; // Wrap around
+                break;
+            case KeyEvent.VK_RIGHT:
+                if (currentInventoryCol < INVENTORY_COLS - 1) currentInventoryCol++;
+                else currentInventoryCol = 0; // Wrap around
+                break;
+            case KeyEvent.VK_ENTER:
+            case KeyEvent.VK_E: // Select item
+                List<Item> playerItems = gameController.getPlayerInventoryItems();
+                int selectedItemIndex = currentInventoryRow * INVENTORY_COLS + currentInventoryCol;
+                if (playerItems != null && selectedItemIndex < playerItems.size()) {
+                    Item itemToSelect = playerItems.get(selectedItemIndex);
+                    if (itemToSelect != null) {
+                        gameController.setSelectedItem(itemToSelect); // Need a method in GameController
+                        setGeneralGameMessage(itemToSelect.getName() + " selected.", false);
+                    }
+                }
+                farmModel.setCurrentGameState(GameState.IN_GAME); // Close inventory
+                break;
+            case KeyEvent.VK_ESCAPE:
+            case KeyEvent.VK_I: // Close inventory
+                farmModel.setCurrentGameState(GameState.IN_GAME);
+                playInGameMusic(); // Resume in-game music
+                break;
+        }
+    }
+
+    // New method to draw the Player Info UI
+    private void drawPlayerInfoUI(Graphics2D g2d) {
+        if (farmModel.getCurrentGameState() != GameState.PLAYER_INFO_VIEW) {
+            return;
+        }
+
+        // Panel Background
+        g2d.setColor(PLAYER_INFO_BG_COLOR);
+        g2d.fill(playerInfoPanelRect);
+        g2d.setColor(PLAYER_INFO_TEXT_COLOR.brighter());
+        g2d.draw(playerInfoPanelRect);
+
+        int currentY = playerInfoPanelRect.y + 40;
+        int textX = playerInfoPanelRect.x + 30;
+        int textWidth = playerInfoPanelRect.width - 60;
+
+        // Title
+        g2d.setFont(PLAYER_INFO_FONT_TITLE);
+        g2d.setColor(PLAYER_INFO_TEXT_COLOR);
+        String title = "Player Information";
+        FontMetrics fmTitle = g2d.getFontMetrics();
+        int titleWidthVal = fmTitle.stringWidth(title);
+        g2d.drawString(title, playerInfoPanelRect.x + (playerInfoPanelRect.width - titleWidthVal) / 2, currentY);
+        currentY += fmTitle.getHeight() + 20;
+
+        g2d.setFont(PLAYER_INFO_FONT_TEXT);
+        if (farmModel != null && farmModel.getPlayer() != null) {
+            Player player = farmModel.getPlayer();
+            List<String> infoLines = new ArrayList<>();
+            infoLines.add("Name: " + player.getName());
+            infoLines.add("Gender: " + player.getGender().toString());
+            infoLines.add("Energy: " + player.getEnergy() + "/" + Player.MAX_ENERGY);
+            infoLines.add("Gold: " + player.getGold() + " G");
+            String partnerName = "None";
+            NPC partner = player.getPartner();
+            if (partner != null) {
+                partnerName = partner.getName() + " (" + partner.getRelationshipStatus().toString() + ")"; // Corrected: use partner.getRelationshipStatus()
+            }
+            infoLines.add("Partner: " + partnerName);
+
+            for (String line : infoLines) {
+                List<String> wrappedLines = getWrappedText(line, textWidth, g2d.getFontMetrics());
+                for (String wrappedLine : wrappedLines) {
+                    g2d.drawString(wrappedLine, textX, currentY);
+                    currentY += g2d.getFontMetrics().getHeight();
+                }
+            }
+        }
+        currentY += 20;
+
+        // Prompt to close
+        g2d.setFont(PLAYER_INFO_FONT_TEXT.deriveFont(Font.ITALIC));
+        String continuePrompt = "Press J or Esc to close...";
+        FontMetrics fmPrompt = g2d.getFontMetrics();
+        int promptWidth = fmPrompt.stringWidth(continuePrompt);
+        g2d.drawString(continuePrompt, playerInfoPanelRect.x + (playerInfoPanelRect.width - promptWidth) / 2, playerInfoPanelRect.y + playerInfoPanelRect.height - 30);
+    }
+
+    // New method to draw the Statistics UI
+    private void drawStatisticsUI(Graphics2D g2d) {
+        if (farmModel.getCurrentGameState() != GameState.STATISTICS_VIEW) {
+            return;
+        }
+
+        // Determine the text to display
+        String currentSummaryText;
+        if (farmModel != null && farmModel.getStatistics() != null) {
+            String summaryFromModel = farmModel.getStatistics().getSummary();
+            if (summaryFromModel == null) {
+                currentSummaryText = "Statistics summary is null. Unable to display data.";
+            } else if (summaryFromModel.trim().isEmpty()) {
+                currentSummaryText = "No statistics data to display at the moment.";
+            } else {
+                currentSummaryText = summaryFromModel;
+            }
+        } else {
+            currentSummaryText = "Error: Statistics data is not available (FarmModel or Statistics object is null).";
+        }
+        
+        // Panel Background - Using PLAYER_INFO_BG_COLOR for consistency
+        g2d.setColor(PLAYER_INFO_BG_COLOR); // Changed to PLAYER_INFO_BG_COLOR
+        g2d.fill(statisticsPanelRect);
+        g2d.setColor(PLAYER_INFO_TEXT_COLOR.brighter()); // Changed to PLAYER_INFO_TEXT_COLOR
+        g2d.draw(statisticsPanelRect);
+
+        int currentY = statisticsPanelRect.y + 40;
+        int textX = statisticsPanelRect.x + 30;
+        int textWidth = statisticsPanelRect.width - 60;
+
+        // Title - Using PLAYER_INFO_FONT_TITLE and PLAYER_INFO_TEXT_COLOR
+        g2d.setFont(PLAYER_INFO_FONT_TITLE); 
+        g2d.setColor(PLAYER_INFO_TEXT_COLOR);
+        String title = "Game Statistics"; 
+        if (statisticsShown) { // statisticsShown is true if end condition was met.
+            title = "End Game Statistics";
+        }
+        FontMetrics fmTitle = g2d.getFontMetrics();
+        int titleWidthVal = fmTitle.stringWidth(title);
+        g2d.drawString(title, statisticsPanelRect.x + (statisticsPanelRect.width - titleWidthVal) / 2, currentY);
+        currentY += fmTitle.getHeight() + 20;
+
+        // Statistics Text - Using PLAYER_INFO_FONT_TEXT and PLAYER_INFO_TEXT_COLOR
+        g2d.setFont(PLAYER_INFO_FONT_TEXT);
+        g2d.setColor(PLAYER_INFO_TEXT_COLOR);
+        FontMetrics fmText = g2d.getFontMetrics();
+        String[] lines = currentSummaryText.split("\n"); // Split summary into lines
+
+        for (String line : lines) {
+            // Basic wrapping for each line if it's too long (can be improved)
+            List<String> wrappedLines = getWrappedText(line, textWidth, fmText);
+            for (String wrappedLine : wrappedLines) {
+                 if (currentY + fmText.getHeight() > statisticsPanelRect.y + statisticsPanelRect.height - 50) { // Check bounds before drawing prompt
+                    g2d.drawString("...", textX, currentY); // Indicate more text if it overflows
+                    break; // Stop drawing lines if panel is full
+                }
+                g2d.drawString(wrappedLine, textX, currentY);
+                currentY += fmText.getHeight();
+            }
+            if (currentY + fmText.getHeight() > statisticsPanelRect.y + statisticsPanelRect.height - 50) break; // Check again after outer loop
+        }
+        // currentY += 20; // Extra spacing if needed, adjusted based on content length
+
+        // Prompt to close - Styled like Player Info
+        g2d.setFont(PLAYER_INFO_FONT_TEXT.deriveFont(Font.ITALIC));
+        g2d.setColor(PLAYER_INFO_TEXT_COLOR); // Ensure prompt color is consistent
+        String continuePrompt = "Press O or Esc to close...";
+        FontMetrics fmPrompt = g2d.getFontMetrics();
+        int promptWidth = fmPrompt.stringWidth(continuePrompt);
+        g2d.drawString(continuePrompt, statisticsPanelRect.x + (statisticsPanelRect.width - promptWidth) / 2, statisticsPanelRect.y + statisticsPanelRect.height - 30);
+    }
+
+    // New method to handle input for Player Info view
+    private void handlePlayerInfoViewInput(int keyCode) {
+        if (farmModel.getCurrentGameState() != GameState.PLAYER_INFO_VIEW) {
+            return;
+        }
+        if (keyCode == KeyEvent.VK_J || keyCode == KeyEvent.VK_ESCAPE) {
+            farmModel.setCurrentGameState(GameState.IN_GAME);
+            playInGameMusic(); // Resume in-game music
+        }
+    }
+
+    // New method to handle input for Statistics view
+    private void handleStatisticsViewInput(int keyCode) {
+        if (farmModel.getCurrentGameState() != GameState.STATISTICS_VIEW) {
+            return;
+        }
+        if (keyCode == KeyEvent.VK_O || keyCode == KeyEvent.VK_ESCAPE) {
+            farmModel.setCurrentGameState(GameState.IN_GAME);
+            playInGameMusic(); // Resume in-game music
+            // statisticsScrollPane.setVisible(false); // REMOVED - No longer using JScrollPane
+        }
+    }
+
+    private void initMenuMusic() {
+        System.out.println("DEBUG: initMenuMusic() method CALLED."); // ADDED FOR DEBUGGING
+        try {
+            AudioInputStream audioInputStream = null;
+            // Try loading as a resource first
+            InputStream resourceStream = getClass().getResourceAsStream("/assets/menu/music.wav");
+            if (resourceStream != null) {
+                System.out.println("Attempting to load menu music from resources...");
+                // Wrap the resource stream with another InputStream that supports mark/reset if needed by AudioSystem
+                // BufferedInputStream bufferedStream = new BufferedInputStream(resourceStream);
+                audioInputStream = AudioSystem.getAudioInputStream(resourceStream); // Using direct stream
+            } else {
+                System.out.println("Menu music resource not found, trying absolute path...");
+                // Fallback to absolute path if resource not found
+                File audioFile = new File("G:\\codebro\\coding_itb\\tubesoop\\repository-tugas-besar-oop-2025\\src\\main\\resources\\assets\\menu\\music.wav");
+                if (audioFile.exists()) {
+                    audioInputStream = AudioSystem.getAudioInputStream(audioFile);
+                } else {
+                    System.err.println("Menu music file not found at absolute path either: " + audioFile.getAbsolutePath());
+                    return;
+                }
+            }
+
+            menuMusicClip = AudioSystem.getClip();
+            menuMusicClip.open(audioInputStream);
+            menuMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+            System.out.println("Menu music loaded successfully.");
+
+        } catch (UnsupportedAudioFileException e) {
+            System.err.println("Error: Menu music file format not supported. " + e.getMessage());
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Error: Could not read menu music file. " + e.getMessage());
+            e.printStackTrace();
+        } catch (LineUnavailableException e) {
+            System.err.println("Error: Audio line for menu music unavailable. " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) { // Catch any other unexpected errors during loading
+            System.err.println("An unexpected error occurred while loading menu music: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void playMenuMusic() { // <<<< Ensure this is public
+        System.out.println("Attempting to play MENU music.");
+        if (inGameMusicClip != null) {
+            if (inGameMusicClip.isRunning()) {
+                inGameMusicClip.stop();
+                System.out.println("  playMenuMusic: Stopped active inGameMusicClip.");
+            }
+        }
+        isInGameMusicPlaying = false;
+
+        if (menuMusicClip != null) {
+            if (!menuMusicClip.isRunning()) {
+                try {
+                    menuMusicClip.setFramePosition(0);
+                    menuMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                    menuMusicClip.start();
+                    isMenuMusicPlaying = true;
+                    System.out.println("  playMenuMusic: Started menuMusicClip (music.wav).");
+                } catch (Exception e) {
+                    isMenuMusicPlaying = false;
+                    System.err.println("  playMenuMusic: EXCEPTION starting menuMusicClip: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            } else {
+                isMenuMusicPlaying = true; // Already running
+                System.out.println("  playMenuMusic: menuMusicClip was already running.");
+            }
+        } else {
+            isMenuMusicPlaying = false;
+            System.err.println("  playMenuMusic: menuMusicClip is NULL.");
+        }
+    }
+
+    public void stopMenuMusic() { // <<<< Ensure this is public
+        System.out.println("Attempting to stop MENU music.");
+        if (menuMusicClip != null) {
+            if (menuMusicClip.isRunning()) {
+                menuMusicClip.stop();
+                System.out.println("  stopMenuMusic: Stopped menuMusicClip.");
+            }
+            isMenuMusicPlaying = false;
+        } else {
+            isMenuMusicPlaying = false;
+            System.err.println("  stopMenuMusic: menuMusicClip is NULL.");
+        }
+    }
+
+    // Added for in-game music
+    private void initInGameMusic() {
+        System.out.println("DEBUG: initInGameMusic() method CALLED.");
+        try {
+            AudioInputStream audioInputStream = null;
+            InputStream resourceStream = getClass().getResourceAsStream("/assets/menu/ingame.wav"); // Adjusted path
+            if (resourceStream != null) {
+                System.out.println("Attempting to load in-game music from resources...");
+                audioInputStream = AudioSystem.getAudioInputStream(resourceStream);
+            } else {
+                System.out.println("In-game music resource not found, trying absolute path...");
+                // Fallback to absolute path - adjust if your structure is different
+                File audioFile = new File("G:/codebro/coding_itb/tubesoop/repository-tugas-besar-oop-2025/src/main/resources/assets/menu/ingame.wav");
+                if (audioFile.exists()) {
+                    audioInputStream = AudioSystem.getAudioInputStream(audioFile);
+                } else {
+                    System.err.println("In-game music file not found at absolute path either: " + audioFile.getAbsolutePath());
+                    return;
+                }
+            }
+
+            inGameMusicClip = AudioSystem.getClip();
+            inGameMusicClip.open(audioInputStream);
+            inGameMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+            System.out.println("In-game music loaded successfully.");
+
+        } catch (UnsupportedAudioFileException e) {
+            System.err.println("Error: In-game music file format not supported. " + e.getMessage());
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Error: Could not read in-game music file. " + e.getMessage());
+            e.printStackTrace();
+        } catch (LineUnavailableException e) {
+            System.err.println("Error: Audio line for in-game music unavailable. " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("An unexpected error occurred while loading in-game music: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void playInGameMusic() { // <<<< Ensure this is public
+        System.out.println("Attempting to play IN-GAME music.");
+        if (menuMusicClip != null) {
+            if (menuMusicClip.isRunning()) {
+                menuMusicClip.stop();
+                System.out.println("  playInGameMusic: Stopped active menuMusicClip.");
+            }
+        }
+        isMenuMusicPlaying = false;
+
+        if (inGameMusicClip != null) {
+            if (!inGameMusicClip.isRunning()) {
+                try {
+                    inGameMusicClip.setFramePosition(0);
+                    inGameMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                    inGameMusicClip.start();
+                    isInGameMusicPlaying = true;
+                    System.out.println("  playInGameMusic: Started inGameMusicClip (ingame.wav).");
+                } catch (Exception e) {
+                    isInGameMusicPlaying = false;
+                    System.err.println("  playInGameMusic: EXCEPTION starting inGameMusicClip: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            } else {
+                isInGameMusicPlaying = true; // Already running
+                System.out.println("  playInGameMusic: inGameMusicClip was already running.");
+            }
+        } else {
+            isInGameMusicPlaying = false;
+            System.err.println("  playInGameMusic: inGameMusicClip is NULL.");
+        }
+    }
+
+    // Added for in-game music
+    public void stopInGameMusic() { // <<<< Ensure this is public
+        System.out.println("Attempting to stop IN-GAME music.");
+        if (inGameMusicClip != null) {
+            if (inGameMusicClip.isRunning()) {
+                inGameMusicClip.stop();
+                System.out.println("  stopInGameMusic: Stopped inGameMusicClip.");
+            }
+            isInGameMusicPlaying = false;
+        } else {
+            isInGameMusicPlaying = false;
+            System.err.println("  stopInGameMusic: inGameMusicClip is NULL.");
+        }
+    }
+
+    // Add this new method
+    public void stopMusic() {
+        stopMenuMusic();
+        stopInGameMusic();
     }
 }

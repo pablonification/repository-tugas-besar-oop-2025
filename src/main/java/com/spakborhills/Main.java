@@ -75,62 +75,19 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        // Main Menu Logic - REMOVED JOptionPane based menu
-        // String[] menuOptions = {"New Game", "Help", "Credits", "Exit"};
-        // boolean startGame = false;
+        // Main Menu Logic removed - Handled by GameFrame and MainMenuPanel
 
-        // while (!startGame) {
-        //     int choice = JOptionPane.showOptionDialog(
-        //             null,
-        //             "Welcome to Spakbor Hills!",
-        //             "Main Menu",
-        //             JOptionPane.DEFAULT_OPTION,
-        //             JOptionPane.INFORMATION_MESSAGE,
-        //             null,
-        //             menuOptions,
-        //             menuOptions[0]
-        //     );
+        // Launch the GUI - GameFrame will handle menu and game initialization
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new GameFrame(); // GameFrame constructor no longer takes Farm and GameController directly
+            }
+        });
 
-        //     switch (choice) {
-        //         case 0: // New Game
-        //             startGame = true; // Signal to exit the loop and start the game
-        //             break;
-        //         case 1: // Help
-        //             JOptionPane.showMessageDialog(null,
-        //                     "Spakbor Hills - A Farming Adventure Game!\n\n" +
-        //                     "Objective: Become a successful farmer and achieve milestones!\n\n" +
-        //                     "Controls:\n" +
-        //                     "• WASD/Arrows: Move\n" +
-        //                     "• E: Interact/Use Tool/Harvest\n" +
-        //                     "• F: Eat Selected Item\n" +
-        //                     "• T: Open Store\n" +
-        //                     "• B: Open Shipping Bin\n" +
-        //                     "• 1, 2: Cycle Inventory\n" +
-        //                     "• X: Chat with NPC\n" +
-        //                     "• G: Gift to NPC\n" +
-        //                     "• L: Sleep\n" +
-        //                     "• K: Cook\n" +
-        //                     "• V: Watch TV\n" +
-        //                     "• I: View Player Info\n" +
-        //                     "• O: View Current Progress\n" +
-        //                     "• C: Open Cheat Menu\n\n",
-        //                     "Help", JOptionPane.INFORMATION_MESSAGE);
-        //             break; // Stay in the menu loop
-        //         case 2: // Credits
-        //             JOptionPane.showMessageDialog(null,
-        //                     "Spakbor Hills - Game created by Kelompok Kito", // Placeholder for actual team name
-        //                     "Credits", JOptionPane.INFORMATION_MESSAGE);
-        //             break; // Stay in the menu loop
-        //         case 3: // Exit
-        //         case JOptionPane.CLOSED_OPTION: // Handle dialog close
-        //         default:
-        //             System.out.println("Exiting Spakbor Hills.");
-        //             System.exit(0); // Terminate the application
-        //             return; // Exit main method
-        //     }
-        // }
-
-        // If startGame is true, proceed to initialize and launch the game -> Now always proceeds
+        // The rest of the main method (test cases, old initialization) should be removed or kept commented out
+        // as it's now handled within GameFrame or is for testing purposes only.
+        /*
         // printSectionHeader("MEMULAI COMPREHENSIVE TESTING SPAKBOR HILLS");
 
         Map<String, Item> itemRegistry = setupItemRegistry();
@@ -148,38 +105,16 @@ public class Main {
         List<Recipe> recipeList = setupRecipes();
         PriceList priceList = setupPriceList();
 
-        // Prompt for player name and gender
-        String playerName = JOptionPane.showInputDialog(null, "Enter your name:", "Player Setup", JOptionPane.PLAIN_MESSAGE);
-        if (playerName == null || playerName.trim().isEmpty()) {
-            playerName = "Hero"; // Default name if empty or cancelled
-        }
+        // Prompt for player name and gender - MOVED TO GAMEFRAME
+        // ... (player name, gender, farm name input logic) ...
 
-        Object[] genderOptions = {Gender.MALE, Gender.FEMALE};
-        Gender playerGender = (Gender) JOptionPane.showInputDialog(
-                null,
-                "Select your gender:",
-                "Player Setup",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                genderOptions,
-                Gender.MALE
-        );
-        if (playerGender == null) {
-            playerGender = Gender.MALE; // Default gender if cancelled
-        }
-        
-        String farmName = JOptionPane.showInputDialog(null, "Enter your farm's name:", "Farm Setup", JOptionPane.PLAIN_MESSAGE);
-        if (farmName == null || farmName.trim().isEmpty()) {
-            farmName = playerName + "'s Farm"; // Default farm name
-        }
-
-        String playerSpritesheetPath = "/assets/sprites/player/main_char.png"; // Ganti dengan path Anda
-        int playerSpriteWidth = 16;      // GANTI dengan lebar SATU frame pemain Anda
-        int playerSpriteHeight = 32;     // GANTI dengan tinggi SATU frame pemain Anda
+        String playerSpritesheetPath = "/assets/sprites/player/main_char.png";
+        int playerSpriteWidth = 16;
+        int playerSpriteHeight = 32;
 
         Player player = new Player(playerName, playerGender, farmName, farmMap, 5, 5,
                                    itemRegistry, playerSpritesheetPath,
-                                   playerSpriteWidth, playerSpriteHeight); // Hanya width & height 1 frame
+                                   playerSpriteWidth, playerSpriteHeight);
         EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), player);
 
         Farm farm = new Farm(
@@ -188,97 +123,25 @@ public class Main {
             itemRegistry
         );
 
-        // Create GameController instance
         GameController gameController = new GameController(farm);
-        // farm.setGameController(gameController); // Link controller back to farm if needed for GamePanel timer checks -> Removed this line
 
-        // Launch the GUI
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new GameFrame(farm, gameController);
-            }
-        });
+        // Launch the GUI - OLD WAY
+        // SwingUtilities.invokeLater(new Runnable() {
+        //     @Override
+        //     public void run() {
+        //         new GameFrame(farm, gameController);
+        //     }
+        // });
 
         // Comment out the rest of the test cases
-        /*
-        GameTime gameTime = new GameTime();
-        ShippingBin shippingBin = new ShippingBin();
-        Store store = new Store();
-        // Initialize WorldMap with required parameters
-        WorldMap worldMap = new WorldMap("Spakbor Hills World", store);
-
-        // === SETUP NPCs & RECIPES ===
-        printSubsectionHeader("Setup NPC & Recipe");
-        List<NPC> npcList = setupNPCs();
-        System.out.println("List NPC dibuat dengan " + npcList.size() + " NPC.");
-
-        List<Recipe> recipeList = setupRecipes();
-        System.out.println("List Recipe dibuat dengan " + recipeList.size() + " recipe.");
-
-        // === SETUP PLAYER & FARM ===
-        printSubsectionHeader("Setup Player & Farm");
-        Player player = null;
-        Farm farm = null;
-        try {
-            player = new Player("Tester", Gender.FEMALE, "Kebun Uji", farmMap, 5, 5, itemRegistry);
-            System.out.println("Objek Player berhasil dibuat.");
-            EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), player);
-            farm = new Farm(
-                player.getFarmName(), player, farmMap, worldMap, store,
-                npcList, recipeList, gameTime, shippingBin, statistics, setupPriceList(),
-                itemRegistry
-            );
-            System.out.println("Objek Farm berhasil dibuat.");
-        } catch (Exception e) {
-            System.err.println("ERROR saat membuat Player atau Farm: " + e.getMessage());
-            e.printStackTrace();
-            return; // Hentikan jika gagal
-        }
-
-        printSectionHeader("MEMULAI TEST CASES");
-
-        // === BASIC TESTS ===
-        testBasicPlayerFunctions(player, itemRegistry);
-        
-        // === INVENTORY TESTS ===
-        testInventoryFunctions(player, itemRegistry);
-        
-        // === MOVEMENT TESTS ===
-        testMovement(player, farmMap);
-
-        // === FARMING TESTS ===
-        testFarming(player, farmMap, gameTime, itemRegistry, farm);
-
-        // === NPC INTERACTION TESTS ===
-        testNPCInteractions(player, farm, itemRegistry);
-
-        // === TIME AND WEATHER TESTS ===
-        testTimeAndWeather(gameTime, farm, player);
-
-        // === SHOP AND ECONOMY TESTS ===
-        testShopAndEconomy(player, store, shippingBin, setupPriceList(), itemRegistry, gameTime);
-
-        // === FISHING TESTS ===
-        testFishing(player, farm, itemRegistry);
-
-        // === COOKING TESTS ===
-        testCooking(player, farm, itemRegistry);
-
-        // === EDGE CASES AND ERROR HANDLING ===
-        testEdgeCases(player, farm, itemRegistry);
-
-        // === END GAME CONDITIONS ===
-        testEndGameConditions(player, farm);
-
-        printSectionHeader("COMPREHENSIVE TESTING SELESAI");
+        // ... (testBasicPlayerFunctions, etc.) ...
         */
     }
 
     /**
      * Setup Item Registry dengan berbagai jenis item
      */
-    private static Map<String, Item> setupItemRegistry() {
+    public static Map<String, Item> setupItemRegistry() {
         Map<String, Item> registry = new HashMap<>();
         try {
             // === SEEDS ===
@@ -464,7 +327,7 @@ public class Main {
     /**
      * Setup PriceList dengan harga default
      */
-    private static PriceList setupPriceList() {
+    public static PriceList setupPriceList() {
         PriceList priceList = new PriceList();
         // Seharusnya sudah memiliki harga default, bisa tambahkan item custom di sini
         priceList.initializeDefaultPrices();
@@ -474,7 +337,7 @@ public class Main {
     /**
      * Setup NPC List
      */
-    private static List<NPC> setupNPCs() {
+    public static List<NPC> setupNPCs() {
         List<NPC> npcList = new ArrayList<>();
         
         // Buat NPCs sesuai spesifikasi
@@ -498,7 +361,7 @@ public class Main {
     /**
      * Setup Recipe List
      */
-    private static List<Recipe> setupRecipes() {
+    public static List<Recipe> setupRecipes() {
         List<Recipe> recipes = new ArrayList<>();
         
         // Resep yang sudah ada

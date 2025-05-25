@@ -10,5 +10,8 @@ public enum GameState {
     GAME_OVER,
     NPC_DIALOGUE,
     WORLD_MAP_SELECTION,
+    INVENTORY_VIEW,
+    PLAYER_INFO_VIEW,
+    STATISTICS_VIEW,
     PAUSED // For potential future use
 } 

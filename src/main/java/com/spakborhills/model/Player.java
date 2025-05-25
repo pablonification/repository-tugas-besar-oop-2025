@@ -327,24 +327,24 @@ public class Player {
         }
     
         if (isMoving) {
-            switch (animationFrame) { // animationFrame will cycle 0, 1, 2, 3
-                case 0: // Kaki Kiri - Use spritesheet column 1
+            switch (animationFrame) { 
+                case 0: // Kaki Kiri
                     spriteSheetColPixelX = 1 * spriteWidthPlayer;
                     break;
-                case 1: // Diam Intermediate - Use spritesheet column 2
-                    spriteSheetColPixelX = 2 * spriteWidthPlayer;
+                case 1: // Diam (posisi tengah)
+                    spriteSheetColPixelX = 0 * spriteWidthPlayer; // Gunakan kolom 0 untuk diam
                     break;
-                case 2: // Kaki Kanan - Use spritesheet column 3
-                    spriteSheetColPixelX = 3 * spriteWidthPlayer;
+                case 2: // Kaki Kanan - INI YANG DIPERBAIKI
+                    spriteSheetColPixelX = 3 * spriteWidthPlayer; // Gunakan kolom 3 untuk kaki kanan
                     break;
-                case 3: // Diam Intermediate (again for symmetry) - Use spritesheet column 2
+                case 3: // Diam lagi (kembali ke tengah)
                 default: 
-                    spriteSheetColPixelX = 2 * spriteWidthPlayer;
+                    spriteSheetColPixelX = 0 * spriteWidthPlayer; // Kembali ke diam
                     break;
             }
         } else {
-            // Player is not moving, use the idle frame (spritesheet column 0)
-            spriteSheetColPixelX = 0 * spriteWidthPlayer; // Diam
+            // Player diam, gunakan frame idle (kolom 0)
+            spriteSheetColPixelX = 0 * spriteWidthPlayer;
         }
         
         // Validasi batas (tetap sama)

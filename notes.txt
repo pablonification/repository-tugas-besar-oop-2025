@@ -127,7 +127,7 @@ Fase 4: Waktu, Cuaca, dan Sistem Lainnya
 Sistem Waktu & Pergantian Hari/Musim:
 [IMPLEMENTED] GameTime menghitung waktu, hari, musim. Farm.nextDay() memproses pergantian.
 [IMPLEMENTED] Cheat untuk mengubah Musim (spring, summer, fall, winter) via input dialog (tombol C).
-[UNTUK DILAKUKAN] Efek visual/audio untuk pergantian waktu (misal, warna langit meredup di malam hari di GamePanel).
+[IMPLEMENTED] Efek visual/audio untuk pergantian waktu (misal, warna langit meredup di malam hari di GamePanel).
     Detail Tint Waktu (Sebelumnya Pernah Diimplementasi):
     - Night (22:00 - 04:59): Dark blue/purple tint (new Color(0, 0, 70, 100))
     - Dusk (18:00 - 21:59): Orange-ish tint (new Color(200, 100, 0, 70))
@@ -141,14 +141,14 @@ Cuaca:
 [IMPLEMENTED] Watching TV: Aksi via tombol 'V' jika di dalam rumah untuk mengetahui cuaca HARI INI (GameTime.getCurrentWeather(), GameController.requestWatchTV()). Waktu maju 15 menit, energi berkurang 5.
 End Game Statistics:
 [IMPLEMENTED] Pemicu Tampilan Statistik: Mencapai salah satu milestone (gold >= 17209 atau menikah). Timer di GamePanel cek Farm.checkEndConditions(), panggil GameController.requestShowStatistics() sekali.
-[IMPLEMENTED] GUI untuk Menampilkan Statistik: GamePanel.showStatisticsDialog() menampilkan EndGameStatistics.getSummary() via JOptionPane dengan JTextArea. Timer game dihentikan.
+[IMPLEMENTED] GUI untuk Menampilkan Statistik: Menampilkan EndGameStatistics.getSummary() via integrated UI. Timer game dihentikan.
 Fase 5: Menu dan Fitur Tambahan (Sesuai Spesifikasi Bonus)
 Menu Game Utama (CLI atau GUI Awal):
 [IMPLEMENTED] Main Menu on Startup (JOptionPane in Main.java): New Game, Help, Credits, Exit.
 [UNTUK DILAKUKAN] Load Game (Bonus).
 [IMPLEMENTED] Help Dialog: Basic game description and controls.
 [IMPLEMENTED] Credits Dialog: Placeholder for team name.
-[IMPLEMENTED] View Player Info (In-Game via 'I' key): GamePanel.showPlayerInfoDialog() displays Name, Gender, Energy, Gold, Partner.
+[IMPLEMENTED] View Player Info (In-Game via 'J' key): Displays Name, Gender, Energy, Gold, Partner via integrated UI.
 [IMPLEMENTED] Statistics (In-Game via 'O' key): Calls existing GameController.requestShowStatistics().
 Implementasi Bonus (jika dikerjakan):
 Furnitures (Termasuk interior rumah yang lebih besar dan detail seperti Stove, Bed), Keyboard/Mouse Input (sudah sebagian), Free Market, Gambling, Save/Load, NPC Easter Egg. Masing-masing akan punya sub-task sendiri.
@@ -167,35 +167,28 @@ GUI Enhancements:
       - [IMPLEMENTED] Cheat input (via 'C') kini menggunakan panel in-game.
       - [IMPLEMENTED] End of Day Summary (tidur/pingsan) kini menggunakan panel in-game.
       - [IMPLEMENTED] World Map selection dialog (saat di entry point) uses in-game panel.
-    - Navigasi dan interaksi dilakukan sepenuhnya dengan keyboard/controller/mouse di dalam game window, mirip main menu.
-    - Tampilan panel-panel ini akan konsisten dengan style main menu (warna, font, animasi, dsb).
-[UNTUK DILAKUKAN] Main Menu In-Game (Lanjutan):
-    - Latar belakang visual (misal, gambar pemandangan desa/kebun seperti contoh Harvest Moon).
-    - Kursor/highlight pilihan menu yang lebih menarik (misal, ikon tangan atau animasi).
-    - Integrasikan input Nama Pemain & Nama Kebun ke dalam alur "New Game" dari menu ini, bukan via JOptionPane di awal.
+    - [IMPLEMENTED] Navigasi dan interaksi dilakukan sepenuhnya dengan keyboard/controller di dalam game window, mirip main menu.
+[IMPLEMENTED]  Main Menu In-Game (Lanjutan):
+    - [IMPLEMENTED] Latar belakang visual (misal, gambar pemandangan desa/kebun seperti contoh Harvest Moon).
+    - [IMPLEMENTED] Integrasikan input Nama Pemain & Nama Kebun ke dalam alur "New Game" dari menu ini, bukan via JOptionPane di awal.
 
 [UNTUK DILAKUKAN] Kustomisasi Dialog In-Game:
-    - Ganti semua JOptionPane (Shipping Bin, Chat NPC sisa feedback, Konfirmasi Ya/Tidak, Pesan Info umum) dengan panel/jendela kustom yang terintegrasi dalam tampilan game.
+    - Ganti semua JOptionPane (v Shipping Bin, v Chat NPC sisa feedback, Konfirmasi Ya/Tidak, Pesan Info umum) dengan panel/jendela kustom yang terintegrasi dalam tampilan game.
     - Penyempurnaan UI Toko: Input kuantitas yang lebih baik, feedback pembelian/kegagalan sepenuhnya in-game tanpa JOptionPane, ikon item.
-    - Tampilkan potret karakter saat dialog dengan NPC.
+    - [IMPLEMENTED] Tampilkan potret karakter saat dialog dengan NPC.
 
-[UNTUK DILAKUKAN] Penyempurnaan HUD/Info Panel Pemain:
-    - Representasi grafis untuk bar energi.
-    - Ikon untuk item yang sedang dipilih/dipegang.
-    - Tampilan yang lebih menarik (font, layout) untuk waktu, tanggal, musim, cuaca, dan gold.
+[IMPLEMENTED] Penyempurnaan HUD/Info Panel Pemain:
+    - [IMPLEMENTED] Representasi grafis untuk bar energi.
+    - [IMPLEMENTED] Tampilan yang lebih menarik (font, layout) untuk waktu, tanggal, musim, cuaca, dan gold.
 
-[UNTUK DILAKUKAN] Peningkatan Visual Dunia Game:
-    - Grafis berbasis sprite untuk pemain, NPC, hewan (jika ada), dan item di tanah.
-    - Animasi untuk tile tertentu (misal, air mengalir, api di perapian).
-    - Tile-set yang lebih detail dan beragam untuk setiap area peta (Kebun, Hutan, Desa, Pantai, dll.).
-    - Efek visual saat menggunakan alat (animasi mencangkul, menyiram, memancing, dll.).
-    - Efek visual cuaca yang lebih imersif (partikel hujan lebih baik, salju, daun berguguran, kabut).
+[IMPLEMENTED] Peningkatan Visual Dunia Game:
+    - [IMPLEMENTED] Efek visual saat menggunakan alat (animasi mencangkul, menyiram, memancing, dll.).
+    - [IMPLEMENTED] Efek visual cuaca yang lebih imersif (partikel hujan lebih baik, salju, daun berguguran, kabut).
 
 Audio Enhancements:
 [UNTUK DILAKUKAN] Background Music (BGM):
     - Musik berbeda untuk setiap musim (Spring, Summer, Fall, Winter) di kebun.
     - Musik berbeda untuk lokasi-lokasi utama (Desa, Hutan, Pantai, Toko, Rumah NPC).
-    - Musik khusus untuk event penting atau festival.
     - Musik untuk Main Menu.
 
 [UNTUK DILAKUKAN] Sound Effects (SFX):
@@ -203,16 +196,16 @@ Audio Enhancements:
     - Interaksi UI: Navigasi menu, pilih opsi, buka/tutup dialog.
     - Suara Ambient: Kicau burung di pagi hari, suara sungai/ombak, jangkrik di malam hari, angin.
     - Interaksi NPC: Suara singkat saat memulai dialog atau memberikan respons.
-    - Suara Hewan (jika ada ternak/hewan liar).
     - Efek suara untuk event penting (mendapatkan item langka, naik level pertemanan, dll.).
 
 Polish Umum:
-[UNTUK DILAKUKAN] Transisi Layar:
-    - Efek fade-in/fade-out untuk perpindahan peta.
-    - Transisi khusus saat tidur atau memulai hari baru.
 
-[UNTUK DILAKUKAN] Tipografi:
-    - Pemilihan font yang tematik dan konsisten di seluruh UI game.
+[IMPLEMENTED] Tipografi:
+    - [IMPLEMENTED] Pemilihan font yang tematik dan konsisten di seluruh UI game.
+
+
+PENTING:
+NPC MASIH BANYAK YG KEPOTONG, HARUS DIBENERIN
 
 
 Hotkey:
@@ -226,7 +219,8 @@ K: Cooking
 L: Sleeping
 X: Chat
 V: Watch TV (Today's Weather)
-I: View Player Info
+J: View Player Info
+I: Inventory
 O: View Statistics
 1, 2: Swap Tools
 C: Cheat weather dan season
