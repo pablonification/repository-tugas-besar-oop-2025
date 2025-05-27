@@ -227,6 +227,19 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private Clip inGameMusicClip; // Added for in-game music
     private boolean isInGameMusicPlaying = false; // Added for in-game music
 
+    private long inGameMusicPosition = 0;
+    private long menuMusicPosition = 0;
+
+    // Pause Menu UI State
+    private String[] pauseMenuOptions = {"Resume", "Exit to Main Menu", "Exit Game"};
+    private int currentPauseMenuSelection = 0;
+    private Rectangle pauseMenuPanelRect;
+    private static final Font PAUSE_MENU_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
+    private static final Font PAUSE_MENU_FONT_ITEM = new Font("Arial", Font.PLAIN, 22);
+    private static final Color PAUSE_MENU_BG_COLOR = new Color(0, 0, 0, 180); // Semi-transparent black
+    private static final Color PAUSE_MENU_TEXT_COLOR = Color.WHITE;
+    private static final Color PAUSE_MENU_HIGHLIGHT_COLOR = Color.YELLOW;
+
     public GamePanel(Farm farmModel, GameController gameController, GameFrame gameFrame) { // Added GameFrame parameter
         this.farmModel = farmModel;
         this.gameController = gameController;
@@ -461,6 +474,13 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         int statsPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - statsPanelHeight) / 2;
         statisticsPanelRect = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
+        // Initialize Pause Menu Panel Rect (centered)
+        int pmPanelWidth = VIEWPORT_WIDTH_IN_TILES * TILE_SIZE / 3;
+        int pmPanelHeight = VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE / 2;
+        int pmPanelX = (VIEWPORT_WIDTH_IN_TILES * TILE_SIZE - pmPanelWidth) / 2;
+        int pmPanelY = (VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT - pmPanelHeight) / 2;
+        pauseMenuPanelRect = new Rectangle(pmPanelX, pmPanelY, pmPanelWidth, pmPanelHeight);
+
         // Ensure layout is null if other components still use absolute positioning, 
         // otherwise, it might not be necessary to set it to null explicitly if all UI is custom drawn.
         if (this.getLayout() == null) { // Check if it was already set to null
@@ -605,9 +625,34 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (currentState == GameState.MAIN_MENU) {
             // playMenuMusic() will stop inGameMusicClip if running, and start menuMusicClip if not running.
             playMenuMusic();
-        } else { // For IN_GAME and all other non-MAIN_MENU states
-            // playInGameMusic() will stop menuMusicClip if running, and start/continue in-game music.
+        } else if (currentState == GameState.IN_GAME || 
+                   currentState == GameState.STORE_UI || 
+                   currentState == GameState.SHIPPING_BIN || 
+                   currentState == GameState.NPC_DIALOGUE || 
+                   currentState == GameState.CHEAT_INPUT || 
+                   currentState == GameState.WORLD_MAP_SELECTION || 
+                   currentState == GameState.INVENTORY_VIEW || 
+                   currentState == GameState.PLAYER_INFO_VIEW || 
+                   currentState == GameState.STATISTICS_VIEW || 
+                   currentState == GameState.END_OF_DAY_SUMMARY) {
             playInGameMusic();
+        } else if (currentState == GameState.PAUSE_MENU) {
+            // Music should have been paused on entering this state.
+            // This is a safeguard to ensure it IS stopped if somehow still running.
+            if (inGameMusicClip != null && inGameMusicClip.isRunning()) {
+                stopInGameMusicSavingPosition();
+            }
+            if (menuMusicClip != null && menuMusicClip.isRunning()) { // Should not occur from in-game pause
+                stopMenuMusicSavingPosition();
+            }
+        } else {
+            // For any other truly unhandled states, ensure music is off.
+            if (inGameMusicClip != null && inGameMusicClip.isRunning()) {
+                stopInGameMusicSavingPosition();
+            }
+            if (menuMusicClip != null && menuMusicClip.isRunning()) {
+                stopMenuMusicSavingPosition();
+            }
         }
 
         if (currentState == GameState.MAIN_MENU) {
@@ -625,7 +670,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             drawPlayer(g2d);
             drawNPCs(g2d); // Make sure this is called to draw NPCs
             drawPlayerInfo(g2d); // Draw player info panel at the bottom
-            // drawDayNightTint(g2d); // Temporarily commented out for testing house rendering
+            drawDayNightTint(g2d); // Temporarily commented out for testing house rendering
             
             // Draw UI elements on top based on state
             if (currentState == GameState.NPC_DIALOGUE) {
@@ -645,6 +690,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             } else if (currentState == GameState.STATISTICS_VIEW) { // Added statistics view
                 drawStatisticsUI(g2d);
             }
+        }
+
+        // Draw pause menu on top if active, over everything else except general messages
+        if (currentState == GameState.PAUSE_MENU) {
+            drawPauseMenu(g2d);
         }
 
         // Draw general game messages on top of everything if active
@@ -1342,7 +1392,33 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
         int keyCode = e.getKeyCode();
 
+        // Global Escape for Pause Menu (if in game) or specific UI close
+        if (keyCode == KeyEvent.VK_ESCAPE) {
+            if (farmModel.getCurrentGameState() == GameState.IN_GAME) {
+                farmModel.setCurrentGameState(GameState.PAUSE_MENU);
+                stopGameTimer(); // Pause game timer
+                stopInGameMusicSavingPosition(); // Pause in-game music and save its position
+                // animationTimer.stop(); // Also pause animations
+                currentPauseMenuSelection = 0; // Reset selection
+                repaint();
+                return;
+            } else if (farmModel.getCurrentGameState() == GameState.PAUSE_MENU) {
+                farmModel.setCurrentGameState(GameState.IN_GAME);
+                startGameTimer(); // Resume game timer
+                // playInGameMusic(); // Music will be resumed by paintComponent
+                // animationTimer.start(); // Resume animations
+                repaint();
+                return;
+            }
+            // Other UI specific escape handling (falls through if not IN_GAME or PAUSE_MENU)
+        }
+
         // Priority for modal-like UI states
+        if (farmModel.getCurrentGameState() == GameState.PAUSE_MENU) {
+            handlePauseMenuInput(keyCode);
+            repaint();
+            return;
+        }
         if (farmModel.getCurrentGameState() == GameState.CHEAT_INPUT) {
             handleCheatTyping(e); // Pass full event for char typing
             repaint();
@@ -3444,35 +3520,25 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     }
 
     public void playMenuMusic() { // <<<< Ensure this is public
-        System.out.println("Attempting to play MENU music.");
-        if (inGameMusicClip != null) {
-            if (inGameMusicClip.isRunning()) {
-                inGameMusicClip.stop();
-                System.out.println("  playMenuMusic: Stopped active inGameMusicClip.");
-            }
-        }
-        isInGameMusicPlaying = false;
+        // System.out.println("Attempting to play MENU music.");
+        stopInGameMusicSavingPosition(); // Stop in-game music and save its position
 
         if (menuMusicClip != null) {
             if (!menuMusicClip.isRunning()) {
                 try {
-                    menuMusicClip.setFramePosition(0);
+                    menuMusicClip.setFramePosition((int) menuMusicPosition); // Use stored position, cast to int
                     menuMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
                     menuMusicClip.start();
-                    isMenuMusicPlaying = true;
-                    System.out.println("  playMenuMusic: Started menuMusicClip (music.wav).");
+                    // System.out.println("  playMenuMusic: Started menuMusicClip (music.wav).");
                 } catch (Exception e) {
-                    isMenuMusicPlaying = false;
-                    System.err.println("  playMenuMusic: EXCEPTION starting menuMusicClip: " + e.getMessage());
-                    e.printStackTrace();
+                    // System.err.println("  playMenuMusic: EXCEPTION starting menuMusicClip: " + e.getMessage());
+                    // e.printStackTrace();
                 }
-            } else {
-                isMenuMusicPlaying = true; // Already running
-                System.out.println("  playMenuMusic: menuMusicClip was already running.");
             }
+            this.isMenuMusicPlaying = menuMusicClip.isRunning(); // Update based on actual state
         } else {
-            isMenuMusicPlaying = false;
-            System.err.println("  playMenuMusic: menuMusicClip is NULL.");
+            this.isMenuMusicPlaying = false;
+            // System.err.println("  playMenuMusic: menuMusicClip is NULL.");
         }
     }
 
@@ -3480,9 +3546,10 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         System.out.println("Attempting to stop MENU music.");
         if (menuMusicClip != null) {
             if (menuMusicClip.isRunning()) {
-                menuMusicClip.stop();
+                menuMusicClip.stop(); // This is a hard stop, does not save position for resume
                 System.out.println("  stopMenuMusic: Stopped menuMusicClip.");
             }
+            menuMusicPosition = 0; // Reset position on a hard stop
             isMenuMusicPlaying = false;
         } else {
             isMenuMusicPlaying = false;
@@ -3532,50 +3599,41 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     }
 
     public void playInGameMusic() { // <<<< Ensure this is public
-        System.out.println("Attempting to play IN-GAME music.");
-        if (menuMusicClip != null) {
-            if (menuMusicClip.isRunning()) {
-                menuMusicClip.stop();
-                System.out.println("  playInGameMusic: Stopped active menuMusicClip.");
-            }
-        }
-        isMenuMusicPlaying = false;
+        // System.out.println("Attempting to play IN-GAME music.");
+        stopMenuMusicSavingPosition(); // Stop menu music and save its position
 
         if (inGameMusicClip != null) {
             if (!inGameMusicClip.isRunning()) {
                 try {
-                    inGameMusicClip.setFramePosition(0);
+                    inGameMusicClip.setFramePosition((int) inGameMusicPosition); // Use stored position, cast to int
                     inGameMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
                     inGameMusicClip.start();
-                    isInGameMusicPlaying = true;
-                    System.out.println("  playInGameMusic: Started inGameMusicClip (ingame.wav).");
+                    // System.out.println("  playInGameMusic: Started inGameMusicClip (ingame.wav).");
                 } catch (Exception e) {
-                    isInGameMusicPlaying = false;
-                    System.err.println("  playInGameMusic: EXCEPTION starting inGameMusicClip: " + e.getMessage());
-                    e.printStackTrace();
+                    // System.err.println("  playInGameMusic: EXCEPTION starting inGameMusicClip: " + e.getMessage());
+                    // e.printStackTrace();
                 }
-            } else {
-                isInGameMusicPlaying = true; // Already running
-                System.out.println("  playInGameMusic: inGameMusicClip was already running.");
             }
+            this.isInGameMusicPlaying = inGameMusicClip.isRunning(); // Update based on actual state
         } else {
-            isInGameMusicPlaying = false;
-            System.err.println("  playInGameMusic: inGameMusicClip is NULL.");
+            this.isInGameMusicPlaying = false;
+            // System.err.println("  playInGameMusic: inGameMusicClip is NULL.");
         }
     }
 
     // Added for in-game music
     public void stopInGameMusic() { // <<<< Ensure this is public
-        System.out.println("Attempting to stop IN-GAME music.");
+        // System.out.println("Attempting to stop IN-GAME music.");
         if (inGameMusicClip != null) {
             if (inGameMusicClip.isRunning()) {
-                inGameMusicClip.stop();
-                System.out.println("  stopInGameMusic: Stopped inGameMusicClip.");
+                inGameMusicClip.stop(); // This is a hard stop
+                // System.out.println("  stopInGameMusic: Stopped inGameMusicClip.");
             }
+            inGameMusicPosition = 0; // Reset position on a hard stop
             isInGameMusicPlaying = false;
         } else {
             isInGameMusicPlaying = false;
-            System.err.println("  stopInGameMusic: inGameMusicClip is NULL.");
+            // System.err.println("  stopInGameMusic: inGameMusicClip is NULL.");
         }
     }
 
@@ -3583,5 +3641,124 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     public void stopMusic() {
         stopMenuMusic();
         stopInGameMusic();
+    }
+
+    // New method to draw the Pause Menu UI
+    private void drawPauseMenu(Graphics2D g2d) {
+        if (farmModel.getCurrentGameState() != GameState.PAUSE_MENU) {
+            return;
+        }
+
+        // Panel Background (covers the whole game area, not just the menu box, to dim the background)
+        g2d.setColor(PAUSE_MENU_BG_COLOR);
+        g2d.fillRect(0, 0, getWidth(), getHeight()); // Cover entire panel
+
+        // Menu Box
+        g2d.setColor(new Color(30,30,70, 230)); // Slightly different from general dimming, solid box
+        g2d.fill(pauseMenuPanelRect);
+        g2d.setColor(PAUSE_MENU_TEXT_COLOR.brighter());
+        g2d.draw(pauseMenuPanelRect);
+
+
+        int currentY = pauseMenuPanelRect.y + 40;
+        int textX = pauseMenuPanelRect.x + 30;
+
+        // Title
+        g2d.setFont(PAUSE_MENU_FONT_TITLE);
+        g2d.setColor(PAUSE_MENU_TEXT_COLOR);
+        String title = "Paused";
+        FontMetrics fmTitle = g2d.getFontMetrics();
+        int titleWidth = fmTitle.stringWidth(title);
+        g2d.drawString(title, pauseMenuPanelRect.x + (pauseMenuPanelRect.width - titleWidth) / 2, currentY);
+        currentY += fmTitle.getHeight() + 25; // Spacing
+
+        // Menu Items
+        g2d.setFont(PAUSE_MENU_FONT_ITEM);
+        FontMetrics fmItem = g2d.getFontMetrics();
+        int itemLineHeight = fmItem.getHeight() + 10; // Spacing between items
+
+        for (int i = 0; i < pauseMenuOptions.length; i++) {
+            String itemName = pauseMenuOptions[i];
+            if (i == currentPauseMenuSelection) {
+                g2d.setColor(PAUSE_MENU_HIGHLIGHT_COLOR);
+                g2d.drawString("> " + itemName, textX, currentY);
+                g2d.setColor(PAUSE_MENU_TEXT_COLOR);
+            } else {
+                g2d.drawString("  " + itemName, textX, currentY);
+            }
+            currentY += itemLineHeight;
+        }
+    }
+
+    // New method to handle input for the Pause Menu
+    private void handlePauseMenuInput(int keyCode) {
+        if (farmModel.getCurrentGameState() != GameState.PAUSE_MENU) return;
+
+        switch (keyCode) {
+            case KeyEvent.VK_UP:
+                currentPauseMenuSelection--;
+                if (currentPauseMenuSelection < 0) {
+                    currentPauseMenuSelection = pauseMenuOptions.length - 1;
+                }
+                break;
+            case KeyEvent.VK_DOWN:
+                currentPauseMenuSelection++;
+                if (currentPauseMenuSelection >= pauseMenuOptions.length) {
+                    currentPauseMenuSelection = 0;
+                }
+                break;
+            case KeyEvent.VK_ENTER:
+            case KeyEvent.VK_E: // Allow 'E' as select
+                String selectedOption = pauseMenuOptions[currentPauseMenuSelection];
+                switch (selectedOption) {
+                    case "Resume":
+                        farmModel.setCurrentGameState(GameState.IN_GAME);
+                        startGameTimer(); // Resume game timer
+                        // playInGameMusic(); // Music will be resumed by paintComponent
+                        // animationTimer.start(); // Resume animations
+                        break;
+                    // case "Options":
+                    //     setGeneralGameMessage("Options menu not yet implemented.", false);
+                    //     // Potentially open an options sub-menu/state later
+                    //     break;
+                    case "Exit to Main Menu":
+                        stopInGameMusicSavingPosition(); // Ensure in-game music is stopped and position saved
+                        inGameMusicPosition = 0; // Reset position so in-game music starts fresh next time
+                        
+                        if (menuMusicClip != null && menuMusicClip.isRunning()) { // Stop menu music if it was somehow playing
+                            menuMusicClip.stop();
+                        }
+                        menuMusicPosition = 0;   // Ensure main menu music starts from beginning
+                        isMenuMusicPlaying = false; // Mark as not playing so playMenuMusic in paintComponent starts it fresh
+                        
+                        // Instead of just changing game state, use GameFrame to show the proper main menu panel
+                        gameFrame.showMainMenu();
+                        break;
+                    case "Exit Game":
+                        System.out.println("Exiting Spakbor Hills via pause menu.");
+                        System.exit(0);
+                        break;
+                }
+                break;
+            // Note: VK_ESCAPE is handled globally in keyPressed to close the pause menu
+        }
+    }
+
+    // New method to stop in-game music, saving its position
+    private void stopInGameMusicSavingPosition() {
+        if (this.inGameMusicClip != null && this.inGameMusicClip.isRunning()) {
+            this.inGameMusicPosition = this.inGameMusicClip.getFramePosition();
+            this.inGameMusicClip.stop();
+        }
+        this.isInGameMusicPlaying = false; // Update flag
+    }
+
+    // New method to stop menu music, saving its position
+    private void stopMenuMusicSavingPosition() {
+        if (this.menuMusicClip != null && this.menuMusicClip.isRunning()) {
+            this.menuMusicPosition = this.menuMusicClip.getFramePosition();
+            this.menuMusicClip.stop();
+        }
+        this.isMenuMusicPlaying = false; // Update flag
     }
 }

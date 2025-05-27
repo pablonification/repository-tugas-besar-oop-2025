@@ -7,13 +7,13 @@ import com.spakborhills.model.Player;
 import com.spakborhills.model.Item.Item;
 
 public class Abigail extends NPC {
-    private static final String ABIGAIL_SPRITESHEET_PATH = "/assets/sprites/npc/abigail.png";
+    private static final String ABIGAIL_SPRITESHEET_PATH = "/assets/sprites/npc/abigail_tile.png";
     // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
     // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
-    private static final int DEFAULT_SPRITE_X = 1;     // Koordinat X frame di spritesheet
-    private static final int DEFAULT_SPRITE_Y = 5;     // Koordinat Y frame di spritesheet
-    private static final int SPRITE_WIDTH = 14;        // Lebar satu frame sprite
-    private static final int SPRITE_HEIGHT = 27;       // Tinggi satu frame sprite
+    private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
+    private static final int DEFAULT_SPRITE_Y = 0;     // Koordinat Y frame di spritesheet
+    private static final int SPRITE_WIDTH = 32;        // Lebar satu frame sprite (tile version)
+    private static final int SPRITE_HEIGHT = 32;       // Tinggi satu frame sprite (tile version)
 
     // Untuk potret di dialog (misal, potret netral pertama)
     private static final int DEFAULT_PORTRAIT_X = 68; // Koordinat X potret di spritesheet

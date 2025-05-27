@@ -7,13 +7,13 @@ import com.spakborhills.model.Player;
 import com.spakborhills.model.Item.Item;
 
 public class Dasco extends NPC {
-    private static final String DASCO_SPRITESHEET_PATH = "/assets/sprites/npc/dasco.png";
+    private static final String DASCO_SPRITESHEET_PATH = "/assets/sprites/npc/dasco_tile.png";
     // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
     // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
     private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
-    private static final int DEFAULT_SPRITE_Y = 1;     // Koordinat Y frame di spritesheet
-    private static final int SPRITE_WIDTH = 16;        // Lebar satu frame sprite
-    private static final int SPRITE_HEIGHT = 31;       // Tinggi satu frame sprite
+    private static final int DEFAULT_SPRITE_Y = 0;     // Koordinat Y frame di spritesheet
+    private static final int SPRITE_WIDTH = 32;        // Lebar satu frame sprite (tile version)
+    private static final int SPRITE_HEIGHT = 32;       // Tinggi satu frame sprite (tile version)
 
     // Untuk potret di dialog (misal, potret netral pertama)
     private static final int DEFAULT_PORTRAIT_X = 66; // Koordinat X potret di spritesheet

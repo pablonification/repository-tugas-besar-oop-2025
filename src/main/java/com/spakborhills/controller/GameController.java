@@ -34,6 +34,7 @@ import com.spakborhills.view.GamePanel;
 import com.spakborhills.model.Object.House; // Added import
 import com.spakborhills.model.Util.ShippingBin; // Import ShippingBin
 import com.spakborhills.model.Enum.GameState; // Import GameState
+import com.spakborhills.model.Object.DeployedObject; // Added import for DeployedObject
 
 public class GameController {
 
@@ -809,17 +810,17 @@ public class GameController {
 
     private Point findSafeSpawnPoint(MapArea map, int preferredX, int preferredY) {
         if (map == null) {
-            System.err.println("findSafeSpawnPoint: Map is null, returning preferred coordinates as fallback.");
-            return new Point(preferredX, preferredY);
+            System.err.println("findSafeSpawnPoint: Map is null, returning preferred coordinates as fallback (1,1).");
+            return new Point(1, 1); // Fallback to a generally safe coordinate
         }
 
         // Check preferred point first
         Tile preferredTile = map.getTile(preferredX, preferredY);
-        if (preferredTile != null && preferredTile.getType() != TileType.WATER && preferredTile.getType() != TileType.OBSTACLE && preferredTile.getAssociatedObject() == null) {
+        if (preferredTile != null && isTileWalkable(preferredTile, map, preferredX, preferredY)) {
             return new Point(preferredX, preferredY);
         }
 
-        // Search adjacent tiles in a defined order (e.g., N, S, E, W, NE, NW, SE, SW)
+        // Search adjacent tiles to the preferred point
         int[][] offsets = {
             {0, -1}, {0, 1}, {1, 0}, {-1, 0}, // N, S, E, W
             {1, -1}, {-1, -1}, {1, 1}, {-1, 1}  // NE, NW, SE, SW
@@ -831,18 +832,80 @@ public class GameController {
 
             if (map.isWithinBounds(checkX, checkY)) {
                 Tile adjacentTile = map.getTile(checkX, checkY);
-                if (adjacentTile != null && adjacentTile.getType() != TileType.WATER && adjacentTile.getType() != TileType.OBSTACLE && adjacentTile.getAssociatedObject() == null) {
+                if (adjacentTile != null && isTileWalkable(adjacentTile, map, checkX, checkY)) {
                     System.out.println("Safe spawn found at adjacent tile: (" + checkX + ", " + checkY + ") for preferred: (" + preferredX + ", " + preferredY + ") on map " + map.getName());
                     return new Point(checkX, checkY);
                 }
             }
         }
 
-        System.err.println("findSafeSpawnPoint: No safe adjacent tile found for (" + preferredX + ", " + preferredY + ") on map " + map.getName() + ". Returning preferred as last resort.");
-        // As a last resort, if no safe spot is found nearby, return the original preferred (with a warning already printed)
-        // or a map-specific default safe spot if available (e.g., map.getDefaultSafeSpawn()).
-        // For now, returning preferred to avoid null, but this could lead to being stuck if preferred itself is bad.
-        return new Point(preferredX, preferredY); 
+        System.out.println("findSafeSpawnPoint: Preferred ("+preferredX+","+preferredY+") and adjacent tiles unsafe on map " + map.getName() + ". Checking map entry points.");
+
+        // If preferred and adjacent are not safe, iterate through the map's defined entry points
+        List<Point> entryPoints = map.getEntryPoints();
+        if (entryPoints != null && !entryPoints.isEmpty()) {
+            for (Point entry : entryPoints) {
+                if (map.isWithinBounds(entry.x, entry.y)) {
+                    Tile entryTile = map.getTile(entry.x, entry.y);
+                    // We also allow ENTRY_POINT itself as a walkable spawn, assuming it's placed on a fundamentally walkable base tile.
+                    if (entryTile != null && (isTileWalkable(entryTile, map, entry.x, entry.y) || entryTile.getType() == TileType.ENTRY_POINT)) {
+                        System.out.println("Safe spawn found at map entry point: (" + entry.x + ", " + entry.y + ") on map " + map.getName());
+                        return entry;
+                    }
+                }
+            }
+            System.err.println("findSafeSpawnPoint: No walkable entry point found on map " + map.getName() + ". Fallback to first entry point or (1,1).");
+            // If no entry point is walkable, return the first one as a last resort, or a hardcoded safe point.
+            return entryPoints.get(0); // Could still be unsafe, but it's an entry point.
+        }
+
+        System.err.println("findSafeSpawnPoint: No safe adjacent tile and no entry points defined for map " + map.getName() + ". Returning absolute fallback (1,1).");
+        // Absolute fallback if no other options
+        return new Point(1, 1); 
+    }
+
+    // Helper method to check if a tile is walkable
+    private boolean isTileWalkable(Tile tile, MapArea map, int x, int y) {
+        if (tile == null) return false;
+        TileType type = tile.getType();
+        // Walkable types: GRASS, TILLABLE, TILLED, PLANTED, ENTRY_POINT (if base is walkable)
+        // Also includes various floor types.
+        // Unwalkable: WATER, OBSTACLE, or if there's a DEPLOYED_OBJECT that's not passable
+        boolean isBaseTypeWalkable = type == TileType.GRASS || 
+                                     type == TileType.TILLABLE || 
+                                     type == TileType.TILLED || 
+                                     type == TileType.PLANTED || // A planted tile is walkable; harvestability is a state of the plant, not the tile type itself for walkability.
+                                     type == TileType.ENTRY_POINT || // Assuming entry points are placed on walkable base
+                                     type == TileType.WOOD_FLOOR ||  
+                                     type == TileType.STONE_FLOOR ||
+                                     type == TileType.CARPET_FLOOR ||
+                                     type == TileType.LUXURY_FLOOR ||
+                                     type == TileType.DIRT_FLOOR;
+
+        if (!isBaseTypeWalkable) return false;
+
+        // Check for blocking deployed objects. 
+        // The isOccupied check might be slightly different from "isWalkable".
+        // For now, assume if getAssociatedObject is not null, it's blocking.
+        // A more robust way would be DeployedObject having an isPassable() method.
+        if (map.getObjectAt(x,y) != null) { 
+            // TODO: Check if the object is passable. For now, assume all objects are obstacles.
+            // For example, a small rug (DeployedObject) might be on a WOOD_FLOOR tile and should be passable.
+            // A House object would not be.
+            // This currently uses a simplified check: if there's an object, it's not walkable.
+            // This might conflict with the definition of some maps if entry points are on tiles with non-blocking objects.
+            // For now, if the object is the map itself (e.g. a house in an NPC map), allow it.
+            DeployedObject obj = map.getObjectAt(x,y);
+            if (obj!= null && obj.getName().toLowerCase().contains("house") && map.getName().toLowerCase().contains("home")){
+                 //This is likely an NPC house map, player can spawn inside.
+            } else if (obj != null){
+                // System.out.println("Tile ("+x+","+y+") on map "+map.getName()+" has object: "+obj.getName()+", considered not walkable for spawn.");
+                // return false; 
+                // Temporarily allowing spawn on occupied tiles if base type is walkable, to avoid getting stuck
+                // This needs better logic based on object passability.
+            }
+        }
+        return true;
     }
 
     /**
@@ -859,12 +922,12 @@ public class GameController {
 
         Player player = farmModel.getPlayer();
         GameTime gameTime = farmModel.getCurrentTime();
+        MapArea currentMap = player.getCurrentMap();
         MapArea targetMap = farmModel.getMapArea(destination);
 
         if (targetMap == null) {
             System.err.println("GameController: Target map for destination " + destination + " is null.");
             if (gamePanel != null) {
-                // Show a message to the player if the map isn't available
                 javax.swing.JOptionPane.showMessageDialog(gamePanel, 
                     "The location '" + destination.toString() + "' is not accessible yet.", 
                     "Cannot Visit", 
@@ -873,56 +936,74 @@ public class GameController {
             return false;
         }
 
-        // Determine entry point. For now, center of the map.
-        // A more robust solution would involve predefined entry points for each map/transition.
-        int entryX = 0;
-        int entryY = 0;
-        if (targetMap.getSize() != null) {
-            entryX = targetMap.getSize().width / 2;
-            entryY = targetMap.getSize().height / 2;
+        int preferredX = 0; // Default preferred X
+        int preferredY = 0; // Default preferred Y
+
+        List<Point> targetEntryPoints = targetMap.getEntryPoints();
+
+        if (destination == LocationType.FARM) {
+            // Returning to Farm: Try to use a logical entry point based on where player might be coming from,
+            // or a default safe spot on the farm map if no specific entry logic is in place.
+            // For now, let's assume the FarmMap has entry points defined for world map access.
+            // We could try to find an entry point on FarmMap that isn't on the edge player is on (if currentMap isn't FarmMap)
+            // or use player's last known position on FarmMap if available and still valid.
+            // Simplest: use the first entry point of the farm map, or a safe default.
+            if (targetEntryPoints != null && !targetEntryPoints.isEmpty()) {
+                preferredX = targetEntryPoints.get(0).x;
+                preferredY = targetEntryPoints.get(0).y;
+            } else {
+                preferredX = targetMap.getSize().width / 2; // Default to center-ish if no entry points
+                preferredY = targetMap.getSize().height / 2;
+        }
+        } else if (currentMap instanceof FarmMap) {
+            // Exiting FarmMap to another location
+            int playerExitX = player.getCurrentTileX();
+            int playerExitY = player.getCurrentTileY();
+            int farmMapWidth = currentMap.getSize().width;
+            int farmMapHeight = currentMap.getSize().height;
+
+            // Default to a central entry point on the target map
+            if (targetEntryPoints != null && !targetEntryPoints.isEmpty()) {
+                // Try to find an entry point on the opposite side of the target map
+                if (playerExitX == 0 && targetMap.getName().equalsIgnoreCase("Forest River")) { // Exited left from Farm, entering Forest River (expects right entry)
+                    Point entry = targetEntryPoints.stream().filter(p -> p.x == targetMap.getSize().width -1).findFirst().orElse(targetEntryPoints.get(0));
+                    preferredX = entry.x; preferredY = entry.y;
+                } else if (playerExitX >= farmMapWidth - 1  && targetMap.getName().equalsIgnoreCase("Forest River")) { // Exited right from Farm, entering Forest River (expects left entry)
+                    Point entry = targetEntryPoints.stream().filter(p -> p.x == 0).findFirst().orElse(targetEntryPoints.get(0));
+                    preferredX = entry.x; preferredY = entry.y;
+                } else if (targetEntryPoints.size() > 0) { // Default to first entry point if no specific logic matches
+                     preferredX = targetEntryPoints.get(0).x;
+                     preferredY = targetEntryPoints.get(0).y;
+                } else { // Fallback if target has no entry points
+                    preferredX = targetMap.getSize().width / 2;
+                    preferredY = targetMap.getSize().height / 2;
+                }
+            } else { // Fallback if target has no entry points
+                preferredX = targetMap.getSize().width / 2;
+                preferredY = targetMap.getSize().height / 2;
+            }
+        } else {
+            // Transitioning between two non-FarmMap world locations, or from a world location to another (not Farm)
+            // This logic might need to be more sophisticated based on world map connections.
+            // For now, use the first entry point of the target map or its center.
+            if (targetEntryPoints != null && !targetEntryPoints.isEmpty()) {
+                preferredX = targetEntryPoints.get(0).x;
+                preferredY = targetEntryPoints.get(0).y;
+            } else {
+                preferredX = targetMap.getSize().width / 2;
+                preferredY = targetMap.getSize().height / 2;
+            }
         }
         
-        // Ensure entry points are within bounds, especially for very small maps
-        if (targetMap.getSize() != null) {
-            if (entryX >= targetMap.getSize().width) entryX = Math.max(0, targetMap.getSize().width - 1);
-            if (entryY >= targetMap.getSize().height) entryY = Math.max(0, targetMap.getSize().height - 1);
-        }
+        // Ensure preferred coordinates are within the target map bounds before finding safe spawn
+        if (preferredX >= targetMap.getSize().width) preferredX = targetMap.getSize().width - 1;
+        if (preferredY >= targetMap.getSize().height) preferredY = targetMap.getSize().height - 1;
+        if (preferredX < 0) preferredX = 0;
+        if (preferredY < 0) preferredY = 0;
 
-        // Tentukan titik masuk default berdasarkan tipe map tujuan
-        // Ini adalah logika yang SANGAT disederhanakan dan perlu diperbaiki
-        // Seharusnya setiap MapArea punya daftar entry point yang lebih spesifik
-        // atau setidaknya spawn point default yang aman.
-        int targetX = targetMap.getSize().width / 2; // Contoh: tengah horizontal
-        int targetY = targetMap.getSize().height - 1; // Contoh: paling bawah
-
-        if (destination == LocationType.FARM) { // Jika kembali ke Farm
-            // Coba tempatkan pemain di salah satu entry point FarmMap jika ada
-            // atau di posisi terakhirnya di FarmMap jika disimpan
-            // Untuk sekarang, kita pakai contoh sederhana lagi:
-            targetX = player.getCurrentTileX(); // Kembali ke X terakhir di map sebelumnya
-            targetY = player.getCurrentTileY(); // Kembali ke Y terakhir di map sebelumnya
-            // Pastikan X,Y ini valid untuk FarmMap
-            if (targetX >= farmModel.getFarmMap().getSize().width) targetX = farmModel.getFarmMap().getSize().width -1;
-            if (targetY >= farmModel.getFarmMap().getSize().height) targetY = farmModel.getFarmMap().getSize().height -1;
-            if (targetX < 0) targetX = 0;
-            if (targetY < 0) targetY = 0;
-        } else if (player.getCurrentMap() instanceof FarmMap) {
-            // Jika berasal dari FarmMap, tentukan entry point berdasarkan sisi mana pemain keluar
-            if (player.getCurrentTileX() == 0) { // Keluar dari kiri Farm
-                targetX = targetMap.getSize().width -1; targetY = targetMap.getSize().height / 2;
-            } else if (player.getCurrentTileX() >= player.getCurrentMap().getSize().width -1) { // Keluar dari kanan Farm
-                targetX = 0; targetY = targetMap.getSize().height / 2;
-            } else if (player.getCurrentTileY() == 0) { // Keluar dari atas Farm
-                targetX = targetMap.getSize().width / 2; targetY = targetMap.getSize().height -1;
-            } else if (player.getCurrentTileY() >= player.getCurrentMap().getSize().height -1) { // Keluar dari bawah Farm
-                targetX = targetMap.getSize().width / 2; targetY = 0;
-            }
-        } // Logika entry point lain bisa ditambahkan untuk transisi antar WorldMap areas
-
-        // Gunakan findSafeSpawnPoint untuk mendapatkan koordinat yang aman
-        Point safeSpawn = findSafeSpawnPoint(targetMap, targetX, targetY);
-        targetX = safeSpawn.x;
-        targetY = safeSpawn.y;
+        Point safeSpawn = findSafeSpawnPoint(targetMap, preferredX, preferredY);
+        int targetX = safeSpawn.x;
+        int targetY = safeSpawn.y;
 
         boolean visited = player.visit(targetMap, targetX, targetY);
 

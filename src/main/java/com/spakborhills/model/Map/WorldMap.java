@@ -228,7 +228,11 @@ public class WorldMap implements MapArea {
         
         // Tetapkan entry point di sisi untuk kembali ke farm
         forestMap.entryPoints.clear();
-        forestMap.addEntryPoint(new Point(0, GENERIC_HEIGHT/2));
+        // Entry point di sisi kiri tengah
+        forestMap.addEntryPoint(new Point(0, GENERIC_HEIGHT / 2));
+        // Entry point di sisi kanan tengah
+        forestMap.addEntryPoint(new Point(GENERIC_WIDTH - 1, GENERIC_HEIGHT / 2));
+
         for (Point p : forestMap.entryPoints) {
             if (forestMap.isWithinBounds(p.x, p.y)) {
                 Tile tile = forestMap.getTile(p.x, p.y);
@@ -238,7 +242,7 @@ public class WorldMap implements MapArea {
             }
         }
         
-        System.out.println("Forest River Map created with river and entry points.");
+        System.out.println("Forest River Map created with river and entry points on both sides.");
         return forestMap;
     }
     

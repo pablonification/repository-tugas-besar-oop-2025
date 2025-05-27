@@ -7,13 +7,15 @@ import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Player;
 public class Emily extends NPC {
-    private static final String EMILY_SPRITESHEET_PATH = "/assets/sprites/npc/emily.png";
+    private static final String EMILY_SPRITESHEET_PATH = "/assets/sprites/npc/emily_tile.png";
     // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
     // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
-    private static final int DEFAULT_SPRITE_X = 1;     // Koordinat X frame di spritesheet
-    private static final int DEFAULT_SPRITE_Y = 4;     // Koordinat Y frame di spritesheet
-    private static final int SPRITE_WIDTH = 15;        // Lebar satu frame sprite
-    private static final int SPRITE_HEIGHT = 28;       // Tinggi satu frame sprite
+    private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
+    private static final int DEFAULT_SPRITE_Y = 0;     // Koordinat Y frame di spritesheet
+    // !!! PENTING: Pastikan SPRITE_WIDTH dan SPRITE_HEIGHT di bawah ini adalah dimensi PIXEL SEBENARNYA dari SATU frame di emily.png !!!
+    // !!! Jika salah, sprite akan terlihat terpotong atau salah. UKUR DI EDITOR GAMBAR! !!!
+    private static final int SPRITE_WIDTH = 32;        // Lebar satu frame sprite (tile version)
+    private static final int SPRITE_HEIGHT = 32;       // Tinggi satu frame sprite (tile version)
 
     // Untuk potret di dialog (misal, potret netral pertama)
     private static final int DEFAULT_PORTRAIT_X = 68; // Koordinat X potret di spritesheet

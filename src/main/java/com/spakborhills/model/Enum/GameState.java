@@ -13,5 +13,6 @@ public enum GameState {
     INVENTORY_VIEW,
     PLAYER_INFO_VIEW,
     STATISTICS_VIEW,
-    PAUSED // For potential future use
+    PAUSED, // For potential future use
+    PAUSE_MENU // For the in-game pause menu
 } 
