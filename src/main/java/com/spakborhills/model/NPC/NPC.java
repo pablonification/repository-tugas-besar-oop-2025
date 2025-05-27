@@ -51,8 +51,9 @@ public abstract class NPC {
     // Untuk spritesheets
     protected String spritesheetPath;
     protected transient BufferedImage fullSpritesheet;
-    protected String dialoguePortraitPath; // New field for dialogue portrait path
-    protected transient BufferedImage dialoguePortraitImage; // New field for loaded dialogue portrait
+    protected String dialoguePortraitPath; // Path to the SPRITESHEET for dialogue portraits
+    protected transient BufferedImage portraitSpritesheetForDialogue; // Loaded image from dialoguePortraitPath
+    protected transient BufferedImage dialoguePortraitImage; // Final cropped portrait for dialogue
 
     // Dimensi dan koordinat untuk frame sprite default di peta
     public int defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight;
@@ -134,49 +135,73 @@ public abstract class NPC {
     private void loadDialoguePortrait() {
         try {
             if (this.dialoguePortraitPath != null && !this.dialoguePortraitPath.isEmpty()) {
-                BufferedImage loadedPortrait = ImageIO.read(getClass().getResourceAsStream(this.dialoguePortraitPath));
-                if (loadedPortrait != null) {
-                    this.dialoguePortraitImage = loadedPortrait; // Use the loaded image directly
-                    // Update portraitWidth and portraitHeight to the actual dimensions of the loaded dedicated portrait
-                    // This assumes the dedicated portrait is to be used at its native size.
-                    // If it should be scaled to the old defaultPortraitX/Y/Width/Height, then this update is not needed
-                    // and GamePanel should continue to use npc.portraitWidth/Height for drawing.
-                    // For now, let's assume the user wants to use the NPC's defined portraitWidth/Height for drawing scale.
-                    // So, we don't re-assign this.portraitWidth/Height here from the image itself.
+                // Load the specific spritesheet meant for dialogue portraits
+                this.portraitSpritesheetForDialogue = ImageIO.read(getClass().getResourceAsStream(this.dialoguePortraitPath));
+
+                if (this.portraitSpritesheetForDialogue != null) {
+                    // Now, crop from this dialogue-specific spritesheet
+                    try {
+                        this.dialoguePortraitImage = this.portraitSpritesheetForDialogue.getSubimage(
+                            this.defaultPortraitX, // e.g., 68 for Abigail
+                            this.defaultPortraitY, // e.g., 135 for Abigail
+                            this.portraitWidth,    // e.g., 53 for Abigail (this is the CROP width)
+                            this.portraitHeight    // e.g., 57 for Abigail (this is the CROP height)
+                        );
+                        // The dialoguePortraitImage is now the correctly cropped image.
+                        // The NPC's this.portraitWidth and this.portraitHeight fields (e.g., 53, 57)
+                        // correctly define the dimensions of this cropped image.
+                        // GamePanel will use these dimensions (53x57) for drawing.
+                    } catch (Exception e) {
+                        System.err.println("Gagal memotong potret dialog dari spritesheet potret khusus untuk NPC: " + this.name +
+                                           " (Path: " + this.dialoguePortraitPath + 
+                                           ", X:" + this.defaultPortraitX + ", Y:" + this.defaultPortraitY +
+                                           ", W:" + this.portraitWidth + ", H:" + this.portraitHeight +
+                                           "): " + e.getMessage());
+                        this.dialoguePortraitImage = null; // Fallback to null if cropping fails
+                    }
                 } else {
-                    System.err.println("Gagal memuat potret dialog NPC: " + this.name + " dari path: " + this.dialoguePortraitPath + ". Akan menggunakan fallback dari spritesheet.");
-                    fallbackToSpritesheetPortrait();
+                    System.err.println("Gagal memuat spritesheet potret dialog khusus (dari dialoguePortraitPath): " + this.name + " dari path: " + this.dialoguePortraitPath);
+                    this.dialoguePortraitImage = null; 
                 }
             } else {
-                // If no dedicated path, use the existing logic to get portrait from spritesheet
-                fallbackToSpritesheetPortrait();
+                System.err.println("Tidak ada dialoguePortraitPath yang disediakan untuk NPC: " + this.name + ". Potret dialog akan null.");
+                this.dialoguePortraitImage = null;
+                // If you wanted the old behavior of trying to crop from the main character animation sheet as a last resort:
+                // fallbackToSpritesheetPortrait(); // <<< This is likely not desired anymore.
             }
         } catch (IOException e) {
-            System.err.println("Error I/O saat memuat potret dialog untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
-            fallbackToSpritesheetPortrait();
+            System.err.println("Error I/O saat memuat spritesheet potret dialog (dari dialoguePortraitPath) untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
+            this.dialoguePortraitImage = null;
         } catch (IllegalArgumentException e) {
-            System.err.println("Error path potret dialog tidak valid untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
-            fallbackToSpritesheetPortrait();
+            System.err.println("Error path spritesheet potret dialog (dari dialoguePortraitPath) tidak valid untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
+            this.dialoguePortraitImage = null;
         } catch (Exception e) {
-            System.err.println("Exception umum saat memuat potret dialog untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
-            fallbackToSpritesheetPortrait();
+            System.err.println("Exception umum saat memuat spritesheet potret dialog (dari dialoguePortraitPath) untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
+            this.dialoguePortraitImage = null;
         }
     }
 
-    private void fallbackToSpritesheetPortrait() {
+    private void fallbackToSpritesheetPortrait() { 
+        // This method is now potentially confusing or deprecated if dialoguePortraitPath is the primary source for portrait sheets.
+        // It attempts to crop from this.fullSpritesheet (character animation sheet)
+        // using coordinates that are likely intended for a different portrait-specific spritesheet.
+        System.err.println("PERINGATAN: fallbackToSpritesheetPortrait() dipanggil untuk NPC " + this.name + 
+                           ". Ini mencoba memotong potret dari spritesheet animasi karakter utama (" + this.spritesheetPath +
+                           ") menggunakan koordinat X:" + this.defaultPortraitX + ", Y:" + this.defaultPortraitY +
+                           ", W:" + this.portraitWidth + ", H:" + this.portraitHeight + ". Hasilnya mungkin salah.");
         if (this.fullSpritesheet == null) {
-            loadSpritesheet(); // Ensure main spritesheet is loaded
+            loadSpritesheet(); // Ensure main character animation spritesheet is loaded
         }
         if (this.fullSpritesheet != null) {
             try {
                 this.dialoguePortraitImage = this.fullSpritesheet.getSubimage(defaultPortraitX, defaultPortraitY, portraitWidth, portraitHeight);
             } catch (Exception e) {
-                System.err.println("Gagal memotong fallback potret dialog dari spritesheet untuk NPC: " + this.name + ": " + e.getMessage());
-                this.dialoguePortraitImage = null; // Ensure it's null if fallback fails
+                System.err.println("Gagal memotong fallback potret dialog dari spritesheet animasi karakter untuk NPC: " + this.name + ": " + e.getMessage());
+                this.dialoguePortraitImage = null; 
             }
         } else {
-            System.err.println("Fallback potret dialog gagal untuk NPC: " + this.name + " karena spritesheet utama juga null.");
-            this.dialoguePortraitImage = null; // Ensure it's null
+            System.err.println("Fallback potret dialog (dari spritesheet animasi karakter) gagal total untuk NPC: " + this.name + " karena spritesheet utama ("+ this.spritesheetPath +") juga null.");
+            this.dialoguePortraitImage = null; 
         }
     }
 

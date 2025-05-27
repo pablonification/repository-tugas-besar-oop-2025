@@ -68,6 +68,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     // Tambahkan juga field untuk Font yang sudah diskalakan jika diperlukan
     private final Font DIALOG_FONT;
     private final Font NPC_DIALOG_FONT;
+    private final double scaleFactor; // Added scaleFactor as a field
 
     // private NPC currentInteractingNPC;
 
@@ -90,9 +91,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private Rectangle npcDialogueBox;
     private Image npcPortraitPlaceholder;
     private static final int PORTRAIT_SIZE = 80;
-    private static final int DIALOGUE_PADDING = 20;
-    private static final Font DIALOGUE_TEXT_FONT = new Font("Arial", Font.PLAIN, 18);
-    private static final Font DIALOGUE_NAME_FONT = new Font("Arial", Font.BOLD, 20);
+    private static final int DIALOGUE_PADDING = 20; // This can be scaled if needed: (int)(20 * this.scaleFactor)
+    private final Font DIALOGUE_TEXT_FONT_SCALED; // Changed from DIALOGUE_TEXT_FONT
+    private final Font DIALOGUE_NAME_FONT_SCALED;
 
     // Store UI State
     private boolean isStoreUiActive = false;
@@ -105,8 +106,10 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private Rectangle storeQuantityRect;
     private Rectangle storeBuyButtonRect;
     private Rectangle storeCloseButtonRect;
-    private static final Font STORE_FONT = new Font("Arial", Font.PLAIN, 18);
-    private static final Font STORE_ITEM_FONT = new Font("Monospaced", Font.PLAIN, 16);
+    // private static final Font STORE_FONT = new Font("Arial", Font.PLAIN, 18); // Will be made instance field
+    // private static final Font STORE_ITEM_FONT = new Font("Monospaced", Font.PLAIN, 16); // Will be made instance field
+    private final Font STORE_FONT_SCALED;
+    private final Font STORE_ITEM_FONT_SCALED;
     private static final Color STORE_BG_COLOR = new Color(0, 0, 0, 200); // Semi-transparent black
     private static final Color STORE_TEXT_COLOR = Color.WHITE;
     private static final Color STORE_HIGHLIGHT_COLOR = Color.YELLOW;
@@ -167,8 +170,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private List<String> worldMapDestinations;
     private int currentWorldMapSelectionIndex = 0;
     private Rectangle worldMapPanelRect;
-    private static final Font WORLD_MAP_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
-    private static final Font WORLD_MAP_FONT_ITEM = new Font("Arial", Font.PLAIN, 22);
+    private final Font WORLD_MAP_FONT_TITLE; // Changed to instance field
+    private final Font WORLD_MAP_FONT_ITEM;  // Changed to instance field
     private static final Color WORLD_MAP_BG_COLOR = new Color(60, 100, 60, 220); // Forest green-ish
     private static final Color WORLD_MAP_TEXT_COLOR = Color.WHITE;
     private static final Color WORLD_MAP_HIGHLIGHT_COLOR = Color.YELLOW;
@@ -264,13 +267,21 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         this.INFO_PANEL_HEIGHT = dynamicInfoPanelHeight;
     
         // Hitung faktor skala berdasarkan TILE_SIZE baru relatif terhadap TILE_SIZE desain asli (misal 96)
-        double scaleFactor = this.TILE_SIZE / 96.0;
+        // double scaleFactor = this.TILE_SIZE / 96.0; // Moved to be an instance field
+        this.scaleFactor = this.TILE_SIZE / 96.0;
     
         // Inisialisasi Font dengan ukuran yang diskalakan
         // Pastikan ada ukuran font minimal agar teks tetap terbaca
-        this.DIALOG_FONT = new Font("Arial", Font.PLAIN, Math.max(12, (int)(20 * scaleFactor)));
-        this.NPC_DIALOG_FONT = new Font("Arial", Font.PLAIN, Math.max(10, (int)(16 * scaleFactor)));
+        this.DIALOG_FONT = new Font("Arial", Font.PLAIN, Math.max(12, (int)(20 * this.scaleFactor)));
+        this.NPC_DIALOG_FONT = new Font("Arial", Font.PLAIN, Math.max(10, (int)(16 * this.scaleFactor)));
+        this.WORLD_MAP_FONT_TITLE = new Font("Arial", Font.BOLD, Math.max(14, (int)(28 * this.scaleFactor)));
+        this.WORLD_MAP_FONT_ITEM = new Font("Arial", Font.PLAIN, Math.max(10, (int)(22 * this.scaleFactor)));
 
+        // Initialize scaled fonts for Store and Dialogue Name
+        this.DIALOGUE_NAME_FONT_SCALED = new Font("Arial", Font.BOLD, Math.max(12, (int)(20 * this.scaleFactor)));
+        this.DIALOGUE_TEXT_FONT_SCALED = new Font("Arial", Font.PLAIN, Math.max(10, (int)(18 * this.scaleFactor))); // Added initialization
+        this.STORE_FONT_SCALED = new Font("Arial", Font.PLAIN, Math.max(10, (int)(18 * this.scaleFactor)));
+        this.STORE_ITEM_FONT_SCALED = new Font("Monospaced", Font.PLAIN, Math.max(9, (int)(16 * this.scaleFactor)));
 
         // Update default UIManager jika diperlukan (setelah font diinisialisasi)
         UIManager.put("OptionPane.messageFont", this.DIALOG_FONT);
@@ -1543,7 +1554,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 actionTaken = gameController.requestEatSelectedItem();
                 break;
             case KeyEvent.VK_T: 
-                stopInGameMusic(); // Example: Stop game music when opening store
+                // stopInGameMusic(); // Removed: Music handling is managed by paintComponent based on GameState
                 openStoreDialog(); 
                 actionTaken = true; 
                 break;
@@ -2287,80 +2298,87 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
         Graphics2D g2d = (Graphics2D) g.create();
 
+        // Scale DIALOGUE_PADDING if it becomes a non-static field initialized with scaleFactor
+        int scaledDialoguePadding = (int)(DIALOGUE_PADDING * this.scaleFactor);
+        if (scaledDialoguePadding < 5) scaledDialoguePadding = 5; // Minimum padding
+
         g2d.setColor(new Color(0, 0, 0, 200)); 
         g2d.fill(npcDialogueBox);
         g2d.setColor(Color.WHITE);
         g2d.draw(npcDialogueBox);
 
         Image npcPortraitToDraw = null;
-        int actualPortraitWidthDrawn = PORTRAIT_SIZE; 
-        int actualPortraitHeightDrawn = PORTRAIT_SIZE;
-        String npcNameToDisplay = (this.currentNpcName != null) ? this.currentNpcName : "???"; // Fallback name
+        int actualPortraitWidthDrawn = (int)(PORTRAIT_SIZE * this.scaleFactor); 
+        int actualPortraitHeightDrawn = (int)(PORTRAIT_SIZE * this.scaleFactor);
+        String npcNameToDisplay = (this.currentNpcName != null) ? this.currentNpcName : "???";
 
         if (this.currentInteractingNPC != null) { 
             npcPortraitToDraw = this.currentInteractingNPC.getDefaultPortrait();
-            npcNameToDisplay = this.currentInteractingNPC.getName(); // Gunakan nama dari objek NPC
+            npcNameToDisplay = this.currentInteractingNPC.getName();
             if (npcPortraitToDraw != null) { 
-                actualPortraitWidthDrawn = this.currentInteractingNPC.portraitWidth;
+                // Use NPC's defined portrait width/height, but scale them if they are intended to be relative to a design size
+                // For now, assume npc.portraitWidth/Height are absolute pixel values for the cropped image
+                actualPortraitWidthDrawn = this.currentInteractingNPC.portraitWidth; // these should be the small, cropped dimensions
                 actualPortraitHeightDrawn = this.currentInteractingNPC.portraitHeight;
             }
         }
         
-        int portraitX = npcDialogueBox.x + DIALOGUE_PADDING;
-        int portraitY = npcDialogueBox.y + DIALOGUE_PADDING;
+        int portraitX = npcDialogueBox.x + scaledDialoguePadding;
+        int portraitY = npcDialogueBox.y + scaledDialoguePadding;
 
         if (npcPortraitToDraw != null) {
             g2d.drawImage(npcPortraitToDraw, portraitX, portraitY,
-                          actualPortraitWidthDrawn,
-                          actualPortraitHeightDrawn,
+                          actualPortraitWidthDrawn, // Draw at its cropped size
+                          actualPortraitHeightDrawn, // Draw at its cropped size
                           this);
         } else {
+            // Placeholder drawing logic (scaled)
+            int placeholderSize = (int)(PORTRAIT_SIZE * this.scaleFactor);
             g2d.setColor(Color.LIGHT_GRAY);
-            g2d.fillRect(portraitX, portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE);
+            g2d.fillRect(portraitX, portraitY, placeholderSize, placeholderSize);
             g2d.setColor(Color.BLACK);
             String initial = (npcNameToDisplay != null && !npcNameToDisplay.isEmpty()) 
                              ? npcNameToDisplay.substring(0,1) 
                              : "?"; 
-            g2d.drawString(initial, portraitX + PORTRAIT_SIZE/2 - 5, portraitY + PORTRAIT_SIZE/2 + 5);
+            Font tempFont = new Font("Arial", Font.BOLD, (int)(placeholderSize * 0.6)); // Scale font for placeholder initial
+            FontMetrics tempFm = g2d.getFontMetrics(tempFont);
+            g2d.setFont(tempFont);
+            g2d.drawString(initial, portraitX + (placeholderSize - tempFm.stringWidth(initial)) / 2, portraitY + (placeholderSize + tempFm.getAscent()) / 2 - tempFm.getDescent()/2);
         }
+        // Scaled border for portrait or placeholder
         g2d.setColor(Color.GRAY); 
         g2d.drawRect(portraitX, portraitY, actualPortraitWidthDrawn, actualPortraitHeightDrawn);
 
-        g2d.setFont(DIALOGUE_NAME_FONT);
+        g2d.setFont(this.DIALOGUE_NAME_FONT_SCALED); // Use scaled font
         FontMetrics nameFm = g2d.getFontMetrics();
-        int nameX = portraitX + actualPortraitWidthDrawn + DIALOGUE_PADDING;
-        int nameY = npcDialogueBox.y + DIALOGUE_PADDING + nameFm.getAscent();
+        int nameX = portraitX + actualPortraitWidthDrawn + scaledDialoguePadding;
+        int nameY = npcDialogueBox.y + scaledDialoguePadding + nameFm.getAscent();
         g2d.setColor(Color.YELLOW); 
-        g2d.drawString(npcNameToDisplay + " says:", nameX, nameY); // Gunakan npcNameToDisplay
+        g2d.drawString(npcNameToDisplay + " says:", nameX, nameY);
 
-        // Display Heart Points
         if (this.currentInteractingNPC != null) {
             int currentHP = this.currentInteractingNPC.getHeartPoints();
-            // TODO: Retrieve maxHP dynamically, e.g. from npc.getMaxHeartPoints() or based on bachelor status
-            int maxHP = 150; // Using 150 as a general max for bachelors as per spec for proposal
-            // A more robust solution would involve checking NPC type or having a getMaxHP() method in NPC class.
-            // For example, if currentInteractingNPC.isBachelor() then maxHP = 150 else maxHP = 100;
+            int maxHP = this.currentInteractingNPC.getMaxHeartPoints(); 
             
             String heartString = String.format("Affection: %d / %d", currentHP, maxHP);
-            g2d.setFont(NPC_DIALOG_FONT.deriveFont(Font.ITALIC, 16f)); // Slightly smaller, italic font for HP
-            g2d.setColor(Color.PINK); // Pink color for affection
-            // Position it below the name
-            int heartY = nameY + nameFm.getHeight(); // Adjust spacing as needed
+            Font scaledNpcDialogFont = this.NPC_DIALOG_FONT.deriveFont(Font.ITALIC, Math.max(8f, (float)(16f * this.scaleFactor))); // Scale this too
+            g2d.setFont(scaledNpcDialogFont);
+            g2d.setColor(Color.PINK);
+            int heartY = nameY + nameFm.getHeight() + (int)(2 * this.scaleFactor); // Scaled spacing
             g2d.drawString(heartString, nameX, heartY);
         }
 
-        // ... (sisa kode untuk menggambar teks dialog dan prompt, sama seperti sebelumnya)
-        g2d.setFont(DIALOGUE_TEXT_FONT);
+        g2d.setFont(this.DIALOGUE_TEXT_FONT_SCALED); // Use scaled font
         g2d.setColor(Color.WHITE);
         FontMetrics textFm = g2d.getFontMetrics();
         int textBlockStartX = nameX;
-        // Adjust textBlockStartY if heart points are displayed
-        int textBlockStartY = nameY + nameFm.getHeight() + DIALOGUE_PADDING; // Start dialogue text below name and heart points
-        if (this.currentInteractingNPC != null) { // If heart points were drawn, add more space
-            textBlockStartY += g2d.getFontMetrics(NPC_DIALOG_FONT.deriveFont(Font.ITALIC, 16f)).getHeight();
+        int textBlockStartY = nameY + nameFm.getHeight() + scaledDialoguePadding; 
+        if (this.currentInteractingNPC != null) { 
+            Font scaledNpcDialogFontForHeight = this.NPC_DIALOG_FONT.deriveFont(Font.ITALIC, Math.max(8f, (float)(16f * this.scaleFactor)));
+            textBlockStartY += g2d.getFontMetrics(scaledNpcDialogFontForHeight).getHeight() + (int)(2*this.scaleFactor);
         }
 
-        int availableTextWidth = (npcDialogueBox.x + npcDialogueBox.width - DIALOGUE_PADDING) - textBlockStartX;
+        int availableTextWidth = (npcDialogueBox.x + npcDialogueBox.width - scaledDialoguePadding) - textBlockStartX;
         
         List<String> lines = new ArrayList<>();
         String dialogueText = (currentNpcDialogue != null) ? currentNpcDialogue : " ";
@@ -2379,9 +2397,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
              lines.add(currentLine.toString().trim()); 
         }
 
-        int lineY = textBlockStartY; // Use the calculated start Y for dialogue text
+        int lineY = textBlockStartY; 
         for (String line : lines) {
-            if (lineY + textFm.getHeight() > npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING - textFm.getHeight()) { 
+            if (lineY + textFm.getHeight() > npcDialogueBox.y + npcDialogueBox.height - scaledDialoguePadding - textFm.getHeight()) { 
                 g2d.drawString("...", textBlockStartX, lineY); 
                 break;
             }
@@ -2389,11 +2407,13 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             lineY += textFm.getHeight();
         }
 
-        g2d.setFont(DIALOGUE_TEXT_FONT.deriveFont(Font.ITALIC));
+        Font scaledItalicDialogueTextFont = this.DIALOGUE_TEXT_FONT_SCALED.deriveFont(Font.ITALIC);
+        g2d.setFont(scaledItalicDialogueTextFont);
+        FontMetrics promptFm = g2d.getFontMetrics(); // Get metrics for the potentially different italic font
         String continuePrompt = "Press ENTER to continue...";
-        int promptWidth = textFm.stringWidth(continuePrompt); 
-        int promptX = npcDialogueBox.x + npcDialogueBox.width - promptWidth - DIALOGUE_PADDING;
-        int promptY = npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING;
+        int promptWidth = promptFm.stringWidth(continuePrompt); 
+        int promptX = npcDialogueBox.x + npcDialogueBox.width - promptWidth - scaledDialoguePadding;
+        int promptY = npcDialogueBox.y + npcDialogueBox.height - scaledDialoguePadding;
         g2d.setColor(Color.LIGHT_GRAY);
         g2d.drawString(continuePrompt, promptX, promptY);
 
@@ -2553,20 +2573,24 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         g2d.setColor(Color.WHITE);
         g2d.drawRect(storePanelRect.x, storePanelRect.y, storePanelRect.width, storePanelRect.height);
 
-        g2d.setFont(DIALOGUE_NAME_FONT);
+        g2d.setFont(this.DIALOGUE_NAME_FONT_SCALED); // Use scaled font for title
         g2d.setColor(STORE_TEXT_COLOR);
         String title = "Toko Spakbor Hills";
         FontMetrics fmTitle = g2d.getFontMetrics();
         int titleWidth = fmTitle.stringWidth(title);
-        g2d.drawString(title, storePanelRect.x + (storePanelRect.width - titleWidth) / 2, storePanelRect.y + 30);
+        g2d.drawString(title, storePanelRect.x + (storePanelRect.width - titleWidth) / 2, storePanelRect.y + (int)(30 * this.scaleFactor));
 
-        g2d.setFont(STORE_FONT);
+        g2d.setFont(this.STORE_FONT_SCALED); // Use scaled font
         g2d.setColor(STORE_TEXT_COLOR);
-        g2d.drawString("[Esc] Tutup", storeCloseButtonRect.x + 5, storeCloseButtonRect.y + 20);
+        // Note: storeCloseButtonRect is already scaled as it's based on storePanelRect. We scale text position within it.
+        g2d.drawString("[Esc] Tutup", storeCloseButtonRect.x + (int)(5 * this.scaleFactor), storeCloseButtonRect.y + fmTitle.getAscent() + (int)(5*this.scaleFactor) );
 
-        g2d.setFont(STORE_ITEM_FONT);
-        int itemY = storeItemListRect.y;
-        int itemLineHeight = g2d.getFontMetrics().getHeight() + 2;
+
+        g2d.setFont(this.STORE_ITEM_FONT_SCALED); // Use scaled font
+        FontMetrics fmItem = g2d.getFontMetrics(); // Font metrics for scaled item font
+        int itemY = storeItemListRect.y + fmItem.getAscent(); // Start Y for first item line, considering ascent
+        int itemLineHeight = fmItem.getHeight() + Math.max(1, (int)(2 * this.scaleFactor)); // Scaled line height
+
         int maxNameLength = 0;
         if (storeItemsForDisplay != null && !storeItemsForDisplay.isEmpty()) {
             for (Item item : storeItemsForDisplay) {
@@ -2603,7 +2627,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             }
         }
         
-        FontMetrics bottomFontMetrics = g2d.getFontMetrics(STORE_FONT);
+        FontMetrics bottomFontMetrics = g2d.getFontMetrics(this.STORE_FONT_SCALED);
         int bottomTextHeight = bottomFontMetrics.getHeight();
         int goldTextY = storePanelRect.y + storePanelRect.height - 20;
         String goldText = "Gold: " + farmModel.getPlayer().getGold() + " G";
@@ -2614,11 +2638,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (storeItemsForDisplay != null && !storeItemsForDisplay.isEmpty() && currentStoreItemSelectionIndex < storeItemsForDisplay.size()) {
             if (storeInputMode.equals("inputting_quantity")) {
                 Item selectedItem = storeItemsForDisplay.get(currentStoreItemSelectionIndex);
-                g2d.setFont(STORE_FONT);
+                g2d.setFont(this.STORE_FONT_SCALED);
                 g2d.setColor(STORE_TEXT_COLOR);
                 String promptText1 = "Beli " + selectedItem.getName() + "? Jumlah: " + currentBuyQuantity;
                 String promptText2 = "([Up]/[Down] Ubah Jumlah)";
-                int quantityPromptX = storePanelRect.x + 20; // Mulai dari kiri seperti Gold
+                int quantityPromptX = storePanelRect.x + Math.max(10, (int)(20 * this.scaleFactor));
                 
                 // Posisi Y untuk prompt kuantitas, di atas feedback atau Gold
                 int quantityPromptY1 = feedbackTextY - bottomTextHeight - 5; // Di atas feedback
@@ -2632,15 +2656,15 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 g2d.setColor(STORE_TEXT_COLOR);
                 g2d.drawString("[Esc/Bksp] Batal", storeBuyButtonRect.x, quantityPromptY2);
             } else {
-                g2d.setFont(STORE_FONT);
+                g2d.setFont(this.STORE_FONT_SCALED);
                 g2d.setColor(STORE_TEXT_COLOR);
                 String instructionText = "([Up]/[Down] Pilih Item, [E/Enter] Pilih)";
                 FontMetrics instructionFm = g2d.getFontMetrics();
                 // Gambar instruksi umum di atas feedback atau Gold
-                g2d.drawString(instructionText, storePanelRect.x + 20, feedbackTextY - bottomTextHeight -5 ); 
+                g2d.drawString(instructionText, storePanelRect.x + Math.max(10, (int)(20 * this.scaleFactor)), feedbackTextY - bottomTextHeight -5 ); 
             }
         } else if (storeItemsForDisplay == null || storeItemsForDisplay.isEmpty()) {
-             g2d.setFont(STORE_FONT);
+             g2d.setFont(this.STORE_FONT_SCALED);
              g2d.setColor(Color.YELLOW);
              String emptyStoreMsg = "Toko sedang kosong!";
              FontMetrics msgFm = g2d.getFontMetrics();
@@ -2649,19 +2673,19 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
         // Gambar feedback message jika ada
         if (storeFeedbackMessage != null && !storeFeedbackMessage.isEmpty()) {
-            g2d.setFont(STORE_FONT);
+            g2d.setFont(this.STORE_FONT_SCALED);
             g2d.setColor(storeFeedbackColor);
             FontMetrics feedbackFm = g2d.getFontMetrics();
             // Pusatkan teks feedback jika memungkinkan, atau letakkan di kiri
-            int feedbackX = storePanelRect.x + 20; 
+            int feedbackX = storePanelRect.x + Math.max(10, (int)(20 * this.scaleFactor)); 
             // Jika ingin tengah: storePanelRect.x + (storePanelRect.width - feedbackFm.stringWidth(storeFeedbackMessage)) / 2;
             g2d.drawString(storeFeedbackMessage, feedbackX, feedbackTextY);
         }
         
         // Gambar Gold terakhir agar selalu di atas jika ada overlap (seharusnya tidak dengan layout baru)
-        g2d.setFont(STORE_FONT);
+        g2d.setFont(this.STORE_FONT_SCALED);
         g2d.setColor(STORE_TEXT_COLOR);
-        g2d.drawString(goldText, storePanelRect.x + 20, goldTextY);
+        g2d.drawString(goldText, storePanelRect.x + Math.max(10, (int)(20 * this.scaleFactor)), goldTextY);
     }
 
     // Metode baru untuk mengatur feedback di UI Toko
@@ -3126,31 +3150,58 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         g2d.setColor(WORLD_MAP_TEXT_COLOR.brighter());
         g2d.draw(worldMapPanelRect);
 
-        int currentY = worldMapPanelRect.y + 40;
-        int textX = worldMapPanelRect.x + 30;
+        int currentY = worldMapPanelRect.y + (int)(40 * this.scaleFactor); // Scaled top margin
+        int textX = worldMapPanelRect.x + (int)(30 * this.scaleFactor); // Scaled left margin
 
         // Title
-        g2d.setFont(WORLD_MAP_FONT_TITLE);
+        g2d.setFont(this.WORLD_MAP_FONT_TITLE); // Use scaled instance font
         g2d.setColor(WORLD_MAP_TEXT_COLOR);
         String title = "Pilih Tujuan";
         FontMetrics fmTitle = g2d.getFontMetrics();
         int titleWidth = fmTitle.stringWidth(title);
         g2d.drawString(title, worldMapPanelRect.x + (worldMapPanelRect.width - titleWidth) / 2, currentY);
-        currentY += fmTitle.getHeight() + 25; // Spacing
+        currentY += fmTitle.getHeight() + (int)(25 * this.scaleFactor); // Scaled spacing after title
 
         // Destination List
-        g2d.setFont(WORLD_MAP_FONT_ITEM);
+        g2d.setFont(this.WORLD_MAP_FONT_ITEM); // Use scaled instance font
         FontMetrics fmItem = g2d.getFontMetrics();
-        int itemLineHeight = fmItem.getHeight() + 10; // Spacing between items
+        int scaledItemVerticalPadding = Math.max(2, (int)(5 * this.scaleFactor)); // Scaled padding between items
+        int itemLineHeight = fmItem.getHeight() + scaledItemVerticalPadding;
+
+        // Calculate available space for instruction text at the bottom
+        float baseInstructionFontSize = 18f;
+        float scaledInstructionFontSize = Math.max(9f, (float)(baseInstructionFontSize * this.scaleFactor));
+        Font instructionFont = this.WORLD_MAP_FONT_ITEM.deriveFont(Font.ITALIC, scaledInstructionFontSize);
+        FontMetrics fmInstructions = g2d.getFontMetrics(instructionFont);
+        
+        int baseInstructionBottomOffset = 25; // Base offset from panel bottom for instruction baseline
+        int scaledInstructionBottomOffset = Math.max(12, (int)(baseInstructionBottomOffset * this.scaleFactor));
+        int instructionBaselineY = worldMapPanelRect.y + worldMapPanelRect.height - scaledInstructionBottomOffset;
+        
+        // Determine the Y coordinate above which list items must be drawn
+        int listBottomBoundaryY = instructionBaselineY - fmInstructions.getHeight() - (int)(5 * this.scaleFactor); // Top of instruction visual area with padding
 
         for (int i = 0; i < worldMapDestinations.size(); i++) {
-            // Adjusted condition to allow more items before cutting off for instructions
-            // Check if drawing the current item would overlap with the instruction text area
-            int instructionTextY = worldMapPanelRect.y + worldMapPanelRect.height - 25 - fmItem.getDescent(); // Approximate top of instruction text
-            if (currentY + fmItem.getAscent() > instructionTextY - itemLineHeight) { // If next line starts to overlap or gets too close
-                g2d.drawString("...", textX, currentY);
+            // If the current item's baseline (currentY) plus its descent goes beyond the boundary,
+            // it means this item won't fit. Draw "..." and break.
+            if (currentY + fmItem.getDescent() > listBottomBoundaryY) {
+                 if (i > 0) { // Only draw "..." if it's not the very first item that's cut off
+                    // Attempt to draw "..." at the previous line's position if possible, or current.
+                    // For simplicity, draw at currentY, it might slightly overlap if listBottomBoundaryY is tight.
+                    int ellipsisY = currentY;
+                    // If the previous line was too close, adjust ellipsisY upwards to the previous slot
+                    if ( (currentY - itemLineHeight + fmItem.getDescent()) <= listBottomBoundaryY ) {
+                        ellipsisY = currentY - itemLineHeight;
+                    }
+                     if (ellipsisY < listBottomBoundaryY + fmItem.getAscent()) { // ensure ellipsis itself is visible
+                        g2d.setFont(this.WORLD_MAP_FONT_ITEM); // Ensure correct font
+                        g2d.setColor(WORLD_MAP_TEXT_COLOR);    // Ensure correct color
+                        g2d.drawString("...", textX, ellipsisY);
+                     }
+                 }
                 break;
             }
+
             String destName = worldMapDestinations.get(i);
             if (i == currentWorldMapSelectionIndex) {
                 g2d.setColor(WORLD_MAP_HIGHLIGHT_COLOR);
@@ -3163,11 +3214,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
 
         // Instructions
-        g2d.setFont(WORLD_MAP_FONT_ITEM.deriveFont(Font.ITALIC, 18f));
+        g2d.setFont(instructionFont); // Use the derived scaled font for instructions
+        g2d.setColor(WORLD_MAP_TEXT_COLOR);
         String instructions = "[Up/Down] Pilih  [Enter] Pergi  [Esc] Batal";
-        FontMetrics fmInstructions = g2d.getFontMetrics();
         int instructionsWidth = fmInstructions.stringWidth(instructions);
-        g2d.drawString(instructions, worldMapPanelRect.x + (worldMapPanelRect.width - instructionsWidth) / 2, worldMapPanelRect.y + worldMapPanelRect.height - 25);
+        g2d.drawString(instructions, worldMapPanelRect.x + (worldMapPanelRect.width - instructionsWidth) / 2, instructionBaselineY);
     }
 
     private void handleWorldMapSelectionInput(int keyCode) {

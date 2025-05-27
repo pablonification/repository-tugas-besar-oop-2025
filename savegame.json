@@ -1,21 +1,33 @@
 {
-  "playerX": 16,
+  "playerX": 5,
   "playerY": 4,
-  "currentMapId": "Farm",
+  "currentMapId": "Mayor Tadi\u0027s Home",
   "playerMoney": 500,
   "playerEnergy": 50,
   "playerInventory": {
     "items": [
       {
-        "itemId": "Proposal Ring",
-        "quantity": 1
+        "itemId": "Parsnip Seeds",
+        "quantity": 15
       },
       {
-        "itemId": "Hoe",
+        "itemId": "Firewood",
+        "quantity": 10
+      },
+      {
+        "itemId": "Wheat",
+        "quantity": 10
+      },
+      {
+        "itemId": "Watering Can",
         "quantity": 1
       },
       {
         "itemId": "Fishing Rod",
+        "quantity": 1
+      },
+      {
+        "itemId": "Proposal Ring",
         "quantity": 1
       },
       {
@@ -27,34 +39,313 @@
         "quantity": 2
       },
       {
-        "itemId": "Potato",
-        "quantity": 10
+        "itemId": "Hoe",
+        "quantity": 1
       },
       {
-        "itemId": "Wheat",
+        "itemId": "Potato",
         "quantity": 10
       },
       {
         "itemId": "Pickaxe",
         "quantity": 1
-      },
-      {
-        "itemId": "Firewood",
-        "quantity": 10
-      },
-      {
-        "itemId": "Parsnip Seeds",
-        "quantity": 15
-      },
-      {
-        "itemId": "Watering Can",
-        "quantity": 1
       }
     ]
   },
   "currentDay": 1,
-  "currentHour": 7,
+  "currentHour": 8,
   "currentSeason": "SPRING",
   "currentYear": 1,
-  "farmTiles": {}
+  "farmTiles": {
+    "8,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "8,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "14,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "8,19": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "9,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "19,23": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "9,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "19,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "9,20": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "5,20": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "5,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "19,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "16,31": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "ENTRY_POINT"
+    },
+    "5,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "21,23": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "14,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "21,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "10,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "21,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "10,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "10,19": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "7,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "10,20": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "7,19": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "10,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "7,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "10,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "8,20": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "18,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "8,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "18,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "18,23": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "8,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "0,16": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "ENTRY_POINT"
+    },
+    "20,23": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "20,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "13,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "20,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "13,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "6,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "6,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "6,19": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "7,20": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "7,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "7,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "31,16": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "ENTRY_POINT"
+    },
+    "12,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "12,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "9,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "9,19": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "9,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "5,17": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "5,18": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "5,19": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "6,21": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "6,20": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "6,22": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "DEPLOYED_OBJECT"
+    },
+    "16,0": {
+      "growthStage": 0,
+      "isWatered": false,
+      "type": "ENTRY_POINT"
+    }
+  }
 }
