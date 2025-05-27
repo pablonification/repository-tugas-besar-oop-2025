@@ -34,4 +34,9 @@ public class Food extends Item implements EdibleItem {
         return true;
     }
 
+    @Override
+    public Item cloneItem() {
+        return new Food(this.getName(), this.energyRestored, this.getBuyPrice(), this.getSellPrice());
+    }
+
 }

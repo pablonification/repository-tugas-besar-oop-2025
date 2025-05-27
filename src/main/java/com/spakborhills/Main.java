@@ -1273,7 +1273,7 @@ public class Main {
     private static void testEdgeCases(Player player, Farm farm, Map<String, Item> itemRegistry) {
         printSectionHeader("TESTING EDGE CASES AND ERROR HANDLING");
         GameTime gameTime = farm.getCurrentTime();
-        NPC someNpc = farm.getNPCs().isEmpty() ? null : farm.getNPCs().get(0);
+        NPC someNpc = farm.getNpcs().isEmpty() ? null : farm.getNpcs().get(0);
         MapArea npcMapForEdgeCase = null;
         if (someNpc != null) {
             npcMapForEdgeCase = farm.getMapArea(someNpc.getHomeLocation());

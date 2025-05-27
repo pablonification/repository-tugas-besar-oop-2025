@@ -49,6 +49,8 @@ public abstract class Item {
 
     public abstract boolean use(Player player, Object target);
 
+    public abstract Item cloneItem();
+
     // @Override
     // public boolean equals(Object o) {
     //     if (this == o) return true;

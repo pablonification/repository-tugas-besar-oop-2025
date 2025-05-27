@@ -16,12 +16,21 @@ import com.spakborhills.model.Item.Seed;
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Enum.Season;
 import com.spakborhills.model.Enum.TileType;
+import com.spakborhills.model.Enum.Weather;
+import com.spakborhills.model.NPC.NPC;
+import com.spakborhills.model.Util.ShippingBin;
+import com.spakborhills.model.Item.Furniture;
+import java.awt.Point;
+import com.spakborhills.model.Object.DeployedObject;
 
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class SaveLoadManager {
 
@@ -30,23 +39,35 @@ public class SaveLoadManager {
 
     public SaveLoadManager() {
         // GsonBuilder untuk pretty printing agar file JSON mudah dibaca
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
+        this.gson = new GsonBuilder()
+                        .setPrettyPrinting()
+                        .create();
     }
 
     public void saveGame(Farm farm, Player player, GameTime timeService) {
         SaveData saveData = new SaveData();
+        MapArea farmMap = farm.getFarmMap(); // Get farmMap once
 
         // 1. Populate Player Data
+        saveData.setPlayerName(player.getName());
+        saveData.setPlayerGender(player.getGender());
         saveData.setPlayerX(player.getCurrentTileX());
         saveData.setPlayerY(player.getCurrentTileY());
         if (player.getCurrentMap() != null) {
-            saveData.setCurrentMapId(player.getCurrentMap().getName()); // Menggunakan getName()
+            saveData.setCurrentMapId(player.getCurrentMap().getName());
         } else {
             System.err.println("Peringatan saat menyimpan: Player currentMap is null!");
-            saveData.setCurrentMapId("Farm"); // Fallback ke nama default FarmMap jika ada
+            saveData.setCurrentMapId(farm.getFarmMap().getName()); // Fallback
         }
         saveData.setPlayerMoney(player.getGold());
         saveData.setPlayerEnergy(player.getEnergy());
+        saveData.setPlayerFarmName(player.getFarmName());
+
+        if (player.getPartner() != null) {
+            saveData.setPlayerPartner(new SaveData.PartnerData(player.getPartner().getName(), player.getPartner().getRelationshipStatus()));
+        } else {
+            saveData.setPlayerPartner(null);
+        }
 
         // 2. Populate Inventory Data
         InventoryData inventoryData = new InventoryData();
@@ -55,40 +76,122 @@ public class SaveLoadManager {
                 Item item = entry.getKey();
                 Integer quantity = entry.getValue();
                 if (item != null && quantity != null && quantity > 0) {
-                    inventoryData.addItem(new InventoryItemData(item.getName(), quantity));
+                    inventoryData.addItem(new InventoryItemData(item.getName(), quantity)); // Assuming Item name is its ID
                 }
             }
         }
         saveData.setPlayerInventory(inventoryData);
+        saveData.setUnlockedRecipes(player.getUnlockedRecipes()); // Assuming Player has getUnlockedRecipes()
 
-        // 3. Populate Time Data
+        // 3. Populate Time & Game World Data
         saveData.setCurrentDay(timeService.getCurrentDay());
         saveData.setCurrentHour(timeService.getHour());
+        saveData.setCurrentMinute(timeService.getMinute());
         saveData.setCurrentSeason(timeService.getCurrentSeason().toString());
         saveData.setCurrentYear(timeService.getCurrentYear());
+        saveData.setCurrentWeather(farm.getCurrentWeather().toString()); // Assuming Farm has getCurrentWeather()
 
         // 4. Populate Farm Tile Data
         Map<String, FarmTileData> farmTilesData = new HashMap<>();
-        // Always save tiles from the main FarmMap
-        MapArea farmMap = farm.getFarmMap(); 
         if (farmMap != null && farmMap.getTiles() != null) {
+            // Log entry points for debugging
+            if (farmMap instanceof com.spakborhills.model.Map.FarmMap) {
+                com.spakborhills.model.Map.FarmMap concreteFarmMap = (com.spakborhills.model.Map.FarmMap) farmMap;
+                List<Point> entryPoints = concreteFarmMap.getEntryPoints();
+                System.out.println("Debug: Found " + entryPoints.size() + " entry points during save:");
+                for (Point p : entryPoints) {
+                    TileType type = concreteFarmMap.getTile(p.x, p.y).getType();
+                    System.out.println("  Entry point at (" + p.x + "," + p.y + "), current TileType: " + type);
+                }
+            }
+            
             Tile[][] tiles = farmMap.getTiles();
             for (int r = 0; r < tiles.length; r++) {
                 for (int c = 0; c < tiles[r].length; c++) {
                     Tile currentTile = tiles[r][c];
-                    if (currentTile != null && currentTile.getPlantedSeed() != null) {
-                        Seed plantedSeed = currentTile.getPlantedSeed();
+                    if (currentTile != null) { // Save all tiles, not just planted ones
+                        String cropId = null;
+                        int growthStage = 0;
+                        if (currentTile.getPlantedSeed() != null) {
+                            Seed plantedSeed = currentTile.getPlantedSeed();
+                            cropId = plantedSeed.getCropYieldName(); // Or seed.getName() if that's the ID
+                            growthStage = currentTile.getGrowthDays();
+                        }
                         FarmTileData tileData = new FarmTileData(
-                                plantedSeed.getCropYieldName(),
-                                currentTile.getGrowthDays(),
-                                currentTile.isWatered()
+                                currentTile.getType().toString(),
+                                cropId,
+                                growthStage,
+                                currentTile.isWatered(),
+                                currentTile.getLastWateredDay()
                         );
                         farmTilesData.put(c + "," + r, tileData);
+                        
+                        // Debug log when saving TILLED tiles
+                        if (currentTile.getType() == TileType.TILLED) {
+                            System.out.println("DEBUG: Saving TILLED tile at (" + c + "," + r + ")");
+                        }
                     }
                 }
             }
         }
         saveData.setFarmTiles(farmTilesData);
+
+        // 5. Populate Shipping Bin Contents
+        List<SaveData.ShippingBinItemData> shippingBinItems = new ArrayList<>();
+        ShippingBin shippingBin = farm.getShippingBin();
+        if (shippingBin != null && shippingBin.getItems() != null) {
+            for (Map.Entry<Item, Integer> entry : shippingBin.getItems().entrySet()) {
+                shippingBinItems.add(new SaveData.ShippingBinItemData(entry.getKey().getName(), entry.getValue()));
+            }
+        }
+        saveData.setShippingBinContents(shippingBinItems);
+
+        // 6. Populate NPC Data
+        Map<String, SaveData.NpcData> npcDataMap = new HashMap<>();
+        if (farm.getNpcs() != null) { // Assuming Farm has a way to get all NPCs
+            for (NPC npc : farm.getNpcs()) {
+                if (npc != null) {
+                    npcDataMap.put(npc.getName(), new SaveData.NpcData(npc.getHeartPoints(), npc.getRelationshipStatus()));
+                }
+            }
+        }
+        saveData.setNpcDataMap(npcDataMap);
+
+        // 7. Populate Milestones
+        saveData.setMilestonesAchieved(farm.getAchievedMilestones()); // Assuming Farm has getAchievedMilestones()
+
+        // 8. Populate Bonus Data (Example for Furniture)
+        SaveData.BonusData bonusData = new SaveData.BonusData();
+        List<SaveData.FurnitureData> furnitureList = new ArrayList<>();
+        if (farm.getHouse() != null && farm.getHouse().getFurnitures() != null) {
+             for (Furniture furniture : farm.getHouse().getFurnitures()) {
+                 furnitureList.add(new SaveData.FurnitureData(furniture.getName(), furniture.getX(), furniture.getY()));
+             }
+        }
+        bonusData.setHouseFurniture(furnitureList);
+        saveData.setBonusData(bonusData);
+
+        // 9. Populate Farm Deployed Objects
+        List<SaveData.PlacedObjectData> farmObjectsData = new ArrayList<>();
+        // Ensure farmMap is an instance of FarmMap before casting or calling specific methods
+        if (farmMap instanceof com.spakborhills.model.Map.FarmMap) {
+            com.spakborhills.model.Map.FarmMap concreteFarmMap = (com.spakborhills.model.Map.FarmMap) farmMap;
+            if (concreteFarmMap.getDeployedObjectsMap() != null) { 
+                for (Map.Entry<Point, DeployedObject> entry : concreteFarmMap.getDeployedObjectsMap().entrySet()) {
+                    Point anchor = entry.getKey();
+                    DeployedObject deployedObject = entry.getValue();
+                    if (deployedObject != null) {
+                        farmObjectsData.add(new SaveData.PlacedObjectData(
+                            deployedObject.getName(),
+                            deployedObject.getClass().getName(), // Get the full class name for reflection
+                            anchor.x,
+                            anchor.y
+                        ));
+                    }
+                }
+            }
+        }
+        saveData.setFarmDeployedObjects(farmObjectsData);
 
         // Tulis ke file JSON
         try (FileWriter writer = new FileWriter(SAVE_FILE_PATH)) {
@@ -119,156 +222,291 @@ public class SaveLoadManager {
             return;
         }
 
-        // Referensi ke ItemRegistry dari Farm, sangat penting untuk membuat objek Item/Seed dari ID
         Map<String, Item> itemRegistry = farm.getItemRegistry();
         if (itemRegistry == null) {
-            System.err.println("KRITICAL ERROR saat load: ItemRegistry di Farm adalah null. Tidak bisa memuat item/crop.");
-            // Mungkin lempar exception atau hentikan proses load
+            System.err.println("CRITICAL ERROR saat load: ItemRegistry di Farm adalah null. Tidak bisa memuat item/crop.");
             return;
         }
+        
+        // Clear existing NPC list in Farm before loading, or update existing ones
+        // farm.clearNpcs(); // Or similar logic
 
         // 1. Apply Player Data
-        // Perpindahan map dan posisi HARUS ditangani dengan benar.
-        // Untuk sementara, kita set posisi. Idealnya, panggil GameController.
-        // gameController.requestVisitByID(saveData.getCurrentMapId(), saveData.getPlayerX(), saveData.getPlayerY());
-        // Jika GameController tidak diinject, Farm atau Main class perlu memanggil ini setelah load.
-        // Untuk sekarang, kita set map dan posisi di player, TAPI ini mungkin tidak cukup untuk render dll.
+        player.setName(saveData.getPlayerName());
+        player.setGender(saveData.getPlayerGender());
+        player.setFarmName(saveData.getPlayerFarmName());
+        player.setGold(saveData.getPlayerMoney());
+        player.setEnergy(saveData.getPlayerEnergy());
+
+        if (saveData.getPlayerPartner() != null && farm.getNpcs() !=null) {
+            Optional<NPC> partnerNpcOpt = farm.findNPC(saveData.getPlayerPartner().getName());
+            if (partnerNpcOpt.isPresent()) {
+                NPC partnerNpc = partnerNpcOpt.get();
+                player.setPartner(partnerNpc);
+                partnerNpc.setRelationshipStatus(saveData.getPlayerPartner().getStatus());
+                 // Also update the NPC in the main list if not done by reference
+                Optional<NPC> npcInListOpt = farm.findNPC(partnerNpc.getName());
+                if (npcInListOpt.isPresent()) {
+                    NPC npcInList = npcInListOpt.get();
+                    npcInList.setRelationshipStatus(saveData.getPlayerPartner().getStatus());
+                }
+            } else {
+                 System.err.println("Error loading partner: NPC with name '" + saveData.getPlayerPartner().getName() + "' not found.");
+            }
+        } else {
+            player.setPartner(null);
+        }
+        
         MapArea targetMap = farm.getWorldMap().getMapAreaByName(saveData.getCurrentMapId());
         if (targetMap == null && farm.getFarmMap().getName().equals(saveData.getCurrentMapId())) {
             targetMap = farm.getFarmMap();
         }
 
         if (targetMap != null) {
-            player.setCurrentMap(targetMap); // Ini mungkin tidak cukup, perlu koordinasi dengan GamePanel/Controller
+            player.setCurrentMap(targetMap); 
             player.setPosition(saveData.getPlayerX(), saveData.getPlayerY());
             System.out.println("Player map set to: " + targetMap.getName() + " and position to (" + saveData.getPlayerX() + "," + saveData.getPlayerY() + ")");
         } else {
-            System.err.println("Error loading player map: Map ID '" + saveData.getCurrentMapId() + "' tidak ditemukan.");
-            // Fallback ke map default jika perlu
+            System.err.println("Error loading player map: Map ID '" + saveData.getCurrentMapId() + "' tidak ditemukan. Defaulting to farm map.");
+            player.setCurrentMap(farm.getFarmMap()); // Default to farm map
+            player.setPosition(farm.getFarmMap().getPlayerSpawnX(), farm.getFarmMap().getPlayerSpawnY()); // Default spawn
         }
-        player.setGold(saveData.getPlayerMoney());
-        player.setEnergy(saveData.getPlayerEnergy());
+
 
         // 2. Apply Inventory Data
         if (player.getInventory() != null) {
-            player.getInventory().clear(); // Bersihkan inventaris lama
+            player.getInventory().clear(); 
             if (saveData.getPlayerInventory() != null && saveData.getPlayerInventory().getItems() != null) {
                 for (InventoryItemData itemData : saveData.getPlayerInventory().getItems()) {
                     Item itemTemplate = itemRegistry.get(itemData.getItemId());
                     if (itemTemplate != null) {
-                        // Kuantitas sudah ada di itemData.getQuantity()
-                        // addItem di Inventory menangani kuantitas
-                        player.getInventory().addItem(itemTemplate, itemData.getQuantity());
+                        player.getInventory().addItem(itemTemplate.cloneItem(), itemData.getQuantity()); // cloneItem if necessary
                     } else {
                         System.err.println("Error loading inventory: Item ID '" + itemData.getItemId() + "' tidak ditemukan di registry.");
                     }
                 }
             }
         }
-        System.out.println("Inventory loaded.");
+        if (saveData.getUnlockedRecipes() != null) {
+             player.setUnlockedRecipes(new ArrayList<>(saveData.getUnlockedRecipes())); // Assuming Player has setUnlockedRecipes()
+        }
+        System.out.println("Inventory and recipes loaded.");
 
         // 3. Apply Time Data
         timeService.setDayOfMonth(saveData.getCurrentDay());
-        timeService.setTime(saveData.getCurrentHour(), 0); // Set menit ke 0
+        timeService.setTime(saveData.getCurrentHour(), saveData.getCurrentMinute()); 
         try {
-            Season season = Season.valueOf(saveData.getCurrentSeason().toUpperCase()); // Pastikan case sesuai enum
+            Season season = Season.valueOf(saveData.getCurrentSeason().toUpperCase()); 
             timeService.setSeason(season);
         } catch (IllegalArgumentException e) {
             System.err.println("Error loading time: Season string '" + saveData.getCurrentSeason() + "' tidak valid.");
             timeService.setSeason(Season.SPRING); // Fallback
         }
         timeService.setYear(saveData.getCurrentYear());
-        System.out.println("Time loaded: Day " + timeService.getCurrentDay() + ", Hour " + timeService.getHour() + ", Season " + timeService.getCurrentSeason() + ", Year " + timeService.getCurrentYear());
+        try {
+            Weather weather = Weather.valueOf(saveData.getCurrentWeather().toUpperCase());
+            farm.setCurrentWeather(weather); // Assuming Farm has setCurrentWeather()
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error loading weather: Weather string '" + saveData.getCurrentWeather() + "' tidak valid.");
+            farm.setCurrentWeather(Weather.SUNNY); // Fallback
+        }
+        System.out.println("Time and weather loaded: Day " + timeService.getCurrentDay() + ", Time " + timeService.getHour() + ":" + timeService.getMinute() + ", Season " + timeService.getCurrentSeason() + ", Year " + timeService.getCurrentYear() + ", Weather " + farm.getCurrentWeather());
 
         // 4. Apply Farm Tile Data
-        // This section will now specifically restore tiles to the FarmMap.
         MapArea farmMapToRestore = farm.getFarmMap(); 
-
         if (farmMapToRestore != null && farmMapToRestore.getTiles() != null && saveData.getFarmTiles() != null) {
-            // First, reset all tiles on the FarmMap to a default state.
-            // This ensures that tiles not in the save data (e.g., previously planted but now empty) are cleared.
-            Tile[][] tilesToReset = farmMapToRestore.getTiles();
-            if (tilesToReset != null) {
-                for (int r = 0; r < tilesToReset.length; r++) {
-                    for (int c = 0; c < tilesToReset[r].length; c++) {
-                        Tile tile = tilesToReset[r][c];
-                        if (tile != null) {
-                            // Resetting the tile:
-                            // - setPlantedSeedForLoad(null) should remove any crop and ideally reset type to TILLABLE or default.
-                            // - It should also ideally make the tile unwatered.
-                            // If Tile.java's setPlantedSeedForLoad(null) doesn't fully reset (e.g., type or watered status),
-                            // additional calls like tile.setType(TileType.TILLABLE); or an explicit tile.setWatered(false); might be needed.
-                            tile.setPlantedSeedForLoad(null); 
-                        }
-                    }
-                }
+            // Cast to FarmMap to get entry points (if it is a FarmMap)
+            List<Point> entryPoints = new ArrayList<>();
+            if (farmMapToRestore instanceof com.spakborhills.model.Map.FarmMap) {
+                com.spakborhills.model.Map.FarmMap concreteFarmMap = (com.spakborhills.model.Map.FarmMap) farmMapToRestore;
+                entryPoints = concreteFarmMap.getEntryPoints();
+                System.out.println("Loaded " + entryPoints.size() + " entry points to preserve during tile restoration.");
             }
-            
-            Tile[][] tiles = farmMapToRestore.getTiles(); // Re-fetch, though tilesToReset is the same array
-            if (tiles != null) {
-                for (Map.Entry<String, FarmTileData> entry : saveData.getFarmTiles().entrySet()) {
-                    String[] coords = entry.getKey().split(",");
-                    int x = Integer.parseInt(coords[0]);
-                    int y = Integer.parseInt(coords[1]);
-                    FarmTileData tileData = entry.getValue();
 
-                    if (y >= 0 && y < tiles.length && x >= 0 && x < tiles[y].length) {
-                        Tile targetTile = tiles[y][x];
-                        if (targetTile != null) {
-                            // Reset tile ke TILLABLE atau PLANTED dulu
-                            // targetTile.setType(TileType.TILLABLE); // atau reset total
+            Tile[][] tiles = farmMapToRestore.getTiles();
+            for (Map.Entry<String, FarmTileData> entry : saveData.getFarmTiles().entrySet()) {
+                String[] coords = entry.getKey().split(",");
+                int x = Integer.parseInt(coords[0]);
+                int y = Integer.parseInt(coords[1]);
+                FarmTileData tileData = entry.getValue();
+
+                if (y >= 0 && y < tiles.length && x >= 0 && x < tiles[y].length) {
+                    Tile targetTile = tiles[y][x];
+                    
+                    // Check if this tile is an entry point - if so, preserve it
+                    if (entryPoints.contains(new Point(x, y))) {
+                        System.out.println("Preserving entry point at (" + x + "," + y + ")");
+                        continue; // Skip modifying entry points completely
+                    }
+                    
+                    if (targetTile != null) {
+                        try {
+                            // First store the original type from the save data
+                            TileType originalTileType = TileType.valueOf(tileData.getTileType().toUpperCase());
                             
+                            // Debug for TILLED tiles
+                            if (originalTileType == TileType.TILLED) {
+                                System.out.println("DEBUG: Loading TILLED tile at (" + x + "," + y + ")");
+                            }
+                            
+                            // Now clear any existing seeds - this no longer changes the type thanks to our Tile.java fix
+                            targetTile.setPlantedSeedForLoad(null);
+                            
+                            // If there's a crop to plant
                             if (tileData.getCropId() != null && !tileData.getCropId().isEmpty()) {
-                                // Cari Seed berdasarkan nama CropYield-nya
                                 Seed seedToPlant = null;
                                 for (Item itemFromRegistry : itemRegistry.values()) {
                                     if (itemFromRegistry instanceof Seed) {
                                         Seed currentSeed = (Seed) itemFromRegistry;
                                         if (currentSeed.getCropYieldName().equals(tileData.getCropId())) {
-                                            seedToPlant = currentSeed;
+                                            seedToPlant = (Seed) currentSeed.cloneItem(); // Clone if seeds are stateful
                                             break;
                                         }
                                     }
                                 }
 
                                 if (seedToPlant != null) {
-                                    // Gunakan metode khusus untuk load, atau set manual
-                                    targetTile.setPlantedSeedForLoad(seedToPlant); // Mengatur seed dan tipe tile
+                                    targetTile.setPlantedSeedForLoad(seedToPlant); 
                                     targetTile.setGrowthDays(tileData.getGrowthStage());
                                     if (tileData.isWatered()) {
                                         targetTile.markAsWatered();
                                     } else {
-                                        // Jika tidak disiram di save, pastikan flag isWatered di tile juga false
-                                        // Tile.setPlantedSeedForLoad mungkin sudah mengatur ini, atau perlu setter eksplisit
-                                        // Untuk sekarang, kita asumsikan setPlantedSeedForLoad cukup
+                                        targetTile.clearWatered(); // Ensure it's marked as not watered
                                     }
+                                    targetTile.setLastWateredDay(tileData.getLastWateredDay());
                                 } else {
                                     System.err.println("Error loading farm tile at ("+x+","+y+"): Seed untuk crop ID '" + tileData.getCropId() + "' tidak ditemukan.");
-                                    targetTile.setType(TileType.TILLABLE); // Reset jika gagal load crop
-                                    targetTile.setPlantedSeedForLoad(null); // Ensure no seed if it failed
+                                    targetTile.setType(TileType.TILLABLE); 
                                 }
                             } else {
-                                // Tidak ada cropId, pastikan tile bukan PLANTED
-                                // The reset loop above should have handled this, but as a safeguard:
-                                targetTile.setPlantedSeedForLoad(null);
-                                if(targetTile.getType() == TileType.PLANTED){
-                                   targetTile.setType(TileType.TILLABLE); 
+                                // If no crop, make sure we set the right tile type from the save data
+                                // This will restore TILLED and any other types properly
+                                targetTile.setType(originalTileType);
+                                
+                                // Set water status if applicable
+                                if (originalTileType == TileType.TILLED && tileData.isWatered()) {
+                                    targetTile.markAsWatered();
+                                    targetTile.setLastWateredDay(tileData.getLastWateredDay());
                                 }
                             }
+                        } catch (IllegalArgumentException e) {
+                            System.err.println("Error loading farm tile at ("+x+","+y+"): TileType string '" + tileData.getTileType() + "' tidak valid. Defaulting to TILLABLE.");
+                            targetTile.setType(TileType.TILLABLE);
                         }
-                    } else {
-                        System.err.println("Error loading farm tile: Koordinat (" + x + "," + y + ") di luar batas untuk map " + farmMapToRestore.getName());
                     }
                 }
             }
-             System.out.println("Farm tiles loaded for map: " + farmMapToRestore.getName());
-        } else {
-            if (farmMapToRestore == null) {
-                System.out.println("FarmMap not found, cannot load farm tiles.");
-            } else {
-                System.out.println("No farm tiles to load or FarmMap tiles array is null.");
+        }
+        System.out.println("Farm tiles loaded.");
+
+        // 5. Apply Shipping Bin Contents
+        ShippingBin shippingBin = farm.getShippingBin();
+        if (shippingBin != null) {
+            shippingBin.clearBin(); // Clear existing items
+            if (saveData.getShippingBinContents() != null) {
+                for (SaveData.ShippingBinItemData itemData : saveData.getShippingBinContents()) {
+                    Item itemTemplate = itemRegistry.get(itemData.getItemId());
+                    if (itemTemplate != null) {
+                        shippingBin.addItem(itemTemplate.cloneItem(), itemData.getQuantity()); // cloneItem if necessary
+                    } else {
+                        System.err.println("Error loading shipping bin: Item ID '" + itemData.getItemId() + "' tidak ditemukan di registry.");
+                    }
+                }
             }
         }
-        System.out.println("Save data applied to game state.");
+        System.out.println("Shipping bin loaded.");
+
+        // 6. Apply NPC Data
+        if (saveData.getNpcDataMap() != null && farm.getNpcs() != null) {
+            for (Map.Entry<String, SaveData.NpcData> entry : saveData.getNpcDataMap().entrySet()) {
+                Optional<NPC> npcOpt = farm.findNPC(entry.getKey());
+                if (npcOpt.isPresent()) {
+                    NPC npc = npcOpt.get();
+                    SaveData.NpcData npcSaveData = entry.getValue();
+                    npc.setHeartPoints(npcSaveData.getHeartPoints());
+                    if (player.getPartner() == null || !player.getPartner().getName().equals(npc.getName())) {
+                         npc.setRelationshipStatus(npcSaveData.getRelationshipStatus());
+                    } else {
+                         npc.setRelationshipStatus(player.getPartner().getRelationshipStatus());
+                    }
+                } else {
+                    System.err.println("Error loading NPC data: NPC with name '" + entry.getKey() + "' not found.");
+                }
+            }
+        }
+        System.out.println("NPC data loaded.");
+
+        // 7. Apply Milestones
+        if (saveData.getMilestonesAchieved() != null) {
+            farm.setAchievedMilestones(new ArrayList<>(saveData.getMilestonesAchieved())); // Assuming Farm has setAchievedMilestones()
+        }
+        System.out.println("Milestones loaded.");
+
+        // 8. Apply Bonus Data (Example for Furniture)
+        if (saveData.getBonusData() != null && saveData.getBonusData().getHouseFurniture() != null) {
+            if (farm.getHouse() != null) {
+                farm.getHouse().clearFurniture(); // Clear existing furniture
+                for (SaveData.FurnitureData furnitureData : saveData.getBonusData().getHouseFurniture()) {
+                    Item furnitureItem = itemRegistry.get(furnitureData.getItemId());
+                    if (furnitureItem instanceof Furniture) {
+                        Furniture newFurniture = (Furniture) furnitureItem.cloneItem(); // Clone if necessary
+                        newFurniture.setPosition(furnitureData.getX(), furnitureData.getY()); // Assuming Furniture has setPosition
+                        farm.getHouse().addFurniture(newFurniture);
+                    } else {
+                        System.err.println("Error loading furniture: Item ID '" + furnitureData.getItemId() + "' is not a valid Furniture item or not found.");
+                    }
+                }
+            }
+        }
+        System.out.println("Bonus data (furniture) loaded.");
+        
+        // 9. Apply Farm Deployed Objects
+        if (farm.getFarmMap() instanceof com.spakborhills.model.Map.FarmMap) {
+            com.spakborhills.model.Map.FarmMap concreteFarmMap = (com.spakborhills.model.Map.FarmMap) farm.getFarmMap();
+            concreteFarmMap.clearAllDeployedObjects(); // Clear existing objects first
+
+            if (saveData.getFarmDeployedObjects() != null) {
+                for (SaveData.PlacedObjectData placedObjectData : saveData.getFarmDeployedObjects()) {
+                    try {
+                        Class<?> deployedObjectClass = Class.forName(placedObjectData.getObjectClassType());
+                        // Assuming a no-arg constructor for all DeployedObject types
+                        DeployedObject deployedObjectInstance = (DeployedObject) deployedObjectClass.getDeclaredConstructor().newInstance();
+                        
+                        // Some objects might need their name set if it's used beyond just identification
+                        // For example, if House.getName() is used for UI or something.
+                        // DeployedObject itself doesn't have setName, so this depends on concrete classes
+                        // or we add setName to DeployedObject if it's a common need.
+                        // For now, we rely on the object's default name or constructor setting it.
+                        // If specific objects like House need their name restored: 
+                        // if (deployedObjectInstance instanceof com.spakborhills.model.Object.House) {
+                        //    ((com.spakborhills.model.Object.House) deployedObjectInstance).setName(placedObjectData.getObjectName());
+                        // }
+                        // For simplicity, let's assume name on DeployedObject is mainly for identification or handled by constructor.
+
+                        boolean placed = concreteFarmMap.placeObject(deployedObjectInstance, placedObjectData.getX(), placedObjectData.getY());
+                        if (placed) {
+                            System.out.println("Loaded and placed deployed object: " + deployedObjectInstance.getName() + " of type " + placedObjectData.getObjectClassType() + " at (" + placedObjectData.getX() + "," + placedObjectData.getY() + ")");
+                        } else {
+                            System.err.println("Error loading deployed object: Failed to place " + placedObjectData.getObjectName() + " of type " + placedObjectData.getObjectClassType() + " at (" + placedObjectData.getX() + "," + placedObjectData.getY() + ")");
+                        }
+                    } catch (ClassNotFoundException e) {
+                        System.err.println("Error loading deployed object: Class not found - " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
+                    } catch (NoSuchMethodException e) {
+                        System.err.println("Error loading deployed object: No-arg constructor not found for " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
+                    } catch (InstantiationException | IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
+                        System.err.println("Error loading deployed object: Failed to instantiate " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
+                    } catch (Exception e) { // Catch any other unexpected errors during object restoration
+                        System.err.println("Unexpected error loading deployed object " + placedObjectData.getObjectName() + ": " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+            }
+        } else {
+            System.err.println("Could not load deployed farm objects: FarmMap is not an instance of com.spakborhills.model.Map.FarmMap");
+        }
+        System.out.println("Farm deployed objects loading process completed.");
+
+        System.out.println("All save data applied to game state.");
     }
+
 } 

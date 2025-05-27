@@ -13,6 +13,7 @@ import java.awt.Dimension;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.ArrayList;
 
 /**
  * Merepresentasikan peta kebun pemain (Farm Map).
@@ -27,27 +28,46 @@ public class FarmMap implements MapArea{
     private final Tile[][] tiles;
     private final Map<Point, DeployedObject> deployedObjectsMap;
     private final java.util.List<Point> entryPoints; // Daftar EntryPoint
+    private int playerSpawnX; // Added for default spawn X
+    private int playerSpawnY; // Added for default spawn Y
+
+    /**
+     * Default constructor for new games, initializes with default objects and entry points.
+     */
+    public FarmMap() {
+        this(true); // Initialize with defaults
+    }
 
     /**
      * Konstruktor untuk FarmMap.
-     * Menginisialisasi grid Tile, menempatkan objek awal, dan mendefinisikan entry point.
+     * Menginisialisasi grid Tile, mendefinisikan entry point, 
+     * dan secara kondisional menempatkan objek awal.
+     * @param initializeDefaults Jika true, tempatkan objek awal (House, Pond, dll.). Jika false, jangan tempatkan.
      */
-    public FarmMap() {
+    public FarmMap(boolean initializeDefaults) {
         this.tiles = new Tile[DEFAULT_HEIGHT][DEFAULT_WIDTH];
         this.deployedObjectsMap = new HashMap<>();
         this.entryPoints = new java.util.ArrayList<>();
 
-        // 1. Inisialisasi semua tile sebagai TILLABLE
+        this.playerSpawnX = DEFAULT_WIDTH / 2; 
+        this.playerSpawnY = DEFAULT_HEIGHT / 2;
+
+        // Always initialize all tiles as TILLABLE first
         for (int y = 0; y < DEFAULT_HEIGHT; y++) {
             for (int x = 0; x < DEFAULT_WIDTH; x++) {
                 tiles[y][x] = new Tile(TileType.TILLABLE);
             }
         }
 
-        placeInitialDeployedObjects();
+        // Define entry points first - always need to do this
         defineEntryPoints();
 
-        System.out.println("FarmMap '" + name + "' berhasil dibuat dengan ukuran " + DEFAULT_WIDTH + "x" + DEFAULT_HEIGHT + ".");
+        // Only place house, pond, etc when initializing defaults
+        if (initializeDefaults) {
+            placeInitialDeployedObjects();
+        }
+
+        System.out.println("FarmMap '" + name + "' berhasil dibuat. Initial defaults placed: " + initializeDefaults);
     } 
 
     /**
@@ -105,11 +125,16 @@ public class FarmMap implements MapArea{
         }
     }
 
+    /**
+     * Defines entry points at the north, east, south, and west edges of the map.
+     * It's important this runs before placeInitialDeployedObjects and is always called
+     * regardless of initializeDefaults value.
+     */
     private void defineEntryPoints() {
         // Entry Point Utara (tengah atas)
         int northX = DEFAULT_WIDTH / 2;
         int northY = 0;
-        if (isWithinBounds(northX, northY) && tiles[northY][northX].getType() == TileType.TILLABLE) { // Hanya ubah jika TILLABLE
+        if (isWithinBounds(northX, northY)) {
             tiles[northY][northX].setType(TileType.ENTRY_POINT);
             entryPoints.add(new Point(northX, northY));
             System.out.println("Entry Point Utara ditambahkan di (" + northX + "," + northY + ")");
@@ -118,7 +143,7 @@ public class FarmMap implements MapArea{
         // Entry Point Timur (tengah kanan)
         int eastX = DEFAULT_WIDTH - 1;
         int eastY = DEFAULT_HEIGHT / 2;
-        if (isWithinBounds(eastX, eastY) && tiles[eastY][eastX].getType() == TileType.TILLABLE) {
+        if (isWithinBounds(eastX, eastY)) {
             tiles[eastY][eastX].setType(TileType.ENTRY_POINT);
             entryPoints.add(new Point(eastX, eastY));
             System.out.println("Entry Point Timur ditambahkan di (" + eastX + "," + eastY + ")");
@@ -127,7 +152,7 @@ public class FarmMap implements MapArea{
         // Entry Point Selatan (tengah bawah)
         int southX = DEFAULT_WIDTH / 2;
         int southY = DEFAULT_HEIGHT - 1;
-        if (isWithinBounds(southX, southY) && tiles[southY][southX].getType() == TileType.TILLABLE) {
+        if (isWithinBounds(southX, southY)) {
             tiles[southY][southX].setType(TileType.ENTRY_POINT);
             entryPoints.add(new Point(southX, southY));
             System.out.println("Entry Point Selatan ditambahkan di (" + southX + "," + southY + ")");
@@ -136,7 +161,7 @@ public class FarmMap implements MapArea{
         // Entry Point Barat (tengah kiri)
         int westX = 0;
         int westY = DEFAULT_HEIGHT / 2;
-        if (isWithinBounds(westX, westY) && tiles[westY][westX].getType() == TileType.TILLABLE) {
+        if (isWithinBounds(westX, westY)) {
             tiles[westY][westX].setType(TileType.ENTRY_POINT);
             entryPoints.add(new Point(westX, westY));
             System.out.println("Entry Point Barat ditambahkan di (" + westX + "," + westY + ")");
@@ -151,14 +176,23 @@ public class FarmMap implements MapArea{
         return java.util.Collections.unmodifiableList(this.entryPoints);
     }
 
+    // Added getters for player spawn coordinates
+    public int getPlayerSpawnX() {
+        return playerSpawnX;
+    }
+
+    public int getPlayerSpawnY() {
+        return playerSpawnY;
+    }
+
     /**
      * Helper untuk memeriksa apakah area tertentu tersedia untuk penempatan objek.
      */
     private boolean isAreaAvailable(int startX, int startY, int width, int height) {
         for (int y = startY; y < startY + height; y++) {
             for (int x = startX; x < startX + width; x++) {
-                if (!isWithinBounds(x, y) || isOccupied(x, y)) {
-                    return false; // Area tidak valid atau sudah terisi
+                if (!isWithinBounds(x, y) || isOccupied(x, y) || tiles[y][x].getType() == TileType.ENTRY_POINT) { // Check for ENTRY_POINT
+                    return false; // Area tidak valid, sudah terisi, atau merupakan entry point
                 }
             }
         }
@@ -252,35 +286,28 @@ public class FarmMap implements MapArea{
             return false;
         }
 
-        // 1. Validasi apakah area penempatan cukup dan tidak tumpang tindih
         if (!isAreaAvailable(x, y, obj.getWidth(), obj.getHeight())) {
-            // System.out.println("Debug: Area (" + x + "," + y + ") to (" + (x+obj.getWidth()-1) + "," + (y+obj.getHeight()-1) + ") tidak tersedia untuk " + obj.getName());
             return false;
         }
 
-        // 2. Jika valid, tempatkan objek
-        // Simpan referensi objek di titik anchor (kiri atas) di map
         deployedObjectsMap.put(new Point(x, y), obj);
 
-        // Update semua tile yang ditempati oleh objek ini
         for (int i = 0; i < obj.getHeight(); i++) {
             for (int j = 0; j < obj.getWidth(); j++) {
                 Tile currentTile = getTile(x + j, y + i);
                 if (currentTile != null) {
-                    currentTile.associateObject(obj); // Memberitahu tile ada objek di atasnya
-                    // Jika objeknya adalah Pond, set tile type menjadi WATER
+                    // The associateObject method in Tile now handles preserving ENTRY_POINT type.
+                    // It also correctly sets DEPLOYED_OBJECT for non-Pond, non-ENTRY_POINT cases.
+                    currentTile.associateObject(obj);
+
+                    // If the object is a Pond, explicitly set the TileType to WATER.
+                    // This overrides the DEPLOYED_OBJECT that might have been set by associateObject
+                    // if the tile wasn't an ENTRY_POINT.
                     if (obj instanceof Pond) {
                         currentTile.setType(TileType.WATER);
-                    } else {
-                        // Untuk objek lain, tile type menjadi DEPLOYED_OBJECT (default dari associateObject jika tidak di-override)
-                        // Jika associateObject() sudah menangani type setting ke DEPLOYED_OBJECT, baris ini mungkin tidak perlu
-                        // Namun untuk kejelasan, kita set eksplisit jika BUKAN Pond.
-                        // Asumsi: associateObject() mungkin hanya link object, dan type di-set terpisah atau oleh tile itu sendiri.
-                        // Jika associateObject sudah set ke DEPLOYED_OBJECT, maka else ini bisa di-skip.
-                        // Untuk aman, kita biarkan: Tile.associateObject akan set DEPLOYED_OBJECT, lalu kita override untuk Pond.
-                        // Revisi: Tile.associateObject() memang mengubah type menjadi DEPLOYED_OBJECT.
-                        // Jadi, kita cukup override untuk Pond.
-                    }
+                    } 
+                    // No specific handling for House or ShippingBinObject here regarding tile type,
+                    // as associateObject (if not ENTRY_POINT) would have set it to DEPLOYED_OBJECT.
                 }
             }
         }
@@ -350,6 +377,21 @@ public class FarmMap implements MapArea{
         }
         System.err.println("Objek " + objToRemove.getName() + " tidak ditemukan untuk dihapus.");
         return false;
+    }
+
+    public Map<Point, DeployedObject> getDeployedObjectsMap() {
+        return this.deployedObjectsMap;
+    }
+
+    public void clearAllDeployedObjects() {
+        // Create a list of objects to remove to avoid ConcurrentModificationException
+        java.util.List<DeployedObject> objectsToRemove = new ArrayList<>(deployedObjectsMap.values());
+        for (DeployedObject obj : objectsToRemove) {
+            removeObject(obj); // removeObject already handles resetting tiles
+        }
+        // Sanity check, though removeObject should handle it.
+        // deployedObjectsMap.clear(); // This would orphan tiles if removeObject wasn't thorough
+        System.out.println("All deployed objects cleared from FarmMap.");
     }
 
 }

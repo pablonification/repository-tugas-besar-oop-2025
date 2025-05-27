@@ -81,5 +81,10 @@ public class Seed extends Item {
     public int getQuantityPerHarvest() {
         return quantityPerHarvest;
     }
+
+    @Override
+    public Item cloneItem() {
+        return new Seed(getName(), getBuyPrice(), daysToHarvest, targetSeason, cropYieldName, quantityPerHarvest);
+    }
    
 }

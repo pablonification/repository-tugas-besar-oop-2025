@@ -113,19 +113,20 @@ public class Player {
     private static final int CHAT_HEART_POINTS_GAIN = 10;
 
     // --- Atribut ---
-    private final String name;
-    private final Gender gender;
+    private String name;
+    private Gender gender;
     private int energy;
-    private final String farmName;
-    private NPC partner; // null jika single
+    private String farmName;
     private int gold;
     private final Inventory inventory;
     private MapArea currentMap;
     private int currentTileX;
     private int currentTileY;
+    private NPC partner; // null jika single
     private String favoriteItemName;
     private Item selectedItem; // Ditambahkan
     private int engagementDay;
+    private List<String> unlockedRecipes; // Added for save/load
 
     // Atribut untuk sprite dan animasi pemain
     private String spritesheetPathPlayer; // Ganti nama agar tidak konflik dengan field NPC jika ada subclassing
@@ -170,19 +171,19 @@ public class Player {
     public Player(String name, Gender gender, String farmName, MapArea startMap, int startX, int startY,
                   Map<String, Item> itemRegistry, String spritesheetPath,
                   int spriteWidth, int spriteHeight) { // Hanya perlu lebar & tinggi satu frame
-        this.name = name; //
-        this.gender = gender; //
-        this.farmName = farmName; //
-        this.energy = MAX_ENERGY; //
+        this.name = name;
+        this.gender = gender;
+        this.farmName = farmName;
+        this.energy = MAX_ENERGY;
         this.gold = DEFAULT_STARTING_GOLD;
-        this.inventory = new Inventory(); //
-        this.currentMap = startMap; //
-        this.currentTileX = startX; //
-        this.currentTileY = startY; //
+        this.inventory = new Inventory();
+        this.currentMap = startMap;
+        this.currentTileX = startX;
+        this.currentTileY = startY;
         this.favoriteItemName = "";
         this.partner = null;
         this.selectedItem = null;
-        this.engagementDay = -1; //
+        this.engagementDay = -1;
 
         // Inisialisasi sprite
         this.spritesheetPathPlayer = spritesheetPath;
@@ -428,23 +429,51 @@ public class Player {
     public int getCurrentTileY() { return currentTileY; }
     public Point getPosition() { return new Point(currentTileX, currentTileY); }
     public String getFavoriteItemName() { return favoriteItemName; }
-    public Item getSelectedItem() { return selectedItem; } // Ditambahkan
-    public int getEngagementDay() { return engagementDay; } // Ditambahkan
-    public void setEngagementDay(int engagementDay) { this.engagementDay = engagementDay; } // Ditambahkan
+    public Item getSelectedItem() { return selectedItem; }
+    public int getEngagementDay() { return engagementDay; }
+
+    // Added getter and setter for unlockedRecipes
+    public List<String> getUnlockedRecipes() {
+        if (this.unlockedRecipes == null) { // Initialize if null to prevent NullPointerExceptions
+            this.unlockedRecipes = new ArrayList<>();
+        }
+        return unlockedRecipes;
+    }
+
+    public void setUnlockedRecipes(List<String> unlockedRecipes) {
+        this.unlockedRecipes = unlockedRecipes;
+    }
+
+    public void unlockRecipe(String recipeId) { // Helper method to add a recipe
+        if (this.unlockedRecipes == null) {
+            this.unlockedRecipes = new ArrayList<>();
+        }
+        if (!this.unlockedRecipes.contains(recipeId)) {
+            this.unlockedRecipes.add(recipeId);
+        }
+    }
 
     // --- Setters ---
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
+    }
+
+    public void setFarmName(String farmName) {
+        this.farmName = farmName;
+    }
+
     public void setPartner(NPC partner) { this.partner = partner; }
     public void setPosition(int x, int y) { this.currentTileX = x; this.currentTileY = y; }
     public void setCurrentMap(MapArea map) { this.currentMap = map; }
     public void setFavoriteItemName(String itemName) { this.favoriteItemName = itemName; }
-    public void setSelectedItem(Item item) { // Ditambahkan
-        // Opsional: Cek apakah item ada di inventory sebelum di-set
-        // if (inventory.hasItem(item, 1) || item == null) { // item bisa null jika ingin "unequip"
-             this.selectedItem = item;
-        // } else {
-        //     System.err.println("Error: Mencoba memilih item yang tidak ada di inventory.");
-        // }
+    public void setSelectedItem(Item item) {
+        this.selectedItem = item;
     }
+    public void setEngagementDay(int engagementDay) { this.engagementDay = engagementDay; }
 
     // --- Pengubah State ---
     public void changeEnergy(int amount) {
@@ -464,7 +493,7 @@ public class Player {
         }
     }
 
-    public void setGold(int gold) { // Added setter for loading
+    public void setGold(int gold) {
         if (gold >= 0) {
             this.gold = gold;
         }
@@ -484,7 +513,7 @@ public class Player {
         }
     }
 
-    public void setEnergy(int energy) { // Added setter for loading
+    public void setEnergy(int energy) {
         this.energy = Math.max(MIN_ENERGY, Math.min(MAX_ENERGY, energy));
     }
 
@@ -500,12 +529,11 @@ public class Player {
      * @param direction Arah untuk bergerak.
      * @return true jika perpindahan berhasil, false jika gagal.
      */
-    public boolean move(Direction direction) { //
+    public boolean move(Direction direction) {
         int nextX = currentTileX;
         int nextY = currentTileY;
 
-        // Set arah hadap pemain bahkan sebelum mencoba bergerak
-        setCurrentDirection(direction); // Update arah hadap
+        setCurrentDirection(direction);
 
         switch (direction) {
             case NORTH: nextY--; break;
@@ -516,33 +544,30 @@ public class Player {
 
         if (currentMap == null || !currentMap.isWithinBounds(nextX, nextY)) {
             System.out.println("Tidak bisa bergerak ke luar batas map.");
-            setMoving(false); // Berhenti bergerak jika menabrak batas
+            setMoving(false);
             return false;
         }
         if (currentMap.isOccupied(nextX, nextY)) {
             System.out.println("Jalan terhalang.");
-            setMoving(false); // Berhenti bergerak jika terhalang
+            setMoving(false);
             return false;
         }
 
-        // Tambahan: Cek apakah tile tujuan adalah WATER
         Tile destinationTile = currentMap.getTile(nextX, nextY);
         if (destinationTile != null && destinationTile.getType() == TileType.WATER) {
             System.out.println("Player cannot move onto WATER tile.");
-            return false; // Mencegah pindah ke tile WATER
+            return false;
         }
 
-        // Cek apakah tile tujuan adalah DEPLOYED_OBJECT (misalnya House, Pond, dll.)
-        // atau apakah di luar batas map
         if (currentMap.isOccupied(nextX, nextY)) {
             System.out.println("Jalan terhalang.");
-            setMoving(false); // Berhenti bergerak jika terhalang
+            setMoving(false);
             return false;
         }
 
         currentTileX = nextX;
         currentTileY = nextY;
-        setMoving(true); // Mulai animasi bergerak
+        setMoving(true);
         return true;
     }
 
@@ -556,13 +581,11 @@ public class Player {
      * @return true jika pencangkulan berhasil, false jika gagal.
      */
     public boolean till(Tile targetTile) {
-        // Validasi dasar
         if (targetTile == null) {
             System.out.println("Tidak ada tile target untuk dicangkul.");
             return false;
         }
 
-        // Periksa apakah pemain memiliki Hoe dan sedang dipilih
         boolean hasHoe = false;
         if (selectedItem instanceof Equipment) {
             Equipment currentTool = (Equipment) selectedItem;
@@ -573,21 +596,17 @@ public class Player {
 
         if (!hasHoe) {
             System.out.println("Kamu membutuhkan Hoe untuk mencangkul tanah dan Hoe harus dipilih.");
-            // Bisa juga cek inventory.hasTool("Hoe") jika selectedItem bukan Hoe tapi ada di inv
             return false;
         }
         
-        // Periksa apakah tile bisa dicangkul
         if (!targetTile.canBeTilled()) {
             System.out.println("Tile ini tidak bisa dicangkul.");
-            // (Misalnya sudah dicangkul, ada objek, atau tipe yang tidak bisa dicangkul)
             return false;
         }
 
-        // Lakukan aksi pencangkulan (mengubah tipe Tile)
         targetTile.setType(TileType.TILLED);
         System.out.println("Tanah berhasil dicangkul!");
-        return true; // Berhasil
+        return true;
     }
 
     /**
@@ -658,7 +677,6 @@ public class Player {
             return false;
         }
 
-        // Corrected season check using getTargetSeason() and direct comparison
         Season currentSeasonValue = currentTime.getCurrentSeason();
         Season seedTargetSeasonValue = seedToPlant.getTargetSeason();
         if (seedTargetSeasonValue != Season.ANY && seedTargetSeasonValue != currentSeasonValue) {
@@ -667,14 +685,12 @@ public class Player {
         }
 
         if (inventory.hasItem(seedToPlant, 1)) {
-            // Menggunakan metode setPlantedSeed dari Tile.java yang menerima Seed dan Season
             boolean plantSuccess = targetTile.setPlantedSeed(seedToPlant, currentSeasonValue); 
             if (plantSuccess) {
                 inventory.removeItem(seedToPlant, 1);
                 System.out.println("[Player.plant] Action success: " + seedToPlant.getName() + " planted.");
                 return true;
             } else {
-                // Pesan error spesifik dari Tile.setPlantedSeed() jika ada, atau pesan ini jika gagal karena alasan lain di sana
                 System.out.println("[Player.plant] Action failed: Tile.setPlantedSeed returned false (check Tile's internal logic, e.g. season check there too).");
                 return false;
             }
@@ -693,8 +709,7 @@ public class Player {
      * @param targetTile Objek Tile yang akan disiram.
      * @return true jika berhasil menyiram, false jika gagal.
      */
-    public boolean water(Tile targetTile, Weather currentWeather) { // currentWeather tidak digunakan di sini karena Tile.markAsWatered() tidak memerlukannya secara langsung
-                                                                    // Tile.updateDaily() yang akan menghandle efek hujan
+    public boolean water(Tile targetTile, Weather currentWeather) {
         if (targetTile == null) {
             System.out.println("[Player.water] Error: Target tile is null.");
             return false;
@@ -703,7 +718,7 @@ public class Player {
         boolean hasWateringCan = false;
         if (selectedItem instanceof Equipment) {
             Equipment currentTool = (Equipment) selectedItem;
-            String actualToolType = currentTool.getToolType(); // Get the tool type
+            String actualToolType = currentTool.getToolType();
             System.out.println("[Player.water] Debug: Selected item is Equipment. Name: " + currentTool.getName() + ", Actual ToolType: '" + actualToolType + "'"); 
             
             if (actualToolType != null && actualToolType.equalsIgnoreCase("WateringCan")) {
@@ -753,29 +768,24 @@ public class Player {
             System.out.println("Player.harvest: Tidak ada yang bisa dipanen atau tile tidak valid.");
             return false;
         }
-        // Diasumsikan Tile.harvest() akan mengembalikan daftar Item hasil panen atau null/kosong jika gagal
-        List<Item> harvestedProduce = targetTile.processHarvest(itemRegistry); // processHarvest HARUS mereset tile
+        List<Item> harvestedProduce = targetTile.processHarvest(itemRegistry);
 
         if (harvestedProduce != null && !harvestedProduce.isEmpty()) {
             boolean allAdded = true;
             for(Item item : harvestedProduce){
-                if (item != null) { // Pastikan item tidak null sebelum menambahkannya
-                    this.inventory.addItem(item, 1); // Untuk sekarang, asumsikan setiap hasil panen adalah 1 unit
+                if (item != null) {
+                    this.inventory.addItem(item, 1);
                     System.out.println("Player memanen: " + item.getName());
-                    // Mencatat panen ke statistik
                     if (statistics != null) {
-                        statistics.recordHarvest(item.getName(), 1); // Asumsi quantity 1 per item dari list
+                        statistics.recordHarvest(item.getName(), 1);
                     }
                 } else {
-                    allAdded = false; // Tandai jika ada item null dalam hasil panen
+                    allAdded = false;
                 }
             }
             if (!allAdded) {
                 System.err.println("Peringatan: Beberapa item hasil panen null dan tidak ditambahkan.");
             }
-            // Tidak ada biaya energi eksplisit untuk panen di spesifikasi,
-            // namun controller akan tetap memanggil changeEnergy(-5) sebagai contoh.
-            // Jika ingin panen gratis energi, hapus changeEnergy di controller atau buat nol.
             return true;
         } else {
             System.out.println("Player.harvest: Gagal memanen atau tidak ada hasil dari tile.");
@@ -797,10 +807,9 @@ public class Player {
         }
 
         if (itemToEat instanceof EdibleItem) {
-            // Cek dulu apakah pemain punya item tersebut sebelum mencoba mengurangi
-        if (!inventory.hasItem(itemToEat, 1)) {
+            if (!inventory.hasItem(itemToEat, 1)) {
                 System.out.println("Player.eat: Pemain tidak memiliki " + itemToEat.getName() + " untuk dimakan.");
-                return false; // Seharusnya tidak terjadi jika itemToEat adalah selectedItem yang valid dari inventory
+                return false;
             }
 
             EdibleItem edible = (EdibleItem) itemToEat;
@@ -808,34 +817,17 @@ public class Player {
 
             if (this.energy >= MAX_ENERGY && energyRestored > 0) {
                 System.out.println("Player.eat: Energi sudah penuh, tidak bisa makan " + itemToEat.getName() + " untuk memulihkan energi.");
-                // Pertimbangkan apakah tetap mengonsumsi item jika energi sudah penuh.
-                // Untuk saat ini, jika energi penuh dan item memberi energi positif, makan dibatalkan untuk hemat item.
-                // Jika item memberi energi negatif (poison?), mungkin tetap dikonsumsi.
-                // Untuk simplicity, kita batalkan jika energi penuh & restore positif.
-            return false;
-        }
+                return false;
+            }
             
-            // Hapus item dari inventory DULU, baru tambah energi.
-            // Ini mencegah situasi di mana energi bertambah tapi item gagal dihapus (meskipun kecil kemungkinannya di sini).
             boolean removed = inventory.removeItem(itemToEat, 1);
             if (removed) {
                 changeEnergy(energyRestored);
                 System.out.println(this.name + " memakan " + itemToEat.getName() + ". Energi pulih: " + energyRestored + ". Energi sekarang: " + this.energy);
-                // Jika item adalah Equipment setelah dimakan (misal potion dengan efek sementara),
-                // selectedItem mungkin perlu di-clear atau diganti.
-                // Untuk EdibleItem biasa (Crop, Food), selectedItem akan menjadi null jika stack habis,
-                // dan Player/Controller harus menangani pemilihan item berikutnya.
-                // Jika itemToEat adalah selectedItem dan jumlahnya jadi 0, selectedItem harus di-update.
-                // Logic ini sebaiknya ada di Controller atau setelah pemanggilan eat()
                 if (inventory.getItemCount(itemToEat) == 0 && itemToEat.equals(this.selectedItem)) {
-                    // Jika item yang dimakan adalah selectedItem dan habis, selectedItem jadi null
-                    // Controller akan perlu logika untuk memilih item berikutnya atau handle selectedItem null.
-                    // this.setSelectedItem(null); // Player tidak seharusnya mengatur selected itemnya sendiri secara langsung berdasarkan aksi ini.
-                                              // Controller yang harusnya mengelola selectedItem.
                 }
                 return true;
             } else {
-                // Ini seharusnya tidak terjadi jika hasItem(itemToEat, 1) true.
                 System.err.println("Player.eat: Gagal menghapus " + itemToEat.getName() + " dari inventory meskipun awalnya terdeteksi.");
                 return false;
             }
@@ -855,7 +847,6 @@ public class Player {
      */
     public void sleep(int energyBeforeSleep, boolean usedBonusBed) {
         int targetEnergy;
-        // Penalty condition: energy < 10% * MAX_ENERGY (which is LOW_ENERGY_THRESHOLD)
         boolean applyPenalty = energyBeforeSleep < LOW_ENERGY_THRESHOLD;
 
         if (applyPenalty) {
@@ -866,26 +857,14 @@ public class Player {
             System.out.println("Kamu tidur nyenyak. Energi pulih sepenuhnya.");
         }
 
-        // Bonus bed logic (currently 'usedBonusBed' will be false for normal sleep)
-        // The specification for Action #7 (Sleeping) does not mention how a bonus bed affects
-        // the standard sleep energy recovery. This section can be expanded if bonus beds
-        // have a defined interaction with normal sleep beyond just being a different action trigger.
         if (usedBonusBed) {
-            // Example: If a bonus bed doubled recovery and was used with low energy:
-            // if (applyPenalty) { targetEnergy = MAX_ENERGY; } // Full recovery instead of half
-            // else { targetEnergy = MAX_ENERGY + 20; } // Or some other bonus
             System.out.println("Menggunakan tempat tidur bonus! (Logika spesifik akan diimplementasikan dengan fitur furnitur)");
-            // For now, no change to targetEnergy from usedBonusBed for Action #7 to stick to spec.
-            // The original code had: if (usedBonusBed && energyBeforeSleep < LOW_ENERGY_THRESHOLD) targetEnergy *= 2;
-            // This could be re-added if that's the desired interaction.
         }
 
-        // Clamp energy to MAX_ENERGY
         if (targetEnergy > MAX_ENERGY) {
             targetEnergy = MAX_ENERGY;
         }
-        // It's unlikely to go below MIN_ENERGY with sleep, but good to keep clamp.
-        if (targetEnergy < MIN_ENERGY) { // Should not be reachable with sleep logic
+        if (targetEnergy < MIN_ENERGY) {
             targetEnergy = MIN_ENERGY;
         }
         this.energy = targetEnergy;
@@ -912,7 +891,6 @@ public class Player {
             return "Item registry tidak tersedia.";
         }
 
-        // Validasi bahan bakar
         String fuelName = fuelItem.getName();
         if (!fuelName.equals("Coal") && !fuelName.equals("Firewood")) {
             return "Bahan bakar tidak valid. Gunakan Coal atau Firewood.";
@@ -921,8 +899,7 @@ public class Player {
             return "Kamu tidak punya " + fuelName + " yang cukup.";
         }
 
-        // Validasi bahan-bahan resep
-        List<Item> fishItemsToRemove = new ArrayList<>(); // Untuk menampung ikan yang akan dihapus nanti
+        List<Item> fishItemsToRemove = new ArrayList<>();
         int anyFishRequired = 0;
         int anyFishFound = 0;
 
@@ -940,7 +917,6 @@ public class Player {
                 if (anyFishFound < anyFishRequired) {
                     return "Kamu kekurangan bahan: " + anyFishRequired + " Any Fish (kamu punya " + anyFishFound + ").";
                 }
-                // Validasi untuk "Any Fish" selesai di sini untuk tahap pengecekan
             } else {
                 Item ingredient = itemRegistry.get(ingredientName);
                 if (ingredient == null) {
@@ -952,7 +928,6 @@ public class Player {
             }
         }
 
-        // Jika semua valid, kurangi bahan bakar dan bahan-bahan dari inventory
         inventory.removeItem(fuelItem, 1);
 
         for (Map.Entry<String, Integer> entry : recipe.getIngredients().entrySet()) {
@@ -961,8 +936,6 @@ public class Player {
 
             if (ingredientName.equals("Any Fish")) {
                 int fishRemovedCount = 0;
-                // Iterasi ulang untuk mengumpulkan dan menghapus ikan
-                // Membuat salinan keyset untuk menghindari ConcurrentModificationException
                 List<Item> currentInventoryKeys = new ArrayList<>(inventory.getItems().keySet());
                 for (Item invItem : currentInventoryKeys) {
                     if (invItem instanceof Fish) {
@@ -979,16 +952,11 @@ public class Player {
                 }
             } else {
                 Item ingredient = itemRegistry.get(ingredientName);
-                // Kita sudah validasi ingredient != null sebelumnya, jadi aman
             inventory.removeItem(ingredient, entry.getValue());
             }
         }
 
-        // System.out.println("Kamu mulai memasak " + recipe.getResultItemName() + "...");
-        // Pengurangan energi (-10) akan dihandle oleh Controller
-        // Penambahan item hasil dan advance time 1 jam juga akan dihandle Controller
-
-        return recipe.getResultItemName(); // Kembalikan nama item hasil jika persiapan sukses
+        return recipe.getResultItemName();
     }
 
     /**
@@ -1003,7 +971,7 @@ public class Player {
             System.out.println("Kamu butuh pancing (Fishing Rod)!");
             return;
         }
-        changeEnergy(-5); // hanya untuk testing
+        changeEnergy(-5);
         System.out.println("Kamu mulai memancing...");
     }
 
@@ -1020,16 +988,14 @@ public class Player {
             return "Target NPC atau cincin tidak valid untuk melamar.";
         }
 
-        // 1. Cek dulu apakah pemain sudah menikah
         if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE) {
             return "Kamu sudah menikah dengan " + this.partner.getName() + "! Tidak bisa melamar siapapun lagi.";
         }
 
-        // 2. Jika belum menikah, baru cek apakah sudah bertunangan
         if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.FIANCE) {
-            if (this.partner == npcTarget) { // Mencoba melamar tunangan sendiri lagi
+            if (this.partner == npcTarget) {
                 return "Kamu sudah bertunangan dengan " + npcTarget.getName() + ".";
-            } else { // Sudah punya tunangan, tapi mencoba melamar NPC lain
+            } else {
                 return "Kamu sudah bertunangan dengan " + this.partner.getName() + " dan tidak bisa melamar " + npcTarget.getName() + ".";
             }
         }
@@ -1046,7 +1012,7 @@ public class Player {
         this.setPartner(npcTarget); 
         this.setEngagementDay(currentTotalDaysPlayed); 
         
-        return null; // Mengindikasikan sukses
+        return null;
     }
 
     /**
@@ -1056,52 +1022,38 @@ public class Player {
      * @param npcTarget NPC yang akan dinikahi.
      * @return true jika kondisi pernikahan terpenuhi di awal, false jika gagal.
      */
-    /**
-     * Mencoba menikahi seorang NPC (harus tunangan dan minimal 1 hari setelah tunangan).
-     *
-     * @param npcTarget NPC yang akan dinikahi.
-     * @param currentTotalDaysPlayed Total hari yang telah dimainkan saat ini.
-     * @return String pesan error jika gagal, atau null jika berhasil.
-     */
     public String marry(NPC npcTarget, int currentTotalDaysPlayed) { 
         if (npcTarget == null ) {
             return "Target NPC tidak valid untuk menikah.";
         }
 
-        // Prioritas #1: Cek apakah pemain sudah menikah DENGAN TARGET INI
         if (this.partner != null && this.partner == npcTarget && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE) {
             return "Kamu sudah menikah dengan " + npcTarget.getName() + "!";
         }
 
-        // Prioritas #2: Cek apakah pemain sudah menikah DENGAN ORANG LAIN
         if (this.partner != null && this.partner.getRelationshipStatus() == RelationshipStatus.SPOUSE && this.partner != npcTarget) {
             return "Kamu sudah menikah dengan " + this.partner.getName() + " dan tidak bisa menikah dengan " + npcTarget.getName() + ".";
         }
         
-        // Prioritas #3: Cek kondisi pertunangan jika belum menikah
-        if (this.partner == null) { // Belum punya partner sama sekali (belum tunangan)
+        if (this.partner == null) {
             return "Kamu belum bertunangan dengan siapapun. Lamar dulu " + npcTarget.getName() + "!";
         }
         
-        if (this.partner != npcTarget) { // Punya tunangan, tapi targetnya beda orang
+        if (this.partner != npcTarget) {
             return npcTarget.getName() + " bukanlah tunanganmu saat ini. Tunanganmu adalah " + this.partner.getName() + ".";
         }
 
-        // Jika sampai sini, berarti this.partner == npcTarget. Sekarang cek statusnya.
         if (npcTarget.getRelationshipStatus() != RelationshipStatus.FIANCE) {
-            // Partner adalah target, tapi statusnya bukan FIANCE (misal, masih SINGLE karena bug, atau sudah SPOUSE tapi lolos cek #1)
              return "Status hubunganmu dengan " + npcTarget.getName() + " adalah " + npcTarget.getRelationshipStatus() + ". Kamu hanya bisa menikahi seorang FIANCE.";
         }
 
-        // Pengecekan minimal 1 hari setelah tunangan
         if (this.engagementDay < 0 || currentTotalDaysPlayed <= this.engagementDay) {
             return "Kamu harus menunggu setidaknya satu hari setelah bertunangan untuk menikah. ";
         }
         
-        // Pernikahan berhasil
         npcTarget.setRelationshipStatus(RelationshipStatus.SPOUSE);
         
-        return null; // Mengindikasikan sukses 
+        return null;
     }
 
     /**
@@ -1112,7 +1064,7 @@ public class Player {
      */
     public Weather watchTV() {
         System.out.println("Kamu menonton TV...");
-        return null; // Placeholder
+        return null;
     }
 
     /**
@@ -1159,13 +1111,11 @@ public class Player {
             return false;
         }
 
-        // Check 1: Player energy
         if (this.energy < CHAT_ENERGY_COST) {
             System.out.println(this.name + " tidak punya cukup energi untuk berbicara (butuh " + CHAT_ENERGY_COST + ", punya " + this.energy + ").");
             return false;
         }
 
-        // Check 2: Player must be on the same map as the NPC
         if (this.currentMap != npcActualMap) {
             System.out.println(this.name + " tidak berada di map yang sama dengan " + npcTarget.getName() + ".");
             System.out.println("Player di: " + this.currentMap.getName() + 
@@ -1173,8 +1123,6 @@ public class Player {
             return false;
         }
         
-        // Check 3: Proximity on that map
-        // Assumes npcTarget.getCurrentTileX() and getCurrentTileY() are their coords on npcActualMap
         int distance = Math.abs(this.currentTileX - npcTarget.getCurrentTileX()) + 
                        Math.abs(this.currentTileY - npcTarget.getCurrentTileY());
 
@@ -1183,7 +1131,6 @@ public class Player {
             return false;
         }
 
-        // All checks passed
         this.changeEnergy(-CHAT_ENERGY_COST);
         if (gameTime != null) {
             gameTime.advance(CHAT_TIME_ADVANCE_MINUTES);
@@ -1193,12 +1140,6 @@ public class Player {
         
         npcTarget.addHeartPoints(CHAT_HEART_POINTS_GAIN);
         
-        // The actual dialogue display will be handled by the View (GamePanel)
-        // using the dialogue string fetched by GameController from npcTarget.getDialogue(this).
-        // System.out.println(this.name + " berhasil berbicara dengan " + npcTarget.getName() + ". (Energi: " + this.energy + ", Hati " + npcTarget.getName() + ": " + npcTarget.getHeartPoints() + ")");
-        //  if (gameTime != null) {
-        //      System.out.println("Waktu saat ini: " + gameTime.getTimeString());
-        // }
         return true;
     }
 
@@ -1211,7 +1152,7 @@ public class Player {
      * @param npcActualMap The MapArea instance where the npcTarget is located.
      * @return true if gifting was successful, false otherwise.
      */
-    public boolean gift(NPC npcTarget, Item itemToGift, GameTime gameTime, MapArea npcActualMap) { // Added npcActualMap
+    public boolean gift(NPC npcTarget, Item itemToGift, GameTime gameTime, MapArea npcActualMap) {
         if (npcTarget == null) {
             System.out.println("Tidak ada NPC yang ditargetkan untuk diberi hadiah.");
             return false;
@@ -1229,24 +1170,20 @@ public class Player {
             return false;
         }
 
-        // Constants for gifting (can be moved to top of class)
         final int GIFT_ENERGY_COST = 5;
         final int GIFT_TIME_ADVANCE_MINUTES = 10;
-        final int GIFT_MAX_DISTANCE = 1; // Same as chat
+        final int GIFT_MAX_DISTANCE = 1;
 
-        // Check 1: Player energy
         if (this.energy < GIFT_ENERGY_COST) {
             System.out.println(this.name + " tidak punya cukup energi untuk memberi hadiah (butuh " + GIFT_ENERGY_COST + ", punya " + this.energy + ").");
             return false;
         }
 
-        // Check 2: Player must be on the same map as the NPC
         if (this.currentMap != npcActualMap) {
             System.out.println(this.name + " tidak berada di map yang sama dengan " + npcTarget.getName() + " untuk memberi hadiah.");
             return false;
         }
 
-        // Check 3: Proximity
         int distance = Math.abs(this.currentTileX - npcTarget.getCurrentTileX()) +
                        Math.abs(this.currentTileY - npcTarget.getCurrentTileY());
 
@@ -1255,13 +1192,11 @@ public class Player {
             return false;
         }
 
-        // Check 4: Player has the item
         if (!this.inventory.hasItem(itemToGift, 1)) {
             System.out.println(this.name + " tidak memiliki " + itemToGift.getName() + " untuk diberikan.");
             return false;
         }
 
-        // All checks passed
         this.changeEnergy(-GIFT_ENERGY_COST);
         if (gameTime != null) {
             gameTime.advance(GIFT_TIME_ADVANCE_MINUTES);
@@ -1275,13 +1210,10 @@ public class Player {
 
         System.out.println(this.name + " memberikan " + itemToGift.getName() + " kepada " + npcTarget.getName() + ".");
         System.out.println(npcTarget.getName() + " bereaksi... (Hati berubah: " + heartChange + ", Total Hati: " + npcTarget.getHeartPoints() + ")");
-        // NPC-specific reaction dialogue could be triggered here or in GameController.
-        // npcTarget.reactToGift(itemToGift, this); 
         
         if (this.selectedItem != null && this.selectedItem.equals(itemToGift) && this.inventory.getItemCount(itemToGift) == 0) {
-            setSelectedItem(null); // Clear selected item if it was the last one gifted
+            setSelectedItem(null);
         }
-
 
         return true;
     }
@@ -1307,8 +1239,7 @@ public class Player {
              return false;
          }
 
-        // Validasi apakah bisa menjual hari ini - Panggil canSellToday() tanpa argumen
-        if (!shippingBin.canSellToday()) { // Removed currentDay argument
+        if (!shippingBin.canSellToday()) {
             System.out.println(this.name + ": Sudah melakukan penjualan via Shipping Bin hari ini. Coba lagi besok.");
              return false;
          }
@@ -1318,22 +1249,16 @@ public class Player {
             return false;
         }
 
-        // Coba hapus dari inventory dulu
         if (this.inventory.removeItem(itemToSell, quantity)) {
-            // Jika berhasil dihapus dari inventory, coba tambahkan ke bin
             if (shippingBin.addItem(itemToSell, quantity)) {
                 System.out.println(this.name + " menaruh " + quantity + " " + itemToSell.getName() + " ke Shipping Bin.");
-                // Tidak ada pengurangan energi atau perubahan gold di sini
-                // Efek waktu 15 menit akan ditangani Controller jika relevan
              return true;
          } else {
-                // Gagal menambahkan ke bin (misal, bin penuh slot unik), kembalikan item ke inventory
-                this.inventory.addItem(itemToSell, quantity); // Rollback
+                this.inventory.addItem(itemToSell, quantity);
                 System.out.println(this.name + ": Gagal menaruh item ke Shipping Bin (mungkin penuh slot unik). Item dikembalikan ke inventory.");
                 return false;
             }
         } else {
-            // Seharusnya tidak sampai sini jika hasItem() dan logika removeItem() benar
             System.err.println(this.name + ": Gagal menghapus " + itemToSell.getName() + " dari inventory meskipun pengecekan awal berhasil.");
              return false;
          }
@@ -1345,15 +1270,15 @@ public class Player {
      * @param farm Referensi ke Farm model untuk memproses hari berikutnya.
      * @return int pendapatan dari penjualan pada hari berikutnya.
      */
-    public int passOut(Farm farm) { // Farm model needed to trigger nextDay
+    public int passOut(Farm farm) {
         System.out.println(getName() + " pingsan karena kelelahan!");
         
         int targetEnergy = MAX_ENERGY / 2;
         int currentEnergy = getEnergy();
-        changeEnergy(targetEnergy - currentEnergy); // Gunakan changeEnergy untuk mengatur ke target
+        changeEnergy(targetEnergy - currentEnergy);
 
         int income = farm.forceSleepAndProcessNextDay(); 
-        System.out.println("Bangun keesokan harinya dengan energi: " + getEnergy() + "."); // Tambahkan titik di akhir
+        System.out.println("Bangun keesokan harinya dengan energi: " + getEnergy() + ".");
         return income;
     }
 
@@ -1375,10 +1300,5 @@ public class Player {
         }
         return false;
     } 
-
-    // Anda bisa menambahkan metode helper lain di sini jika diperlukan
-    // Misalnya:
-    // private Tile getFacingTile() { ... }
-    // private NPC getNearbyNPC() { ... }
 
 } 

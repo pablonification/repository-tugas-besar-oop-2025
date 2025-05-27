@@ -29,4 +29,9 @@ public class MiscItem extends Item {
         System.out.println(getName() + " tidak dapat digunakan secara langsung.");
         return false;
     }
+
+    @Override
+    public Item cloneItem() {
+        return new MiscItem(this.getName(), this.getBuyPrice(), this.getSellPrice());
+    }
 }

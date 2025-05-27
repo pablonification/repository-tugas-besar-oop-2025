@@ -36,4 +36,9 @@ public class ProposalRing extends Item {
         // return player.propose(npcTarget, this);
         return true;
     }
+
+    @Override
+    public Item cloneItem() {
+        return new ProposalRing();
+    }
 }

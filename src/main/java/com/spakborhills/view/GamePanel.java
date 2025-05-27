@@ -344,8 +344,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                         // Update animasi NPC jika ada
                         // Mengambil semua NPC dari farmModel, lalu cek apakah mereka di peta saat ini
                         MapArea currentPlayerMap = farmModel.getPlayer().getCurrentMap();
-                        if (currentPlayerMap != null && farmModel.getNPCs() != null) {
-                            for (NPC npc : farmModel.getNPCs()) { // Iterasi semua NPC dari Farm
+                        if (currentPlayerMap != null && farmModel.getNpcs() != null) {
+                            for (NPC npc : farmModel.getNpcs()) { // Iterasi semua NPC dari Farm
                                 if (npc != null) {
                                     // Cek apakah NPC berada di peta yang sama dengan pemain
                                     MapArea npcMap = farmModel.getMapArea(npc.getHomeLocation()); // Asumsi homeLocation adalah map NPC berada
@@ -1245,7 +1245,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private void drawNPCs(Graphics g) {
         Player player = farmModel.getPlayer();
         MapArea currentMap = player.getCurrentMap();
-        List<NPC> allNPCs = farmModel.getNPCs();
+        List<NPC> allNPCs = farmModel.getNpcs();
     
         if (currentMap == null || allNPCs == null || allNPCs.isEmpty()) {
             return;

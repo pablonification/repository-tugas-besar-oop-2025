@@ -1691,7 +1691,7 @@ public class GameController {
      * @return The found NPC, or null if no NPC is in range.
      */
     private NPC findNearbyNPCForChat(Player player) {
-        if (farmModel == null || farmModel.getNPCs() == null || gamePanel == null || player == null) { 
+        if (farmModel == null || farmModel.getNpcs() == null || gamePanel == null || player == null) { 
             System.err.println("GameController.findNearbyNPCForChat: Critical component is null.");
             if (gamePanel != null) gamePanel.displayMessage("Error internal: Tidak bisa mencari NPC.");
             return null;
@@ -1707,7 +1707,7 @@ public class GameController {
         int playerX = player.getCurrentTileX();
         int playerY = player.getCurrentTileY();
 
-        Optional<NPC> nearbyNPCOptional = farmModel.getNPCs().stream()
+        Optional<NPC> nearbyNPCOptional = farmModel.getNpcs().stream()
             .filter(npc -> {
                 MapArea npcMapContext = farmModel.getMapArea(npc.getHomeLocation());
                 if (npcMapContext != playerMap) {
@@ -1860,7 +1860,7 @@ public class GameController {
     }
 
     private NPC findTargetNPCForInteraction(Player player, int maxDistance) {
-        if (farmModel == null || farmModel.getNPCs() == null || player == null || player.getCurrentMap() == null) {
+        if (farmModel == null || farmModel.getNpcs() == null || player == null || player.getCurrentMap() == null) {
             System.err.println("GameController.findTargetNPCForInteraction: Komponen kritis null.");
             return null;
         }
@@ -1868,7 +1868,7 @@ public class GameController {
         int playerX = player.getCurrentTileX();
         int playerY = player.getCurrentTileY();
 
-        Optional<NPC> nearbyNPCOptional = farmModel.getNPCs().stream()
+        Optional<NPC> nearbyNPCOptional = farmModel.getNpcs().stream()
             .filter(npc -> {
                 MapArea npcExpectedMap = farmModel.getMapArea(npc.getHomeLocation());
                 if (npcExpectedMap != playerMap) {

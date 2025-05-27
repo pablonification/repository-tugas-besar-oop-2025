@@ -16,6 +16,7 @@ package com.spakborhills.model.Item;
 
 import java.util.List;
 import java.util.Set; // Using Set for locations might be slightly better semantically
+import java.util.ArrayList;
 
 import com.spakborhills.model.Enum.ItemCategory;
 import com.spakborhills.model.Enum.FishRarity;
@@ -223,6 +224,22 @@ public class Fish extends Item implements EdibleItem {
 
     public Set<LocationType> getRequiredLocations() {
         return requiredLocations;
+    }
+
+    @Override
+    public Item cloneItem() {
+        // Create new sets and lists to avoid sharing mutable objects
+        Set<Season> clonedSeasons = Set.copyOf(this.requiredSeasons);
+        List<TimeRange> clonedTimeRanges = new ArrayList<>(this.catchableTimeRanges.size());
+        for (TimeRange range : this.catchableTimeRanges) {
+            // Assuming TimeRange is immutable or we make a deep copy if it's mutable
+            // For now, assuming TimeRange(int, int) constructor is sufficient for a new instance
+            clonedTimeRanges.add(new TimeRange(range.startHour, range.endHour)); 
+        }
+        Set<Weather> clonedWeather = Set.copyOf(this.requiredWeather);
+        Set<LocationType> clonedLocations = Set.copyOf(this.requiredLocations);
+
+        return new Fish(this.getName(), this.rarity, clonedSeasons, clonedTimeRanges, clonedWeather, clonedLocations);
     }
 
 }

@@ -16,7 +16,7 @@
     + getFarmMap(): FarmMap
     + getWorldMap(): WorldMap
     + getStore(): Store
-    + getNPCs(): List<NPC>
+    + getNpcs(): List<NPC>
     + findNPC(name: String): Optional<NPC>
     + getRecipes(): List<Recipe>
     + findRecipe(name: String): Recipe
@@ -35,10 +35,12 @@ package com.spakborhills.model;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
+import java.util.ArrayList;
 
 import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Enum.RelationshipStatus;
 import com.spakborhills.model.Enum.GameState;
+import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.NPC.NPC;
 import com.spakborhills.model.Map.FarmMap;
@@ -50,6 +52,7 @@ import com.spakborhills.model.Util.PriceList;
 import com.spakborhills.model.Util.Recipe;
 import com.spakborhills.model.Util.ShippingBin;
 import com.spakborhills.model.Util.EndGameStatistics;
+import com.spakborhills.model.Object.House;
 
 
 public class Farm {
@@ -66,6 +69,9 @@ public class Farm {
     private PriceList priceList;
     private Map<String, Item> itemRegistry;
     private GameState currentGameState;
+    private Weather currentWeather;
+    private List<String> achievedMilestones;
+    private House house;
     
 /**
      * Konstruktor untuk Farm. Menginisialisasi seluruh state dunia game.
@@ -83,7 +89,7 @@ public class Farm {
      * @param statistics  Objek EndGameStatistics yang sudah diinisialisasi.
      * @param priceList   Objek PriceList yang sudah diinisialisasi.
      */
-    public Farm(String name, Player player, FarmMap farmMap, WorldMap worldMap, Store store, List<NPC> npcs, List<Recipe> recipes, GameTime gameTime, ShippingBin shippingBin, EndGameStatistics statistics, PriceList priceList, Map<String, Item> itemRegistry) {
+    public Farm(String name, Player player, FarmMap farmMap, WorldMap worldMap, Store store, List<NPC> npcs, List<Recipe> recipes, GameTime gameTime, ShippingBin shippingBin, EndGameStatistics statistics, PriceList priceList, Map<String, Item> itemRegistry, House house) {
       this.name = name;
       this.player = player;
       this.farmMap = farmMap;
@@ -97,6 +103,9 @@ public class Farm {
       this.priceList = priceList;
       this.itemRegistry = itemRegistry;
       this.currentGameState = GameState.MAIN_MENU;
+      this.currentWeather = Weather.SUNNY;
+      this.achievedMilestones = new ArrayList<>();
+      this.house = house;
       System.out.println("Selamat datang di Kebun '" + name + "'!");
     }
 
@@ -120,7 +129,7 @@ public class Farm {
       return store;
     }
 
-    public List<NPC> getNPCs() {
+    public List<NPC> getNpcs() {
       return npcs;
     }
 
@@ -155,6 +164,33 @@ public class Farm {
     public void setCurrentGameState(GameState gameState) {
         this.currentGameState = gameState;
         System.out.println("GameState changed to: " + gameState);
+    }
+
+    public Weather getCurrentWeather() {
+        return currentWeather;
+    }
+
+    public void setCurrentWeather(Weather currentWeather) {
+        this.currentWeather = currentWeather;
+    }
+
+    public List<String> getAchievedMilestones() {
+        if (this.achievedMilestones == null) {
+            this.achievedMilestones = new ArrayList<>();
+        }
+        return achievedMilestones;
+    }
+
+    public void setAchievedMilestones(List<String> achievedMilestones) {
+        this.achievedMilestones = achievedMilestones;
+    }
+
+    public House getHouse() {
+        return house;
+    }
+
+    public void setHouse(House house) {
+        this.house = house;
     }
 
     /**

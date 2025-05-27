@@ -347,7 +347,11 @@ public abstract class NPC {
     public int getHeartPoints() {
         return heartPoints;
     }
-    
+
+    public void setHeartPoints(int heartPoints) {
+        this.heartPoints = Math.max(0, Math.min(heartPoints, this.maxHeartPoints));
+    }
+
     public void addHeartPoints(int amt){
         heartPoints += amt;
         if (heartPoints > maxHeartPoints) {

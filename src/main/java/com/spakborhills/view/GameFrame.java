@@ -18,6 +18,7 @@ import com.spakborhills.model.Enum.Gender;
 import com.spakborhills.Main; // Required for setup methods
 import com.spakborhills.util.SaveLoadManager; // Import SaveLoadManager
 import com.spakborhills.data.SaveData; // Import SaveData
+import com.spakborhills.model.Object.House; // Corrected import for House
 
 import javax.swing.*;
 import java.awt.*; // Import full AWT package for GraphicsDevice and GraphicsEnvironment
@@ -170,7 +171,7 @@ public class GameFrame extends JFrame {
                 return;
             }
 
-            FarmMap farmMap = new FarmMap(); // Will be populated/managed by Farm
+            FarmMap farmMap = new FarmMap(false); // For loading game, do not initialize default objects
             GameTime gameTime = new GameTime(); // Will be set by save data
             ShippingBin shippingBin = new ShippingBin(); // State might be part of Farm or Player
             Store store = new Store(); // Potentially needs to be part of save if its stock changes
@@ -192,8 +193,10 @@ public class GameFrame extends JFrame {
 
 
             // Initialize Farm with these components
+            // Create a default House object to pass to the Farm constructor
+            House playerHouse = new House(); // Assuming a default constructor for House
             this.farm = new Farm("Loading Farm...", player, farmMap, worldMap, store, npcList, recipeList, 
-                                 gameTime, shippingBin, statistics, priceList, itemRegistry);
+                                 gameTime, shippingBin, statistics, priceList, itemRegistry, playerHouse);
             
             // Apply the loaded save data
             // The SaveLoadManager needs the Farm instance to access ItemRegistry and other components.
@@ -299,7 +302,7 @@ public class GameFrame extends JFrame {
             return;
         }
 
-        FarmMap farmMap = new FarmMap();
+        FarmMap farmMap = new FarmMap(); // For new game, initialize with default objects (true by default)
         GameTime gameTime = new GameTime();
         ShippingBin shippingBin = new ShippingBin();
         Store store = new Store();
@@ -317,10 +320,12 @@ public class GameFrame extends JFrame {
                                    playerSpriteWidth, playerSpriteHeight);
         EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), newPlayer);
 
+        // Create a default House object to pass to the Farm constructor
+        House newPlayerHouse = new House(); // Assuming a default constructor for House
         this.farm = new Farm(
             farmName, newPlayer, farmMap, worldMap, store,
             npcList, recipeList, gameTime, shippingBin, statistics, priceList,
-            itemRegistry
+            itemRegistry, newPlayerHouse
         );
 
         this.gameController = new GameController(this.farm);

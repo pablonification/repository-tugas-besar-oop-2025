@@ -34,4 +34,8 @@ public class Equipment extends Item {
         return toolType;
     }
     
+    @Override
+    public Item cloneItem() {
+        return new Equipment(this.getName(), this.getToolType());
+    }
 }

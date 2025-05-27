@@ -53,6 +53,42 @@ public class Tile {
         return associatedObject;
     }
 
+    // Added for SaveLoadManager
+    public int getLastWateredDay() {
+        // This needs to be calculated or stored differently if an absolute day is needed.
+        // For now, assuming daysSinceLastWatered can be used or adapted.
+        // If GameTime.getCurrentDay() - daysSinceLastWatered is needed, GameTime instance would be required here.
+        // For simplicity with current structure, just returning daysSinceLastWatered.
+        // A more robust solution would be to store the actual game day it was last watered.
+        // Let's assume for now SaveLoadManager wants the *actual day index* it was last watered.
+        // This requires a change in how Tile stores this. For now, placeholder.
+        // To properly implement, Tile would need a field: private int actualLastWateredDay;
+        // and markAsWatered() would set it. GameTime would be needed in markAsWatered().
+        // For the current structure, we will return daysSinceLastWatered as a proxy.
+        // It will be the responsibility of SaveLoadManager to interpret this if needed, or for Tile to be refactored.
+        // REFECTOR CANDIDATE: Store actualLastWateredDay in Tile.
+        // For now, returning daysSinceLastWatered as per current structure.
+        return daysSinceLastWatered; 
+    }
+
+    public void setLastWateredDay(int day) {
+        // This setter implies 'day' is the actual game day it was last watered.
+        // To make this work with daysSinceLastWatered, we'd need current game day.
+        // If 'day' is actually the intended value for daysSinceLastWatered from save file:
+        this.daysSinceLastWatered = day;
+        // If 'day' is the actual game day, and Tile needs to calculate daysSinceLastWatered from it,
+        // then Tile needs access to GameTime.getCurrentDay() upon loading.
+        // For now, directly setting daysSinceLastWatered based on the assumption that the
+        // save file stores this relative counter or an equivalent that is passed as 'day'.
+    }
+
+    public void clearWatered() {
+        this.isWatered = false;
+        // Optionally, if daysSinceLastWatered should indicate it wasn't watered today:
+        // this.daysSinceLastWatered = 1; // Or based on game logic if it implies it missed one day of watering.
+        // For now, just clearing the flag.
+    }
+
     // Setters
     public void setType(TileType newType){
         this.type = newType;
@@ -105,17 +141,15 @@ public class Tile {
         this.plantedSeed = seed;
         if (seed != null) {
             this.type = TileType.PLANTED;
-        } else {
-            // If seed is null, decide what the tile type should revert to.
-            // Assuming it becomes TILLED if a plant is removed during load, 
-            // or could be TILLABLE if that's more appropriate.
-            this.type = TileType.TILLED; 
         }
+        // Removed the automatic setting of tile type to TILLED when seed is null
+        // This now preserves the tile type that was set from the saved data
+        
         // isWatered and daysSinceLastWatered will be set separately by the loading logic
     }
 
     public boolean canBeWateredInternalCheck(){
-        return this.type == TileType.TILLED || this.type == TileType.PLANTED;
+        return this.type == TileType.PLANTED;
     }
     
     /**
@@ -158,11 +192,8 @@ public class Tile {
         if (this.isWatered || weather == Weather.RAINY) { // Already watered or raining? No need.
             return false;
         }
-        // If tilled or planted, and not already watered/raining, it needs water.
-        if (this.type == TileType.TILLED || this.type == TileType.PLANTED) {
-            return true; 
-        }
-        return false; // Not a type that can be watered (e.g. DEPLOYED_OBJECT, or already handled TILLABLE if it can't be watered)
+        // Only planted tiles need watering
+        return this.type == TileType.PLANTED;
     }
 
     public boolean canBeRecovered(){
@@ -181,7 +212,8 @@ public class Tile {
         // 'this.isWatered' here reflects if it was manually watered by the player before nextDay() was called.
         boolean effectivelyWateredForGrowth = this.isWatered;
 
-        if (weather == Weather.RAINY && canBeWateredInternalCheck()) {
+        // Only planted tiles can benefit from rain
+        if (weather == Weather.RAINY && this.type == TileType.PLANTED) {
             effectivelyWateredForGrowth = true; // Rain makes it watered for today's growth regardless of prior manual watering.
         }
 
@@ -234,34 +266,51 @@ public class Tile {
     }
     
     /**
-     * Mengasosiasikan DeployedObject dengan tile ini.
-     * Mengubah tipe tile menjadi DEPLOYED_OBJECT.
-     * @param obj Objek yang akan ditempatkan.
-     * @return true jika berhasil ditempatkan, false jika tile sudah ditempati atau tidak valid.
+     * Menghubungkan objek DeployedObject dengan tile ini.
+     * Jika tile bukan ENTRY_POINT, tipenya akan diubah menjadi DEPLOYED_OBJECT.
+     * @param obj Objek yang akan dihubungkan.
+     * @return true jika berhasil, false jika gagal.
      */
-    public boolean associateObject(DeployedObject obj){
-        if(this.type == TileType.DEPLOYED_OBJECT || this.associatedObject != null){
+    public boolean associateObject(DeployedObject obj) {
+        // Check if tile already has an object assigned or if planting exists
+        if (this.associatedObject != null) {
             System.err.println("Tile (" + this.hashCode() % 1000 + ") sudah ditempati oleh objek lain.");
             return false;
         }
-        if(this.plantedSeed != null){
+        
+        if (this.plantedSeed != null) {
             System.err.println("Tidak bisa menempatkan objek di atas tanaman!");
+            return false;
         }
+
+        // Associate the object
         this.associatedObject = obj;
-        this.setType(TileType.DEPLOYED_OBJECT);
+        
+        // Don't change tile type if it's an ENTRY_POINT
+        if (this.type != TileType.ENTRY_POINT) {
+            // Let FarmMap.placeObject handle specific types like WATER for Ponds
+            if (!(obj instanceof com.spakborhills.model.Object.Pond)) {
+                this.setType(TileType.DEPLOYED_OBJECT);
+            }
+        }
+        
         System.out.println("Objek '" + obj.getName() + "' ditempatkan di Tile (" + this.hashCode() % 1000 + ").");
         return true;
     }
 
     /**
      * Menghapus asosiasi DeployedObject dari tile ini.
-     * Mengubah tipe tile kembali menjadi TILLABLE.
+     * Mengubah tipe tile kembali menjadi TILLABLE kecuali untuk ENTRY_POINT.
      */
-    public void removeAssociatedObject(){
-        if(this.associatedObject != null){
+    public void removeAssociatedObject() {
+        if (this.associatedObject != null) {
             System.out.println("Objek '" + this.associatedObject.getName() + "' dihapus dari Tile (" + this.hashCode() % 1000 + ").");
             this.associatedObject = null;
-            this.setType(TileType.TILLABLE);
+            
+            // Don't change the type back to TILLABLE if it's an ENTRY_POINT
+            if (this.type != TileType.ENTRY_POINT) {
+                this.setType(TileType.TILLABLE);
+            }
         }
     }
 

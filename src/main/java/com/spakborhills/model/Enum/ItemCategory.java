@@ -7,6 +7,7 @@ public enum ItemCategory {
     FOOD,
     EQUIPMENT,
     MISC,
-    RING
+    RING,
+    FURNITURE
 }
 
