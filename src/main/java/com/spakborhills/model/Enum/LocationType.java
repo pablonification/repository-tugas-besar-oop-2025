@@ -7,5 +7,10 @@ public enum LocationType {
     MOUNTAIN_LAKE, 
     OCEAN,      
     STORE,    
-    NPC_HOME      
+    MAYOR_TADI_HOME,
+    CAROLINE_HOME,
+    PERRY_HOME,
+    DASCO_HOME,
+    ABIGAIL_HOME,
+    EMILY_HOME,
 }
