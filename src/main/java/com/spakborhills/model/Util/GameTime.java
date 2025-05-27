@@ -58,6 +58,18 @@ public class GameTime {
     public int getTotalDaysPlayed() { return totalDaysPlayed; } 
     public int getCurrentYear() { return currentYear; }
 
+    public void setDayOfMonth(int dayOfMonth) { // Added for loading
+        if (dayOfMonth >= 1 && dayOfMonth <= DAYS_IN_SEASON) { // Basic validation
+            this.dayOfMonth = dayOfMonth;
+        }
+    }
+
+    public void setYear(int year) { // Added for loading
+        if (year > 0) { // Basic validation
+            this.currentYear = year;
+        }
+    }
+
     private void determineInitialWeather(){
         // Cuaca awal bisa SUNNY, atau langsung terapkan logika acak
         // Untuk memastikan hari pertama bisa hujan jika beruntung:

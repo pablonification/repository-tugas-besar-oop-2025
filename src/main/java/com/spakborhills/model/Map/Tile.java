@@ -82,16 +82,36 @@ public class Tile {
     public boolean setPlantedSeed(Seed seed, Season currentSeason){
         if (this.type == TileType.TILLED && this.plantedSeed == null && seed != null){
             if(seed.getTargetSeason() != Season.ANY && seed.getTargetSeason() != currentSeason){
+                System.err.println("GAGAL TANAM: Benih " + seed.getName() + " tidak cocok untuk musim " + currentSeason);
                 return false;
             }
-            plantedSeed = seed;
-            growthDays = 0;
-            type = TileType.PLANTED;
-            isWatered = false;
-            daysSinceLastWatered = 0;
+            this.plantedSeed = seed;
+            this.growthDays = 0; // Reset growth days on new plant
+            this.type = TileType.PLANTED;
+            this.isWatered = false; // New plant needs water
+            this.daysSinceLastWatered = 0;
+            System.out.println("Berhasil menanam " + seed.getName() + " di Tile (" + this.hashCode() % 1000 + ").");
             return true;
         }
+        System.err.println("GAGAL TANAM: Kondisi tile tidak memungkinkan untuk menanam " + (seed != null ? seed.getName() : "benih null") + ". Tile type: " + this.type + ", plantedSeed: " + (this.plantedSeed != null ? this.plantedSeed.getName() : "null"));
         return false;
+    }
+
+    /**
+     * Sets the planted seed and type directly, intended for loading game state.
+     * This method bypasses normal planting logic like growth day reset or season checks.
+     */
+    public void setPlantedSeedForLoad(Seed seed) {
+        this.plantedSeed = seed;
+        if (seed != null) {
+            this.type = TileType.PLANTED;
+        } else {
+            // If seed is null, decide what the tile type should revert to.
+            // Assuming it becomes TILLED if a plant is removed during load, 
+            // or could be TILLABLE if that's more appropriate.
+            this.type = TileType.TILLED; 
+        }
+        // isWatered and daysSinceLastWatered will be set separately by the loading logic
     }
 
     public boolean canBeWateredInternalCheck(){
@@ -242,6 +262,12 @@ public class Tile {
             System.out.println("Objek '" + this.associatedObject.getName() + "' dihapus dari Tile (" + this.hashCode() % 1000 + ").");
             this.associatedObject = null;
             this.setType(TileType.TILLABLE);
+        }
+    }
+
+    public void setGrowthDays(int growthDays) { // Added for loading
+        if (this.plantedSeed != null) { // Only makes sense if there's a seed
+            this.growthDays = Math.max(0, growthDays); // Basic validation
         }
     }
 

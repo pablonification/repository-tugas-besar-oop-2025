@@ -30,13 +30,16 @@ public class MayorTadi extends NPC {
     private static final int DEFAULT_PORTRAIT_Y = 99;   // Koordinat Y potret di spritesheet
     private static final int PORTRAIT_WIDTH = 64;      // Lebar satu potret
     private static final int PORTRAIT_HEIGHT = 61;     // Tinggi satu potret
+    private static final String MAYOR_TADI_PORTRAIT_PATH = "/assets/portraits/npc/mayor_tadi.png"; // Path for dedicated portrait
+
     public MayorTadi() {
         super("Mayor Tadi",
         LocationType.MAYOR_TADI_HOME,
         false,
         MAYOR_TADI_SPRITESHEET_PATH,
         DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
-        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT);
+        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,
+        MAYOR_TADI_PORTRAIT_PATH); // Pass the new portrait path
         this.lovedItems.add("Legend");
         this.likedItems.addAll(Arrays.asList("Angler", "Crimsonfish", "Glacierfish"));
         // hated items

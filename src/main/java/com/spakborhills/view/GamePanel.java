@@ -238,7 +238,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private long menuMusicPosition = 0;
 
     // Pause Menu UI State
-    private String[] pauseMenuOptions = {"Resume", "Exit to Main Menu", "Exit Game"};
+    private String[] pauseMenuOptions = {"Resume", "Save Game", "Exit to Main Menu", "Exit Game"};
     private int currentPauseMenuSelection = 0;
     private Rectangle pauseMenuPanelRect;
     private static final Font PAUSE_MENU_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
@@ -247,36 +247,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final Color PAUSE_MENU_TEXT_COLOR = Color.WHITE;
     private static final Color PAUSE_MENU_HIGHLIGHT_COLOR = Color.YELLOW;
 
-    // Di dalam GameFrame, sebelum membuat GamePanel
-    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-    // Atau lebih baik, gunakan bounds yang memperhitungkan taskbar:
-    // Rectangle usableScreenBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-    // int screenHeight = usableScreenBounds.height;
-    // int screenWidth = usableScreenBounds.width;
-    int screenHeight = screenSize.height; // Contoh sederhana
 
-    // Target persentase tinggi layar untuk jendela game
-    double targetHeightRatio = 0.85; // Misal, gunakan 85% tinggi layar
-    int targetWindowHeight = (int) (screenHeight * targetHeightRatio);
-
-    // Nilai referensi dari desain Anda
-    int originalViewportTilesHeight = 10; // VIEWPORT_HEIGHT_IN_TILES
-    double originalInfoPanelHeightToTileRatio = 100.0 / 96.0; // Rasio INFO_PANEL_HEIGHT terhadap TILE_SIZE asli
-
-    // 1. Lakukan kalkulasi awal dan simpan ke variabel sementara
-    int calculatedTileSize = (int) (targetWindowHeight / (originalViewportTilesHeight + originalInfoPanelHeightToTileRatio));
-
-    // 2. Batasi (clamp) hasil kalkulasi tersebut ke dalam rentang yang diinginkan (misal, 32px hingga 128px)
-    int dynamicTileSize = Math.max(32, Math.min(calculatedTileSize, 128));
-
-    // Sekarang Anda memiliki nilai `dynamicTileSize` yang sudah final dan aman untuk digunakan.
-    int dynamicInfoPanelHeight = (int) (originalInfoPanelHeightToTileRatio * dynamicTileSize);
-
-    // Saat membuat GamePanel, teruskan nilai dinamis yang sudah aman ini:
-    // GamePanel gamePanel = new GamePanel(farmModel, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
-
-    // Saat membuat GamePanel, teruskan nilai dinamis ini:
-    // GamePanel gamePanel = new GamePanel(farmModel, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
 
     public GamePanel(Farm farmModel, GameController gameController, GameFrame gameFrame, int dynamicTileSize, int dynamicInfoPanelHeight) { // Added GameFrame parameter
         this.farmModel = farmModel;
@@ -605,9 +576,10 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         }
     }
 
-    private void setGeneralGameMessage(String message, boolean isError) {
-        this.generalGameMessage = message;
-        this.generalGameMessageColor = isError ? new Color(255, 80, 80) : new Color(144, 238, 144); // Red for error, light green for info
+    // Method to set a general message on screen for a short duration
+    public void setGeneralGameMessage(String message, boolean isError) { // <<<< Changed to public
+        generalGameMessage = message;
+        generalGameMessageColor = isError ? Color.RED : Color.WHITE;
         if (generalGameMessageTimer.isRunning()) {
             generalGameMessageTimer.restart();
         } else {
@@ -3778,6 +3750,14 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                         startGameTimer(); // Resume game timer
                         // playInGameMusic(); // Music will be resumed by paintComponent
                         // animationTimer.start(); // Resume animations
+                        break;
+                    case "Save Game":
+                        if (gameController != null) {
+                            gameController.saveGame(); // Call GameController to handle saving
+                            setGeneralGameMessage("Game Saved!", false);
+                        } else {
+                            setGeneralGameMessage("Error: Could not save game.", true);
+                        }
                         break;
                     // case "Options":
                     //     setGeneralGameMessage("Options menu not yet implemented.", false);

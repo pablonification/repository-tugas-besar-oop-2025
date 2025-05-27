@@ -196,6 +196,11 @@ public class WorldMap implements MapArea {
         return null;
     }
 
+    @Override
+    public Tile[][] getTiles() {
+        return this.genericTiles;
+    }
+
     /**
      * Mendapatkan MapArea spesifik dari dalam WorldMap berdasarkan LocationType.
      * @param type Tipe lokasi yang dicari (misalnya STORE, FOREST_RIVER).
@@ -412,5 +417,27 @@ public class WorldMap implements MapArea {
                 }
             }
         }
+    }
+
+    /**
+     * Mendapatkan MapArea spesifik dari dalam WorldMap berdasarkan namanya.
+     * Berguna untuk memuat game.
+     * @param name Nama MapArea yang dicari.
+     * @return Objek MapArea jika ditemukan, atau null jika tidak.
+     */
+    public MapArea getMapAreaByName(String name) {
+        if (this.name.equalsIgnoreCase(name)) {
+            return this;
+        }
+        for (MapArea subArea : subLocations.values()) {
+            if (subArea.getName().equalsIgnoreCase(name)) {
+                return subArea;
+            }
+            // Jika subArea juga adalah WorldMap (misalnya, untuk home map)
+            // kita mungkin perlu rekursi, tapi hati-hati dengan kedalaman dan performa.
+            // Untuk sekarang, kita hanya cek level pertama subLocations.
+            // Jika home map adalah WorldMap sendiri, ini akan dicakup oleh cek this.name di atas.
+        }
+        return null; // Tidak ditemukan
     }
 }

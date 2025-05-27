@@ -149,6 +149,10 @@ public class Inventory {
       return Collections.unmodifiableMap(this.items);
     }
 
+    public void clear() { // Added for loading save data
+        this.items.clear();
+    }
+
 // Anda bisa menambahkan metode lain jika perlu, misalnya:
     // - getTotalItemCount(): Mengembalikan jumlah total semua item.
     // - isEmpty(): Memeriksa apakah inventory kosong.

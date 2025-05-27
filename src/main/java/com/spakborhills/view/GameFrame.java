@@ -16,6 +16,8 @@ import com.spakborhills.model.Util.ShippingBin;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Enum.Gender;
 import com.spakborhills.Main; // Required for setup methods
+import com.spakborhills.util.SaveLoadManager; // Import SaveLoadManager
+import com.spakborhills.data.SaveData; // Import SaveData
 
 import javax.swing.*;
 import java.awt.*; // Import full AWT package for GraphicsDevice and GraphicsEnvironment
@@ -138,9 +140,7 @@ public class GameFrame extends JFrame {
                 promptForPlayerAndFarmInfoAndStartGame();
                 break;
             case MainMenuPanel.LOAD_GAME:
-                // Placeholder for Load Game functionality
-                JOptionPane.showMessageDialog(this, "Load Game functionality is not yet implemented.", "Load Game", JOptionPane.INFORMATION_MESSAGE);
-                mainMenuPanel.requestFocusInWindow(); // Return focus
+                loadGameAndStart();
                 break;
             case MainMenuPanel.HELP:
                 displayHelp();
@@ -153,6 +153,80 @@ public class GameFrame extends JFrame {
             case MainMenuPanel.EXIT:
                 System.exit(0);
                 break;
+        }
+    }
+
+    private void loadGameAndStart() {
+        SaveLoadManager saveLoadManager = new SaveLoadManager();
+        SaveData saveData = saveLoadManager.loadGame();
+
+        if (saveData != null) {
+            // Initialize game components first, similar to new game but without player/farm input
+            // Many of these will be overwritten by save data, but essential structures need to be in place
+            Map<String, Item> itemRegistry = Main.setupItemRegistry();
+            if (itemRegistry == null || itemRegistry.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Error: Item Registry setup failed! Cannot load game.", "Load Error", JOptionPane.ERROR_MESSAGE);
+                showMainMenu();
+                return;
+            }
+
+            FarmMap farmMap = new FarmMap(); // Will be populated/managed by Farm
+            GameTime gameTime = new GameTime(); // Will be set by save data
+            ShippingBin shippingBin = new ShippingBin(); // State might be part of Farm or Player
+            Store store = new Store(); // Potentially needs to be part of save if its stock changes
+            WorldMap worldMap = new WorldMap("Spakbor Hills World", store); // Maps are defined, player's current map will be set
+            List<NPC> npcList = Main.setupNPCs(); // NPC states might need loading if they change
+            List<Recipe> recipeList = Main.setupRecipes();
+            PriceList priceList = Main.setupPriceList();
+            
+            // Player needs to be created, then its state will be loaded.
+            // Provide placeholder values, they will be overwritten by applySaveDataToGame.
+            // The spritesheet path and dimensions should ideally be consistent or stored too.
+            String playerSpritesheetPath = "/assets/sprites/player/main_char.png"; 
+            int playerSpriteWidth = 16;
+            int playerSpriteHeight = 32;
+
+            Player player = new Player("Loading...", Gender.MALE, "Loading Farm...", farmMap, 0, 0, 
+                                       itemRegistry, playerSpritesheetPath, playerSpriteWidth, playerSpriteHeight);
+            EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), player);
+
+
+            // Initialize Farm with these components
+            this.farm = new Farm("Loading Farm...", player, farmMap, worldMap, store, npcList, recipeList, 
+                                 gameTime, shippingBin, statistics, priceList, itemRegistry);
+            
+            // Apply the loaded save data
+            // The SaveLoadManager needs the Farm instance to access ItemRegistry and other components.
+            saveLoadManager.applySaveDataToGame(saveData, this.farm, this.farm.getPlayer(), this.farm.getCurrentTime());
+            
+            // Now that farm and player are populated from save data, create GameController
+            this.gameController = new GameController(this.farm);
+
+            // Setup GamePanel
+            if (this.gamePanel != null) {
+                this.gamePanel.stopMusic();
+                mainPanelContainer.remove(this.gamePanel);
+            }
+            gamePanel = new GamePanel(this.farm, this.gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
+            mainPanelContainer.add(gamePanel, GAME_PANEL_KEY);
+            
+            if (this.gameController != null) {
+                this.gameController.setGamePanel(gamePanel);
+            }
+
+            if (gamePanel != null) {
+                gamePanel.startGame(); // This sets GameState to IN_GAME and starts timers
+            }
+            showGamePanel();
+            
+            // After successfully loading and applying, ensure the player spawns safely
+            if (this.gameController != null && this.farm.getPlayer().getCurrentMap() != null) {
+                this.gameController.ensureSafePlayerSpawn();
+            }
+
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to load game data or no save file found.", "Load Error", JOptionPane.ERROR_MESSAGE);
+            showMainMenu();
         }
     }
 

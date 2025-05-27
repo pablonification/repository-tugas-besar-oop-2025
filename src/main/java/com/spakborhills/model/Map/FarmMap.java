@@ -188,6 +188,11 @@ public class FarmMap implements MapArea{
         return null; 
     }
 
+    @Override
+    public Tile[][] getTiles() {
+        return this.tiles;
+    }
+
     /**
      * Memeriksa apakah koordinat (x,y) berada dalam batas peta.
      * Sesuai diagram kelas MapArea.

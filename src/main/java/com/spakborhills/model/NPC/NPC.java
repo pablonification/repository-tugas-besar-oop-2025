@@ -51,6 +51,8 @@ public abstract class NPC {
     // Untuk spritesheets
     protected String spritesheetPath;
     protected transient BufferedImage fullSpritesheet;
+    protected String dialoguePortraitPath; // New field for dialogue portrait path
+    protected transient BufferedImage dialoguePortraitImage; // New field for loaded dialogue portrait
 
     // Dimensi dan koordinat untuk frame sprite default di peta
     public int defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight;
@@ -74,11 +76,12 @@ public abstract class NPC {
 
     protected NPC(String name, LocationType homeLocation, boolean isBachelor, String spritesheetPath,
     int defaultSpriteX, int defaultSpriteY, int spriteWidth, int spriteHeight,
-    int defaultPortraitX, int defaultPortraitY, int portraitWidth, int portraitHeight) {
+    int defaultPortraitX, int defaultPortraitY, int portraitWidth, int portraitHeight, String dialoguePortraitPath) {
         this.name = name;
         this.homeLocation = homeLocation;
         this.isBachelor = isBachelor;
         this.spritesheetPath = spritesheetPath;
+        this.dialoguePortraitPath = dialoguePortraitPath; // Initialize new field
 
         this.heartPoints = 0;
         this.relationshipStatus = RelationshipStatus.SINGLE;
@@ -108,6 +111,7 @@ public abstract class NPC {
         this.animationCounter = 0;
 
         loadSpritesheet();
+        loadDialoguePortrait(); // Call method to load the dialogue portrait
     }
 
 
@@ -126,84 +130,132 @@ public abstract class NPC {
         }
     }
 
-    // Mendapatkan frame sprite default untuk di peta
-// Ganti method getCurrentSpriteFrame() yang lama dengan ini:
-public Image getCurrentSpriteFrame() {
-    if (this.fullSpritesheet == null) {
-        if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
-            loadSpritesheet();
+    // Method to load the dialogue portrait image
+    private void loadDialoguePortrait() {
+        try {
+            if (this.dialoguePortraitPath != null && !this.dialoguePortraitPath.isEmpty()) {
+                BufferedImage loadedPortrait = ImageIO.read(getClass().getResourceAsStream(this.dialoguePortraitPath));
+                if (loadedPortrait != null) {
+                    this.dialoguePortraitImage = loadedPortrait; // Use the loaded image directly
+                    // Update portraitWidth and portraitHeight to the actual dimensions of the loaded dedicated portrait
+                    // This assumes the dedicated portrait is to be used at its native size.
+                    // If it should be scaled to the old defaultPortraitX/Y/Width/Height, then this update is not needed
+                    // and GamePanel should continue to use npc.portraitWidth/Height for drawing.
+                    // For now, let's assume the user wants to use the NPC's defined portraitWidth/Height for drawing scale.
+                    // So, we don't re-assign this.portraitWidth/Height here from the image itself.
+                } else {
+                    System.err.println("Gagal memuat potret dialog NPC: " + this.name + " dari path: " + this.dialoguePortraitPath + ". Akan menggunakan fallback dari spritesheet.");
+                    fallbackToSpritesheetPortrait();
+                }
+            } else {
+                // If no dedicated path, use the existing logic to get portrait from spritesheet
+                fallbackToSpritesheetPortrait();
+            }
+        } catch (IOException e) {
+            System.err.println("Error I/O saat memuat potret dialog untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
+            fallbackToSpritesheetPortrait();
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error path potret dialog tidak valid untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
+            fallbackToSpritesheetPortrait();
+        } catch (Exception e) {
+            System.err.println("Exception umum saat memuat potret dialog untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
+            fallbackToSpritesheetPortrait();
         }
+    }
+
+    private void fallbackToSpritesheetPortrait() {
         if (this.fullSpritesheet == null) {
-            System.err.println("NPC " + name + ": fullSpritesheet null di getCurrentSpriteFrame.");
-            return null;
+            loadSpritesheet(); // Ensure main spritesheet is loaded
+        }
+        if (this.fullSpritesheet != null) {
+            try {
+                this.dialoguePortraitImage = this.fullSpritesheet.getSubimage(defaultPortraitX, defaultPortraitY, portraitWidth, portraitHeight);
+            } catch (Exception e) {
+                System.err.println("Gagal memotong fallback potret dialog dari spritesheet untuk NPC: " + this.name + ": " + e.getMessage());
+                this.dialoguePortraitImage = null; // Ensure it's null if fallback fails
+            }
+        } else {
+            System.err.println("Fallback potret dialog gagal untuk NPC: " + this.name + " karena spritesheet utama juga null.");
+            this.dialoguePortraitImage = null; // Ensure it's null
         }
     }
 
-    int spriteSheetRowPixelY; 
-    int spriteSheetColPixelX; 
+    // Mendapatkan frame sprite default untuk di peta
+    public Image getCurrentSpriteFrame() {
+        if (this.fullSpritesheet == null) {
+            if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
+                loadSpritesheet();
+            }
+            if (this.fullSpritesheet == null) {
+                System.err.println("NPC " + name + ": fullSpritesheet null di getCurrentSpriteFrame.");
+                return null;
+            }
+        }
 
-    // Tentukan baris berdasarkan arah hadap
-    switch (currentDirection) {
-        case NORTH:
-            spriteSheetRowPixelY = spriteSheetRowUp * spriteHeight;
-            break;
-        case SOUTH:
-        default: 
-            spriteSheetRowPixelY = spriteSheetRowDown * spriteHeight;
-            break;
-        case WEST:
-            spriteSheetRowPixelY = spriteSheetRowLeft * spriteHeight;
-            break;
-        case EAST:
-            spriteSheetRowPixelY = spriteSheetRowRight * spriteHeight;
-            break;
-    }
+        int spriteSheetRowPixelY; 
+        int spriteSheetColPixelX; 
 
-    // Tentukan kolom berdasarkan status bergerak dan frame animasi
-    if (isMoving) {
-        switch (animationFrame) { 
-            case 0: // Kaki Kiri
-                spriteSheetColPixelX = 1 * spriteWidth;
+        // Tentukan baris berdasarkan arah hadap
+        switch (currentDirection) {
+            case NORTH:
+                spriteSheetRowPixelY = spriteSheetRowUp * spriteHeight;
                 break;
-            case 1: // Diam (posisi tengah)
-                spriteSheetColPixelX = 0 * spriteWidth;
-                break;
-            case 2: // Kaki Kanan
-                spriteSheetColPixelX = 3 * spriteWidth;
-                break;
-            case 3: // Diam lagi (kembali ke tengah)
+            case SOUTH:
             default: 
-                spriteSheetColPixelX = 0 * spriteWidth;
+                spriteSheetRowPixelY = spriteSheetRowDown * spriteHeight;
+                break;
+            case WEST:
+                spriteSheetRowPixelY = spriteSheetRowLeft * spriteHeight;
+                break;
+            case EAST:
+                spriteSheetRowPixelY = spriteSheetRowRight * spriteHeight;
                 break;
         }
-    } else {
-        // NPC diam, gunakan frame idle (kolom 0)
-        spriteSheetColPixelX = 0 * spriteWidth;
-    }
-    
-    // Validasi batas
-    if (spriteSheetColPixelX < 0 || spriteSheetRowPixelY < 0 ||
-        spriteSheetColPixelX + spriteWidth > fullSpritesheet.getWidth() ||
-        spriteSheetRowPixelY + spriteHeight > fullSpritesheet.getHeight()) {
-        System.err.println("NPC " + name + ": Koordinat/dimensi sprite di luar batas!" +
-                           " Dir: " + currentDirection + ", Moving: " + isMoving + ", AnimFrameIdx: " + animationFrame +
-                           ", Xpx: " + spriteSheetColPixelX + ", Ypx: " + spriteSheetRowPixelY +
-                           ", W: " + spriteWidth + ", H: " + spriteHeight +
-                           ", Sheet: " + fullSpritesheet.getWidth() + "x" + fullSpritesheet.getHeight());
-        // Fallback ke frame default lama jika ada error
-        return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
-    }
 
-    try {
-        return this.fullSpritesheet.getSubimage(spriteSheetColPixelX, spriteSheetRowPixelY, spriteWidth, spriteHeight);
-    } catch (Exception e) {
-        System.err.println("NPC " + name + ": Exception saat getSubimage: " + e.getMessage());
-        e.printStackTrace();
-        // Fallback ke frame default lama jika ada exception
-        return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
-    }
-}
+        // Tentukan kolom berdasarkan status bergerak dan frame animasi
+        if (isMoving) {
+            switch (animationFrame) { 
+                case 0: // Kaki Kiri
+                    spriteSheetColPixelX = 1 * spriteWidth;
+                    break;
+                case 1: // Diam (posisi tengah)
+                    spriteSheetColPixelX = 0 * spriteWidth;
+                    break;
+                case 2: // Kaki Kanan
+                    spriteSheetColPixelX = 3 * spriteWidth;
+                    break;
+                case 3: // Diam lagi (kembali ke tengah)
+                default: 
+                    spriteSheetColPixelX = 0 * spriteWidth;
+                    break;
+            }
+        } else {
+            // NPC diam, gunakan frame idle (kolom 0)
+            spriteSheetColPixelX = 0 * spriteWidth;
+        }
+        
+        // Validasi batas
+        if (spriteSheetColPixelX < 0 || spriteSheetRowPixelY < 0 ||
+            spriteSheetColPixelX + spriteWidth > fullSpritesheet.getWidth() ||
+            spriteSheetRowPixelY + spriteHeight > fullSpritesheet.getHeight()) {
+            System.err.println("NPC " + name + ": Koordinat/dimensi sprite di luar batas!" +
+                               " Dir: " + currentDirection + ", Moving: " + isMoving + ", AnimFrameIdx: " + animationFrame +
+                               ", Xpx: " + spriteSheetColPixelX + ", Ypx: " + spriteSheetRowPixelY +
+                               ", W: " + spriteWidth + ", H: " + spriteHeight +
+                               ", Sheet: " + fullSpritesheet.getWidth() + "x" + fullSpritesheet.getHeight());
+            // Fallback ke frame default lama jika ada error
+            return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
+        }
 
+        try {
+            return this.fullSpritesheet.getSubimage(spriteSheetColPixelX, spriteSheetRowPixelY, spriteWidth, spriteHeight);
+        } catch (Exception e) {
+            System.err.println("NPC " + name + ": Exception saat getSubimage: " + e.getMessage());
+            e.printStackTrace();
+            // Fallback ke frame default lama jika ada exception
+            return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
+        }
+    }
 
     // Method untuk update animasi NPC
     public void updateAnimation() {
@@ -249,20 +301,18 @@ public Image getCurrentSpriteFrame() {
     }
 
     // Mendapatkan potret default untuk dialog
-    public Image getDefaultPortrait() {
-        if (this.fullSpritesheet == null) {
-            if (this.spritesheetPath != null && !this.spritesheetPath.isEmpty()) {
-                loadSpritesheet();
+    public Image getDefaultPortrait() { // This method now becomes the getter for the dedicated dialogue portrait
+        if (this.dialoguePortraitImage == null) {
+            // Attempt to load it if it's null (e.g., after deserialization or if initial load failed or was never called)
+            loadDialoguePortrait(); // This will handle loading dedicated or falling back to spritesheet
+            
+            if (this.dialoguePortraitImage == null) {
+                System.err.println("Potret dialog untuk NPC " + name + " adalah null bahkan setelah upaya pemuatan ulang/fallback.");
+                // Optional: return a truly default placeholder image if even fallback fails
+                return null; 
             }
-            if (this.fullSpritesheet == null) return null;
         }
-        // Potong sub-gambar dari spritesheet untuk potret default
-        // Pastikan koordinat dan dimensi tidak melebihi batas gambar
-        if (defaultPortraitX + portraitWidth > fullSpritesheet.getWidth() || defaultPortraitY + portraitHeight > fullSpritesheet.getHeight()) {
-            System.err.println("Koordinat atau dimensi potret default untuk " + name + " di luar batas spritesheet.");
-            return null;
-        }
-        return this.fullSpritesheet.getSubimage(defaultPortraitX, defaultPortraitY, portraitWidth, portraitHeight);
+        return this.dialoguePortraitImage;
     }
 
     public String getName() {

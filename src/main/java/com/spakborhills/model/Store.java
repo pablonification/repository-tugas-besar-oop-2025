@@ -276,4 +276,9 @@ public class Store implements MapArea{
         }
         return null;
     }
+
+    @Override
+    public Tile[][] getTiles() {
+        return this.tiles;
+    }
 }

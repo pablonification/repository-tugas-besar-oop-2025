@@ -288,3 +288,8 @@ Tips for Itch.io Search:
 *   Check licenses.
 *   Prioritize style consistency.
 ---
+
+
+PENTING:
+- SAAT LOAD SAVE NAMA SEMUA ILANG, MAP MAP ASSET TILES GA KELOAD
+- FOTO PROFIL BLM DI CUT NPC

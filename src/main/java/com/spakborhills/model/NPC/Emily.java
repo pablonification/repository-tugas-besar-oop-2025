@@ -22,13 +22,16 @@ public class Emily extends NPC {
     private static final int DEFAULT_PORTRAIT_Y = 195;   // Koordinat Y potret di spritesheet
     private static final int PORTRAIT_WIDTH = 55;      // Lebar satu potret
     private static final int PORTRAIT_HEIGHT = 61;     // Tinggi satu potret
+    private static final String EMILY_PORTRAIT_PATH = "/assets/portraits/npc/emily.png"; // Path for dedicated portrait
+
     public Emily() {
         super("Emily",
         LocationType.STORE,
         false,
         EMILY_SPRITESHEET_PATH,
         DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
-        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT);
+        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,
+        EMILY_PORTRAIT_PATH); // Pass the new portrait path
         this.likedItems.addAll(Arrays.asList("Catfish", "Salmon", "Sardine"));
         this.hatedItems.addAll(Arrays.asList("Coal", "Wood"));
     }

@@ -1,0 +1,60 @@
+{
+  "playerX": 16,
+  "playerY": 4,
+  "currentMapId": "Farm",
+  "playerMoney": 500,
+  "playerEnergy": 50,
+  "playerInventory": {
+    "items": [
+      {
+        "itemId": "Proposal Ring",
+        "quantity": 1
+      },
+      {
+        "itemId": "Hoe",
+        "quantity": 1
+      },
+      {
+        "itemId": "Fishing Rod",
+        "quantity": 1
+      },
+      {
+        "itemId": "Coal",
+        "quantity": 10
+      },
+      {
+        "itemId": "Legend",
+        "quantity": 2
+      },
+      {
+        "itemId": "Potato",
+        "quantity": 10
+      },
+      {
+        "itemId": "Wheat",
+        "quantity": 10
+      },
+      {
+        "itemId": "Pickaxe",
+        "quantity": 1
+      },
+      {
+        "itemId": "Firewood",
+        "quantity": 10
+      },
+      {
+        "itemId": "Parsnip Seeds",
+        "quantity": 15
+      },
+      {
+        "itemId": "Watering Can",
+        "quantity": 1
+      }
+    ]
+  },
+  "currentDay": 1,
+  "currentHour": 7,
+  "currentSeason": "SPRING",
+  "currentYear": 1,
+  "farmTiles": {}
+}

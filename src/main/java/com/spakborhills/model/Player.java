@@ -461,8 +461,12 @@ public class Player {
     public void addGold(int amount) {
         if (amount > 0) {
             this.gold += amount;
-        } else {
-            System.out.println("Jumlah gold yang ditambahkan harus positif.");
+        }
+    }
+
+    public void setGold(int gold) { // Added setter for loading
+        if (gold >= 0) {
+            this.gold = gold;
         }
     }
 
@@ -478,6 +482,10 @@ public class Player {
             System.out.println("Gold tidak cukup.");
             return false;
         }
+    }
+
+    public void setEnergy(int energy) { // Added setter for loading
+        this.energy = Math.max(MIN_ENERGY, Math.min(MAX_ENERGY, energy));
     }
 
     // --- Metode Aksi Inti (Implementasi berdasarkan Spesifikasi Hal 25-28) ---

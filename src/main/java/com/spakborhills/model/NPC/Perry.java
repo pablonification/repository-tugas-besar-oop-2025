@@ -22,11 +22,14 @@ public class Perry extends NPC {
     private static final int DEFAULT_PORTRAIT_Y = 0;   // Koordinat Y potret di spritesheet
     private static final int PORTRAIT_WIDTH = 65;      // Lebar satu potret
     private static final int PORTRAIT_HEIGHT = 64;     // Tinggi satu potret
+    private static final String PERRY_PORTRAIT_PATH = "/assets/portraits/npc/perry.png"; // Path for dedicated portrait
+
     public Perry() {
         super("Perry", LocationType.PERRY_HOME, false,
         PERRY_SPRITESHEET_PATH,
         DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
-        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT);
+        DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,
+        PERRY_PORTRAIT_PATH); // Pass the new portrait path
         this.lovedItems.addAll(Arrays.asList("Cranberry", "Blueberry"));
         this.likedItems.add("Wine");
     }
