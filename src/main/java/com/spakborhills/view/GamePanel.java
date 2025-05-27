@@ -28,6 +28,7 @@ import com.spakborhills.model.NPC.NPC; // Make sure NPC is imported
 import com.spakborhills.model.Enum.GameState; // Added import for GameState
 import com.spakborhills.model.Util.ShippingBin; // Corrected import path
 import com.spakborhills.model.Object.DeployedObject; // Added import for DeployedObject
+import com.spakborhills.util.SaveLoadManager; // Import for save/load functionality
 
 import javax.imageio.ImageIO; // For loading placeholder image
 import javax.swing.*;
@@ -50,6 +51,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import java.text.SimpleDateFormat;
 
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
 
@@ -76,7 +78,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private boolean statisticsShown = false; // Flag to ensure stats are shown only once
 
     // Main Menu state
-    private String[] menuOptions = {"New Game", "Load Game", "Help", "Credits", "Exit"};
+    private String[] menuOptions = {"New Game", "Load Game", "Help", "Credits", "Manage Saves", "Exit"};
     private int currentMenuSelection = 0;
     private static final Font MENU_FONT = new Font("Arial", Font.BOLD, 30);
     private static final Font MENU_ITEM_FONT = new Font("Arial", Font.PLAIN, 24);
@@ -2140,6 +2142,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     }
 
     private void handleMainMenuInput(int keyCode) {
+        if (farmModel.getCurrentGameState() != GameState.MAIN_MENU) return;
+
         switch (keyCode) {
             case KeyEvent.VK_UP:
                 currentMenuSelection--;
@@ -2157,7 +2161,6 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 selectMainMenuItem();
                 break;
         }
-        repaint(); // Repaint after menu navigation
     }
 
     private void selectMainMenuItem() {
@@ -2165,131 +2168,25 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         System.out.println("Main Menu item selected: " + selectedOption);
         switch (selectedOption) {
             case "New Game":
-                System.out.println("DEBUG: 'New Game' selected from menu.");
-                stopMenuMusic(); // Good to stop menu music explicitly here
-                // farmModel.setCurrentGameState(GameState.IN_GAME); // startGame() will handle this
-                // playInGameMusic(); // startGame() will lead to paintComponent handling this
-                // if (gameTimer != null && !gameTimer.isRunning()) { // startGame() handles timers
-                //     gameTimer.start();
-                // }
-                this.startGame(); // Call startGame to handle state, timers, and other initializations
-                statisticsShown = false; 
+                gameFrame.onMainMenuSelection(0);
                 break;
             case "Load Game":
-                JOptionPane.showMessageDialog(this, "Load Game feature is not yet implemented.", "Load Game", JOptionPane.INFORMATION_MESSAGE);
+                gameFrame.onMainMenuSelection(1);
                 break;
             case "Help":
-                // Re-use existing JOptionPane for help for now
-                 JOptionPane.showMessageDialog(this,
-                            "Spakbor Hills - A Farming Adventure Game!\n\n" +
-                            "Objective: Become a successful farmer and achieve milestones!\n\n" +
-                            "Controls (In-Game):\n" +
-                            "• WASD/Arrows: Move\n" +
-                            "• E: Interact/Use Tool/Harvest\n" +
-                            "• F: Eat Selected Item\n" +
-                            "• T: Open Store\n" +
-                            "• B: Open Shipping Bin\n" +
-                            "• 1, 2: Cycle Inventory\n" +
-                            "• X: Chat with NPC\n" +
-                            "• G: Gift to NPC\n" +
-                            "• L: Sleep\n" +
-                            "• K: Cook\n" +
-                            "• V: Watch TV\n" +
-                            "• I: View Player Info\n" +
-                            "• O: View Current Progress\n" +
-                            "• C: Open Cheat Menu\n\n" +
-                            "Menu Controls:\n" +
-                            "• UP/DOWN Arrows: Navigate\n" +
-                            "• ENTER: Select",
-                            "Help", JOptionPane.INFORMATION_MESSAGE);
+                gameFrame.onMainMenuSelection(2);
                 break;
             case "Credits":
-                // Re-use existing JOptionPane
-                JOptionPane.showMessageDialog(this,
-                            "Spakbor Hills - Game created by Kelompok Kito\n" +
-                            "Inspired by Harvest Moon Series", 
-                            "Credits", JOptionPane.INFORMATION_MESSAGE);
+                gameFrame.onMainMenuSelection(3);
+                break;
+            case "Manage Saves":
+                showManageSavesDialog();
                 break;
             case "Exit":
-                System.out.println("Exiting Spakbor Hills via menu.");
-                System.exit(0);
+                gameFrame.onMainMenuSelection(4);
                 break;
         }
     }
-
-    @Deprecated
-    // private void drawNpcDialogue(Graphics g) {
-    //     if (!isNpcDialogueActive) {
-    //         return;
-    //     }
-
-    //     Graphics2D g2d = (Graphics2D) g.create(); // Create a copy to not affect other drawings
-
-    //     // 1. Draw Dialogue Box Background
-    //     g2d.setColor(new Color(0, 0, 0, 200)); // Semi-transparent black
-    //     g2d.fill(npcDialogueBox);
-    //     g2d.setColor(Color.WHITE);
-    //     g2d.draw(npcDialogueBox);
-
-    //     // 2. Draw NPC Portrait (Placeholder)
-    //     int portraitX = npcDialogueBox.x + DIALOGUE_PADDING;
-    //     int portraitY = npcDialogueBox.y + DIALOGUE_PADDING;
-    //     g2d.drawImage(npcPortraitPlaceholder, portraitX, portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE, this);
-    //     g2d.setColor(Color.GRAY);
-    //     g2d.drawRect(portraitX,portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE);
-
-
-    //     // 3. Draw NPC Name
-    //     g2d.setFont(DIALOGUE_NAME_FONT);
-    //     FontMetrics nameFm = g2d.getFontMetrics();
-    //     int nameX = portraitX + PORTRAIT_SIZE + DIALOGUE_PADDING;
-    //     int nameY = npcDialogueBox.y + DIALOGUE_PADDING + nameFm.getAscent();
-    //     g2d.setColor(Color.YELLOW); // Or any color for the name
-    //     g2d.drawString(currentNpcName + " says:", nameX, nameY);
-
-    //     // 4. Draw Dialogue Text (with basic word wrapping)
-    //     g2d.setFont(DIALOGUE_TEXT_FONT);
-    //     g2d.setColor(Color.WHITE);
-    //     FontMetrics textFm = g2d.getFontMetrics();
-    //     int textBlockStartX = npcDialogueBox.x + DIALOGUE_PADDING + PORTRAIT_SIZE + DIALOGUE_PADDING;
-    //     int availableTextWidth = (npcDialogueBox.x + npcDialogueBox.width - DIALOGUE_PADDING) - textBlockStartX;
-        
-    //     List<String> lines = new ArrayList<>();
-    //     String[] words = currentNpcDialogue.split(" ");
-    //     StringBuilder currentLine = new StringBuilder();
-
-    //     for (String word : words) {
-    //         if (textFm.stringWidth(currentLine.toString() + word) < availableTextWidth) {
-    //             currentLine.append(word).append(" ");
-    //         } else {
-    //             lines.add(currentLine.toString().trim());
-    //             currentLine = new StringBuilder(word + " ");
-    //         }
-    //     }
-    //     lines.add(currentLine.toString().trim()); // Add the last line
-
-    //     int lineY = nameY + DIALOGUE_PADDING;
-    //     for (String line : lines) {
-    //         if (lineY + textFm.getHeight() > npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING) { // Check bounds
-    //             g2d.drawString("...", textBlockStartX, lineY); // Indicate more text if it overflows
-    //             break;
-    //         }
-    //         g2d.drawString(line, textBlockStartX, lineY);
-    //         lineY += textFm.getHeight();
-    //     }
-
-
-    //     // 5. Draw "Press Enter to continue" prompt
-    //     g2d.setFont(DIALOGUE_TEXT_FONT.deriveFont(Font.ITALIC));
-    //     String continuePrompt = "Press ENTER to continue...";
-    //     int promptWidth = textFm.stringWidth(continuePrompt); // Use textFm from DIALOGUE_TEXT_FONT
-    //     int promptX = npcDialogueBox.x + npcDialogueBox.width - promptWidth - DIALOGUE_PADDING;
-    //     int promptY = npcDialogueBox.y + npcDialogueBox.height - DIALOGUE_PADDING;
-    //     g2d.setColor(Color.LIGHT_GRAY);
-    //     g2d.drawString(continuePrompt, promptX, promptY);
-
-    //     g2d.dispose();
-    // }
 
     private void drawNpcDialogue(Graphics g) {
         if (!isNpcDialogueActive) { 
@@ -3804,11 +3701,53 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                         break;
                     case "Save Game":
                         if (gameController != null) {
-                            gameController.saveGame(); // Call GameController to handle saving
-                            setGeneralGameMessage("Game Saved!", false);
+                            String[] options = {"Quick Save", "Save As", "Cancel"};
+                            int choice = JOptionPane.showOptionDialog(
+                                this,
+                                "Choose Save Option",
+                                "Save Game",
+                                JOptionPane.DEFAULT_OPTION,
+                                JOptionPane.QUESTION_MESSAGE,
+                                null,
+                                options,
+                                options[0]
+                            );
+                            
+                            if (choice == 0) { // Quick Save
+                                gameController.saveGame(); // Call GameController to handle saving
+                                setGeneralGameMessage("Game Saved!", false);
+                            } else if (choice == 1) { // Save As
+                                String saveFileName = JOptionPane.showInputDialog(
+                                    this,
+                                    "Enter save file name (without extension):\n(Special characters will be replaced with underscores)",
+                                    "Save Game As",
+                                    JOptionPane.PLAIN_MESSAGE
+                                );
+                                
+                                if (saveFileName != null && !saveFileName.trim().isEmpty()) {
+                                    String actualFileName = gameController.saveGameAs(saveFileName);
+                                    if (actualFileName != null) {
+                                        JOptionPane.showMessageDialog(
+                                            this,
+                                            "Game saved successfully as:\n" + actualFileName + "\n\n" +
+                                            "Note: The filename may have been modified to ensure compatibility.",
+                                            "Save Complete",
+                                            JOptionPane.INFORMATION_MESSAGE
+                                        );
+                                        setGeneralGameMessage("Game Saved as: " + actualFileName, false);
+                                    } else {
+                                        setGeneralGameMessage("Error: Failed to save game.", true);
+                                    }
+                                }
+                            } else if (choice == 2) { // Cancel
+                                // Do nothing
+                            }
                         } else {
                             setGeneralGameMessage("Error: Could not save game.", true);
                         }
+                        break;
+                    case "Manage Saves":
+                        showManageSavesDialog();
                         break;
                     // case "Options":
                     //     setGeneralGameMessage("Options menu not yet implemented.", false);
@@ -3853,5 +3792,111 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             this.menuMusicClip.stop();
         }
         this.isMenuMusicPlaying = false; // Update flag
+    }
+
+    /**
+     * Shows a dialog to manage save files (view, delete)
+     * This can be called from the pause menu or elsewhere
+     */
+    public void showManageSavesDialog() {
+        if (gameController == null) {
+            setGeneralGameMessage("Error: Cannot access save system.", true);
+            return;
+        }
+        
+        List<SaveLoadManager.SaveSlot> saves = gameController.getSaveSlots();
+        if (saves.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No save files found.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            boolean keepManaging = true;
+            while (keepManaging) {
+                // Create a string array with detailed save information
+                String[] saveOptions = new String[saves.size()];
+                for (int i = 0; i < saves.size(); i++) {
+                    SaveLoadManager.SaveSlot save = saves.get(i);
+                    saveOptions[i] = String.format("%s - %s's %s - %s Day %d, Year %d",
+                        save.getFileName(),
+                        save.getPlayerName(),
+                        save.getFarmName(),
+                        save.getSeason(),
+                        save.getDay(),
+                        save.getYear()
+                    );
+                }
+                
+                // Show dialog with detailed save info
+                int selectedIndex = JOptionPane.showOptionDialog(
+                    this,
+                    "Select a save file to manage:",
+                    "Manage Saves",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    saveOptions,
+                    saveOptions[0]
+                );
+                
+                if (selectedIndex < 0 || selectedIndex >= saves.size()) {
+                    // User cancelled or closed dialog
+                    keepManaging = false;
+                } else {
+                    SaveLoadManager.SaveSlot selectedSave = saves.get(selectedIndex);
+                    
+                    // Only show delete option
+                    String[] options = {"Delete", "Cancel"};
+                    int action = JOptionPane.showOptionDialog(
+                        this,
+                        "Do you want to delete the selected save file?\n" + 
+                        "Filename: " + selectedSave.getFileName() + "\n" +
+                        "Player: " + selectedSave.getPlayerName() + "\n" +
+                        "Farm: " + selectedSave.getFarmName() + "\n" +
+                        "Date: " + selectedSave.getSeason() + " Day " + selectedSave.getDay() + ", Year " + selectedSave.getYear() + "\n" +
+                        "Last Modified: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(selectedSave.getLastModified()),
+                        "Delete Save",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.WARNING_MESSAGE,
+                        null,
+                        options,
+                        options[1] // Default to Cancel
+                    );
+                    
+                    if (action == 0) { // Delete
+                        int confirm = JOptionPane.showConfirmDialog(
+                            this,
+                            "Are you sure you want to delete " + selectedSave.getFileName() + "?",
+                            "Confirm Delete",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.WARNING_MESSAGE
+                        );
+                        
+                        if (confirm == JOptionPane.YES_OPTION) {
+                            boolean deleted = gameController.deleteSaveFile(selectedSave.getFileName());
+                            if (deleted) {
+                                JOptionPane.showMessageDialog(this,
+                                    "Save file deleted successfully.",
+                                    "Delete Save",
+                                    JOptionPane.INFORMATION_MESSAGE
+                                );
+                                // Refresh the list of saves
+                                saves = gameController.getSaveSlots();
+                                if (saves.isEmpty()) {
+                                    JOptionPane.showMessageDialog(this, "No more save files available.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
+                                    keepManaging = false;
+                                }
+                            } else {
+                                JOptionPane.showMessageDialog(this,
+                                    "Failed to delete save file.",
+                                    "Delete Save",
+                                    JOptionPane.ERROR_MESSAGE
+                                );
+                            }
+                        }
+                    } else {
+                        // Cancel or dialog closed
+                        keepManaging = false;
+                    }
+                }
+            }
+        }
     }
 }

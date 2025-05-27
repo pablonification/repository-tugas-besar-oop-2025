@@ -25,7 +25,7 @@ public class Perry extends NPC {
     private static final String PERRY_PORTRAIT_PATH = "/assets/portraits/npc/perry.png"; // Path for dedicated portrait
 
     public Perry() {
-        super("Perry", LocationType.PERRY_HOME, false,
+        super("Perry", LocationType.PERRY_HOME, true,
         PERRY_SPRITESHEET_PATH,
         DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
         DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,

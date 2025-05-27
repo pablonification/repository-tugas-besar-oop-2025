@@ -2356,14 +2356,59 @@ public class GameController {
             }
             return;
         }
-        SaveLoadManager saveLoadManager = new SaveLoadManager(); 
-        saveLoadManager.saveGame(farmModel, farmModel.getPlayer(), farmModel.getCurrentTime());
+        SaveLoadManager saveLoadManager = new SaveLoadManager();
         
-        if (gamePanel != null) {
-            // Feedback is now handled in GamePanel's handlePauseMenuInput after calling this
-            // gamePanel.setGeneralGameMessage("Game Saved!", false); 
+        // Generate filename automatically from player and farm name
+        String savedFileName = saveLoadManager.saveGame(null, farmModel, farmModel.getPlayer(), farmModel.getCurrentTime());
+        
+        if (savedFileName != null) {
+            if (gamePanel != null) {
+                gamePanel.setGeneralGameMessage("Game Saved as: " + savedFileName, false);
+            }
+            System.out.println("GameController: Game saved successfully as " + savedFileName);
+        } else {
+            if (gamePanel != null) {
+                gamePanel.setGeneralGameMessage("Error: Failed to save game.", true);
+            }
+            System.err.println("GameController: Failed to save game.");
         }
-        System.out.println("GameController: Save game requested and processed by SaveLoadManager.");
+    }
+    
+    /**
+     * Save game with a specific filename
+     * @param fileName The filename to save as, or null for auto-generation
+     * @return The filename that was actually used
+     */
+    public String saveGameAs(String fileName) {
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getCurrentTime() == null) {
+            System.err.println("GameController: Cannot save game. Essential models are null.");
+            return null;
+        }
+        
+        SaveLoadManager saveLoadManager = new SaveLoadManager();
+        return saveLoadManager.saveGame(fileName, farmModel, farmModel.getPlayer(), farmModel.getCurrentTime());
+    }
+    
+    /**
+     * Get a list of all available save files
+     * @return List of SaveSlot objects with save file metadata
+     */
+    public List<SaveLoadManager.SaveSlot> getSaveSlots() {
+        SaveLoadManager saveLoadManager = new SaveLoadManager();
+        return saveLoadManager.getSaveSlots();
+    }
+    
+    /**
+     * Delete a save file
+     * @param fileName The name of the save file to delete
+     * @return true if deletion was successful
+     */
+    public boolean deleteSaveFile(String fileName) {
+        if (fileName == null || fileName.trim().isEmpty()) {
+            return false;
+        }
+        SaveLoadManager saveLoadManager = new SaveLoadManager();
+        return saveLoadManager.deleteSave(fileName);
     }
 } // End of GameController class
 

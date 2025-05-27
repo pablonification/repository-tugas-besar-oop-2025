@@ -25,7 +25,7 @@ public class Abigail extends NPC {
     public Abigail() {
         super("Abigail",
               LocationType.ABIGAIL_HOME,
-              false,
+              true,
               ABIGAIL_SPRITESHEET_PATH,
               DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
               DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,

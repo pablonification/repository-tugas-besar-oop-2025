@@ -35,7 +35,7 @@ public class MayorTadi extends NPC {
     public MayorTadi() {
         super("Mayor Tadi",
         LocationType.MAYOR_TADI_HOME,
-        false,
+        true,
         MAYOR_TADI_SPRITESHEET_PATH,
         DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
         DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,

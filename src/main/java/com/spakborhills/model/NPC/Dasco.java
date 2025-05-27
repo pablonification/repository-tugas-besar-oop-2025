@@ -25,7 +25,7 @@ public class Dasco extends NPC {
     public Dasco() {
         super("Dasco",
         LocationType.DASCO_HOME,
-        false,
+        true,
         DASCO_SPRITESHEET_PATH,
         DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
         DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,

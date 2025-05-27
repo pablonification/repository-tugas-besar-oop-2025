@@ -12,7 +12,7 @@ import java.io.InputStream;
 public class MainMenuPanel extends JPanel {
 
     private BufferedImage backgroundImage;
-    private String[] menuOptions = {"Start Game", "Load Game", "Help", "Credits", "Exit"};
+    private String[] menuOptions = {"Start Game", "Load Game", "Help", "Credits", "Manage Saves", "Exit"};
     private int selectedOption = 0;
     private Font pixelFont;
     private Font titleFont;
@@ -22,7 +22,8 @@ public class MainMenuPanel extends JPanel {
     public static final int LOAD_GAME = 1;
     public static final int HELP = 2;
     public static final int CREDITS = 3;
-    public static final int EXIT = 4;
+    public static final int MANAGE_SAVES = 4;
+    public static final int EXIT = 5;
 
 
     public MainMenuPanel(GameFrame gameFrame) {

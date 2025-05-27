@@ -23,10 +23,15 @@ import com.spakborhills.model.Item.Furniture;
 import java.awt.Point;
 import com.spakborhills.model.Object.DeployedObject;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +39,8 @@ import java.util.Optional;
 
 public class SaveLoadManager {
 
-    private static final String SAVE_FILE_PATH = "savegame.json";
+    private static final String SAVE_DIRECTORY = "saves";
+    private static final String SAVE_FILE_EXTENSION = ".json";
     private Gson gson;
 
     public SaveLoadManager() {
@@ -42,9 +48,120 @@ public class SaveLoadManager {
         this.gson = new GsonBuilder()
                         .setPrettyPrinting()
                         .create();
+        
+        // Create saves directory if it doesn't exist
+        try {
+            Files.createDirectories(Paths.get(SAVE_DIRECTORY));
+        } catch (IOException e) {
+            System.err.println("Error creating saves directory: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get a list of all available save files
+     * @return List of save slot information with file names and metadata
+     */
+    public List<SaveSlot> getSaveSlots() {
+        List<SaveSlot> saveSlots = new ArrayList<>();
+        File saveDir = new File(SAVE_DIRECTORY);
+        
+        if (!saveDir.exists() || !saveDir.isDirectory()) {
+            return saveSlots; // Return empty list if directory doesn't exist
+        }
+        
+        File[] saveFiles = saveDir.listFiles((dir, name) -> name.endsWith(SAVE_FILE_EXTENSION));
+        if (saveFiles != null) {
+            for (File saveFile : saveFiles) {
+                try {
+                    // Try to load basic metadata from each save file
+                    SaveData saveData = loadBasicSaveData(saveFile.getName());
+                    if (saveData != null) {
+                        SaveSlot slot = new SaveSlot();
+                        slot.setFileName(saveFile.getName());
+                        slot.setPlayerName(saveData.getPlayerName());
+                        slot.setFarmName(saveData.getPlayerFarmName());
+                        slot.setDay(saveData.getCurrentDay());
+                        slot.setSeason(saveData.getCurrentSeason());
+                        slot.setYear(saveData.getCurrentYear());
+                        slot.setLastModified(new Date(saveFile.lastModified()));
+                        saveSlots.add(slot);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error reading save file " + saveFile.getName() + ": " + e.getMessage());
+                }
+            }
+        }
+        
+        return saveSlots;
     }
 
-    public void saveGame(Farm farm, Player player, GameTime timeService) {
+    /**
+     * Load just basic metadata from a save file without the full game state
+     */
+    private SaveData loadBasicSaveData(String fileName) {
+        String filePath = SAVE_DIRECTORY + "/" + fileName;
+        try (FileReader reader = new FileReader(filePath)) {
+            return gson.fromJson(reader, SaveData.class);
+        } catch (IOException e) {
+            System.err.println("Error reading basic save data from " + fileName + ": " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Generates a default save file name based on player and farm name
+     */
+    private String generateSaveFileName(String playerName, String farmName) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+        String timestamp = dateFormat.format(new Date());
+        String safeName = (playerName + "_" + farmName)
+            .replaceAll("[^a-zA-Z0-9_-]", "_")  // Replace special chars with underscore
+            .toLowerCase();
+            
+        return safeName + "_" + timestamp + SAVE_FILE_EXTENSION;
+    }
+
+    /**
+     * Save the game to a specific file name
+     * @param fileName The file name to save to, or null to generate a new one
+     * @param farm The Farm object
+     * @param player The Player object
+     * @param timeService The GameTime service
+     * @return The file name used for saving
+     */
+    public String saveGame(String fileName, Farm farm, Player player, GameTime timeService) {
+        // Generate filename if not provided
+        if (fileName == null || fileName.trim().isEmpty()) {
+            fileName = generateSaveFileName(player.getName(), player.getFarmName());
+        } else {
+            // If filename is provided, make sure it has safe characters
+            fileName = fileName.replaceAll("[^a-zA-Z0-9_-]", "_") + SAVE_FILE_EXTENSION;
+        }
+        
+        // Ensure it has the correct extension
+        if (!fileName.endsWith(SAVE_FILE_EXTENSION)) {
+            fileName = fileName + SAVE_FILE_EXTENSION;
+        }
+        
+        String filePath = SAVE_DIRECTORY + "/" + fileName;
+        SaveData saveData = createSaveData(farm, player, timeService);
+        
+        // Tulis ke file JSON
+        try (FileWriter writer = new FileWriter(filePath)) {
+            gson.toJson(saveData, writer);
+            System.out.println("Game saved successfully to " + filePath);
+            return fileName;
+        } catch (IOException e) {
+            System.err.println("Error saving game: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Creates the SaveData object with all game state
+     */
+    private SaveData createSaveData(Farm farm, Player player, GameTime timeService) {
         SaveData saveData = new SaveData();
         MapArea farmMap = farm.getFarmMap(); // Get farmMap once
 
@@ -193,26 +310,48 @@ public class SaveLoadManager {
         }
         saveData.setFarmDeployedObjects(farmObjectsData);
 
-        // Tulis ke file JSON
-        try (FileWriter writer = new FileWriter(SAVE_FILE_PATH)) {
-            gson.toJson(saveData, writer);
-            System.out.println("Game saved successfully to " + SAVE_FILE_PATH);
-        } catch (IOException e) {
-            System.err.println("Error saving game: " + e.getMessage());
-            e.printStackTrace();
-        }
+        return saveData;
     }
 
-    public SaveData loadGame() {
-        try (FileReader reader = new FileReader(SAVE_FILE_PATH)) {
+    /**
+     * Load a game from a specific save file
+     * @param fileName The name of the save file to load
+     * @return The loaded SaveData, or null if loading failed
+     */
+    public SaveData loadGame(String fileName) {
+        String filePath = SAVE_DIRECTORY + "/" + fileName;
+        try (FileReader reader = new FileReader(filePath)) {
             SaveData saveData = gson.fromJson(reader, SaveData.class);
             if (saveData != null) {
-                System.out.println("Game loaded successfully from " + SAVE_FILE_PATH);
+                System.out.println("Game loaded successfully from " + filePath);
             }
             return saveData;
         } catch (IOException e) {
             System.err.println("Error loading game (file not found or corrupt?): " + e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Delete a save file
+     * @param fileName The name of the save file to delete
+     * @return true if deletion was successful, false otherwise
+     */
+    public boolean deleteSave(String fileName) {
+        String filePath = SAVE_DIRECTORY + "/" + fileName;
+        File saveFile = new File(filePath);
+        
+        if (saveFile.exists()) {
+            boolean deleted = saveFile.delete();
+            if (deleted) {
+                System.out.println("Save file deleted: " + filePath);
+            } else {
+                System.err.println("Failed to delete save file: " + filePath);
+            }
+            return deleted;
+        } else {
+            System.err.println("Save file not found: " + filePath);
+            return false;
         }
     }
 
@@ -322,16 +461,16 @@ public class SaveLoadManager {
                 entryPoints = concreteFarmMap.getEntryPoints();
                 System.out.println("Loaded " + entryPoints.size() + " entry points to preserve during tile restoration.");
             }
-
+            
             Tile[][] tiles = farmMapToRestore.getTiles();
-            for (Map.Entry<String, FarmTileData> entry : saveData.getFarmTiles().entrySet()) {
-                String[] coords = entry.getKey().split(",");
-                int x = Integer.parseInt(coords[0]);
-                int y = Integer.parseInt(coords[1]);
-                FarmTileData tileData = entry.getValue();
+                for (Map.Entry<String, FarmTileData> entry : saveData.getFarmTiles().entrySet()) {
+                    String[] coords = entry.getKey().split(",");
+                    int x = Integer.parseInt(coords[0]);
+                    int y = Integer.parseInt(coords[1]);
+                    FarmTileData tileData = entry.getValue();
 
-                if (y >= 0 && y < tiles.length && x >= 0 && x < tiles[y].length) {
-                    Tile targetTile = tiles[y][x];
+                    if (y >= 0 && y < tiles.length && x >= 0 && x < tiles[y].length) {
+                        Tile targetTile = tiles[y][x];
                     
                     // Check if this tile is an entry point - if so, preserve it
                     if (entryPoints.contains(new Point(x, y))) {
@@ -339,7 +478,7 @@ public class SaveLoadManager {
                         continue; // Skip modifying entry points completely
                     }
                     
-                    if (targetTile != null) {
+                        if (targetTile != null) {
                         try {
                             // First store the original type from the save data
                             TileType originalTileType = TileType.valueOf(tileData.getTileType().toUpperCase());
@@ -472,17 +611,6 @@ public class SaveLoadManager {
                         // Assuming a no-arg constructor for all DeployedObject types
                         DeployedObject deployedObjectInstance = (DeployedObject) deployedObjectClass.getDeclaredConstructor().newInstance();
                         
-                        // Some objects might need their name set if it's used beyond just identification
-                        // For example, if House.getName() is used for UI or something.
-                        // DeployedObject itself doesn't have setName, so this depends on concrete classes
-                        // or we add setName to DeployedObject if it's a common need.
-                        // For now, we rely on the object's default name or constructor setting it.
-                        // If specific objects like House need their name restored: 
-                        // if (deployedObjectInstance instanceof com.spakborhills.model.Object.House) {
-                        //    ((com.spakborhills.model.Object.House) deployedObjectInstance).setName(placedObjectData.getObjectName());
-                        // }
-                        // For simplicity, let's assume name on DeployedObject is mainly for identification or handled by constructor.
-
                         boolean placed = concreteFarmMap.placeObject(deployedObjectInstance, placedObjectData.getX(), placedObjectData.getY());
                         if (placed) {
                             System.out.println("Loaded and placed deployed object: " + deployedObjectInstance.getName() + " of type " + placedObjectData.getObjectClassType() + " at (" + placedObjectData.getX() + "," + placedObjectData.getY() + ")");
@@ -508,5 +636,47 @@ public class SaveLoadManager {
 
         System.out.println("All save data applied to game state.");
     }
-
+    
+    /**
+     * SaveSlot class for storing metadata about available save files
+     */
+    public static class SaveSlot {
+        private String fileName;
+        private String playerName;
+        private String farmName;
+        private int day;
+        private String season;
+        private int year;
+        private Date lastModified;
+        
+        // Getters and setters
+        public String getFileName() { return fileName; }
+        public void setFileName(String fileName) { this.fileName = fileName; }
+        
+        public String getPlayerName() { return playerName; }
+        public void setPlayerName(String playerName) { this.playerName = playerName; }
+        
+        public String getFarmName() { return farmName; }
+        public void setFarmName(String farmName) { this.farmName = farmName; }
+        
+        public int getDay() { return day; }
+        public void setDay(int day) { this.day = day; }
+        
+        public String getSeason() { return season; }
+        public void setSeason(String season) { this.season = season; }
+        
+        public int getYear() { return year; }
+        public void setYear(int year) { this.year = year; }
+        
+        public Date getLastModified() { return lastModified; }
+        public void setLastModified(Date lastModified) { this.lastModified = lastModified; }
+        
+        @Override
+        public String toString() {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+            return playerName + "'s " + farmName + " - " + 
+                   season + " Day " + day + ", Year " + year + " - " +
+                   dateFormat.format(lastModified);
+        }
+    }
 } 

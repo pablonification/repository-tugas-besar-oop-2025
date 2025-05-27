@@ -25,6 +25,7 @@ import java.awt.*; // Import full AWT package for GraphicsDevice and GraphicsEnv
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.text.SimpleDateFormat;
 
 public class GameFrame extends JFrame {
 
@@ -151,6 +152,10 @@ public class GameFrame extends JFrame {
                 displayCredits();
                 mainMenuPanel.requestFocusInWindow(); // Return focus
                 break;
+            case MainMenuPanel.MANAGE_SAVES:
+                manageSaves();
+                mainMenuPanel.requestFocusInWindow(); // Return focus
+                break;
             case MainMenuPanel.EXIT:
                 System.exit(0);
                 break;
@@ -159,7 +164,32 @@ public class GameFrame extends JFrame {
 
     private void loadGameAndStart() {
         SaveLoadManager saveLoadManager = new SaveLoadManager();
-        SaveData saveData = saveLoadManager.loadGame();
+        List<SaveLoadManager.SaveSlot> saveSlots = saveLoadManager.getSaveSlots();
+        
+        if (saveSlots.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No save files found.", "Load Game", JOptionPane.INFORMATION_MESSAGE);
+            showMainMenu();
+            return;
+        }
+        
+        // Create a dialog to let the user select a save file
+        SaveLoadManager.SaveSlot selectedSave = (SaveLoadManager.SaveSlot) JOptionPane.showInputDialog(
+            this,
+            "Select a save file to load:",
+            "Load Game",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            saveSlots.toArray(),
+            saveSlots.get(0)
+        );
+        
+        if (selectedSave == null) {
+            // User cancelled
+            showMainMenu();
+            return;
+        }
+        
+        SaveData saveData = saveLoadManager.loadGame(selectedSave.getFileName());
 
         if (saveData != null) {
             // Initialize game components first, similar to new game but without player/farm input
@@ -228,7 +258,7 @@ public class GameFrame extends JFrame {
             }
 
         } else {
-            JOptionPane.showMessageDialog(this, "Failed to load game data or no save file found.", "Load Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Failed to load selected save file.", "Load Error", JOptionPane.ERROR_MESSAGE);
             showMainMenu();
         }
     }
@@ -367,6 +397,92 @@ public class GameFrame extends JFrame {
             "Game assets from: https://www.spriters-resource.com/\n"+
             "Developed with Java Swing.",
             "Credits", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Display the manage saves dialog
+     */
+    private void manageSaves() {
+        SaveLoadManager saveLoadManager = new SaveLoadManager();
+        List<SaveLoadManager.SaveSlot> saveSlots = saveLoadManager.getSaveSlots();
+        
+        if (saveSlots.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No save files found.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Create a dialog to let the user manage save files
+        boolean keepManaging = true;
+        while (keepManaging) {
+            SaveLoadManager.SaveSlot selectedSave = (SaveLoadManager.SaveSlot) JOptionPane.showInputDialog(
+                this, 
+                "Select a save file to manage:",
+                "Manage Saves",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                saveSlots.toArray(),
+                saveSlots.get(0)
+            );
+            
+            if (selectedSave == null) {
+                // User cancelled
+                keepManaging = false;
+            } else {
+                // Only show delete option
+                String[] options = {"Delete", "Cancel"};
+                int action = JOptionPane.showOptionDialog(
+                    this,
+                    "Do you want to delete the selected save file?\n" + 
+                    "Filename: " + selectedSave.getFileName() + "\n" +
+                    "Player: " + selectedSave.getPlayerName() + "\n" +
+                    "Farm: " + selectedSave.getFarmName() + "\n" +
+                    "Date: " + selectedSave.getSeason() + " Day " + selectedSave.getDay() + ", Year " + selectedSave.getYear() + "\n" +
+                    "Last Modified: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(selectedSave.getLastModified()),
+                    "Delete Save",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.WARNING_MESSAGE,
+                    null,
+                    options,
+                    options[1] // Default to Cancel
+                );
+                
+                if (action == 0) { // Delete
+                    int confirm = JOptionPane.showConfirmDialog(
+                        this,
+                        "Are you sure you want to delete " + selectedSave.getFileName() + "?",
+                        "Confirm Delete",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        boolean deleted = saveLoadManager.deleteSave(selectedSave.getFileName());
+                        if (deleted) {
+                            JOptionPane.showMessageDialog(this,
+                                "Save file deleted successfully.",
+                                "Delete Save",
+                                JOptionPane.INFORMATION_MESSAGE
+                            );
+                            // Refresh the list of saves
+                            saveSlots = saveLoadManager.getSaveSlots();
+                            if (saveSlots.isEmpty()) {
+                                JOptionPane.showMessageDialog(this, "No more save files available.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
+                                keepManaging = false;
+                            }
+                        } else {
+                            JOptionPane.showMessageDialog(this,
+                                "Failed to delete save file.",
+                                "Delete Save",
+                                JOptionPane.ERROR_MESSAGE
+                            );
+                        }
+                    }
+                } else {
+                    // Cancel or dialog closed
+                    keepManaging = false;
+                }
+            }
+        }
     }
 
     public GamePanel getGamePanel() {
