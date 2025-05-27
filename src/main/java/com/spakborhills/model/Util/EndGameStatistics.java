@@ -218,7 +218,7 @@ public class EndGameStatistics {
         sb.append("=== Game Statistics Summary ===\n\n");
         sb.append("Total Days Played: ").append(totalDaysPlayed).append("\n");
         sb.append("Total Income: ").append(totalIncome).append("g\n");
-        sb.append("Total Expenses: ").append(totalExpenditure).append("g\n");
+        sb.append("Total Expenditure: ").append(totalExpenditure).append("g\n");
 
         sb.append("\nIncome by Season (Average per day):\n");
         for (Season s : Season.values()) {
@@ -227,6 +227,15 @@ public class EndGameStatistics {
                                         s,
                                         seasonalIncome.getOrDefault(s, 0),
                                         getAverageSeasonalIncome(s)));
+            }
+        }
+        sb.append("\nExpenditure by Season (Average per day):\n");
+        for (Season s : Season.values()) {
+            if (s != Season.ANY && daysPlayedInSeason.getOrDefault(s, 0) > 0) {
+                sb.append(String.format("  • %s: %dg (Avg: %.2fg)\n",
+                                        s,
+                                        seasonalExpenditure.getOrDefault(s, 0),
+                                        getAverageSeasonalExpenditure(s)));
             }
         }
 
@@ -262,6 +271,33 @@ public class EndGameStatistics {
 
     public int getTotalIncome() { return totalIncome; }
     public int getTotalExpenditure() { return totalExpenditure; }
+    
+    /**
+     * Directly sets the total income value.
+     * This is used when loading from a save file to ensure exact values are preserved.
+     * @param totalIncome The total income value to set
+     */
+    public void setTotalIncome(int totalIncome) {
+        this.totalIncome = totalIncome;
+    }
+    
+    /**
+     * Directly sets the total expenditure value.
+     * This is used when loading from a save file to ensure exact values are preserved.
+     * @param totalExpenditure The total expenditure value to set
+     */
+    public void setTotalExpenditure(int totalExpenditure) {
+        this.totalExpenditure = totalExpenditure;
+    }
+    
+    /**
+     * Directly sets the total days played value.
+     * This is used when loading from a save file to ensure exact values are preserved.
+     * @param totalDaysPlayed The total days played value to set
+     */
+    public void setTotalDaysPlayed(int totalDaysPlayed) {
+        this.totalDaysPlayed = totalDaysPlayed;
+    }
 
     /**
      * Mengembalikan map pendapatan per musim. Kunci adalah Season, nilai adalah total pendapatan.
@@ -325,8 +361,32 @@ public class EndGameStatistics {
      * Mengembalikan map jumlah tanaman yang dipanen. Kunci adalah nama Crop, nilai adalah jumlah.
      * @return Map yang unmodifiable.
      */
-    public Map<String, Integer> getCropsHarvested() {
+    public Map<String, Integer> getCropsHarvestedCount() {
         return Collections.unmodifiableMap(cropsHarvestedCount);
+    }
+
+    /**
+     * Mengembalikan set nama tanaman unik yang pernah dipanen.
+     * @return Set yang unmodifiable.
+     */
+    public Set<String> getUniqueCropsHarvested() {
+        return Collections.unmodifiableSet(uniqueCropsHarvested);
+    }
+
+    /**
+     * Mengembalikan set nama ikan unik yang pernah ditangkap.
+     * @return Set yang unmodifiable.
+     */
+    public Set<String> getUniqueFishCaught() {
+        return Collections.unmodifiableSet(uniqueFishCaught);
+    }
+
+    /**
+     * Mengembalikan set event atau item kunci yang pernah diperoleh.
+     * @return Set yang unmodifiable.
+     */
+    public Set<String> getKeyEventsOrItemsObtained() {
+        return Collections.unmodifiableSet(keyEventsOrItemsObtained);
     }
 
     /**

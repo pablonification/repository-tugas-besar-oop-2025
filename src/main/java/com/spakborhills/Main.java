@@ -185,6 +185,7 @@ public class Main {
             // === MISC ITEMS ===
             MiscItem coal = new MiscItem("Coal", 20, 10);
             MiscItem firewood = new MiscItem("Firewood", 10, 5);
+            MiscItem stone = new MiscItem("Stone", 5, 2);
             
             // === FOOD ===
             Food fishNChips = new Food("Fish n' Chips", 50, 150, 135);
@@ -277,6 +278,7 @@ public class Main {
             // Misc
             registry.put(coal.getName(), coal);
             registry.put(firewood.getName(), firewood);
+            registry.put(stone.getName(), stone);
             
             // Food
             registry.put(fishNChips.getName(), fishNChips);

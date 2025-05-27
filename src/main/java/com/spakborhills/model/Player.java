@@ -201,15 +201,15 @@ public class Player {
             Item parsnipSeeds = itemRegistry.get("Parsnip Seeds");
             // Khusus debug gift aja
             // Legend fish untuk MayorTadi
-            Item legendFish = itemRegistry.get("Legend");
+            // Item legendFish = itemRegistry.get("Legend");
             Item proposalRing = itemRegistry.get("Proposal Ring");
-            Item coal = itemRegistry.get("Coal");
-            Item firewood = itemRegistry.get("Firewood");
+            // Item coal = itemRegistry.get("Coal");
+            // Item firewood = itemRegistry.get("Firewood");
 
             // Potato untuk Caroline
-            Item potato = itemRegistry.get("Potato");
-            Item stone = itemRegistry.get("Stone");
-            Item wheat = itemRegistry.get("Wheat");
+            // Item potato = itemRegistry.get("Potato");
+            // Item stone = itemRegistry.get("Stone");
+            // Item wheat = itemRegistry.get("Wheat");
             Item hoe = itemRegistry.get("Hoe");
             Item wateringCan = itemRegistry.get("Watering Can");
             Item pickaxe = itemRegistry.get("Pickaxe");
@@ -222,13 +222,13 @@ public class Player {
                     this.selectedItem = hoe;
                 }
             } else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
-            if (coal != null) this.inventory.addItem(coal, 10); else System.err.println("PERINGATAN: Coal tidak ditemukan di registry.");
-            if (firewood != null) this.inventory.addItem(firewood, 10); else System.err.println("PERINGATAN: Firewood tidak ditemukan di registry.");
-            if (legendFish != null) this.inventory.addItem(legendFish, 2); else System.err.println("PERINGATAN: Legend Fish tidak ditemukan di registry.");
+            // if (coal != null) this.inventory.addItem(coal, 10); else System.err.println("PERINGATAN: Coal tidak ditemukan di registry.");
+            // if (firewood != null) this.inventory.addItem(firewood, 10); else System.err.println("PERINGATAN: Firewood tidak ditemukan di registry.");
+            // if (legendFish != null) this.inventory.addItem(legendFish, 2); else System.err.println("PERINGATAN: Legend Fish tidak ditemukan di registry.");
             if (proposalRing != null) this.inventory.addItem(proposalRing, 1); else System.err.println("PERINGATAN: Proposal Ring tidak ditemukan di registry.");
-            if (potato != null) this.inventory.addItem(potato, 10); else System.err.println("PERINGATAN: Potato tidak ditemukan di registry.");
-            if (stone != null) this.inventory.addItem(stone, 10); else System.err.println("PERINGATAN: Stone tidak ditemukan di registry.");
-            if (wheat != null) this.inventory.addItem(wheat, 10); else System.err.println("PERINGATAN: Wheat tidak ditemukan di registry.");
+            // if (potato != null) this.inventory.addItem(potato, 10); else System.err.println("PERINGATAN: Potato tidak ditemukan di registry.");
+            // if (stone != null) this.inventory.addItem(stone, 10); else System.err.println("PERINGATAN: Stone tidak ditemukan di registry.");
+            // if (wheat != null) this.inventory.addItem(wheat, 10); else System.err.println("PERINGATAN: Wheat tidak ditemukan di registry.");
             if (wateringCan != null) {
                 this.inventory.addItem(wateringCan, 1);
                 if (this.selectedItem == null || !(this.selectedItem instanceof Equipment && ((Equipment)this.selectedItem).getToolType().equals("WateringCan"))) { // Prioritaskan WateringCan jika ada

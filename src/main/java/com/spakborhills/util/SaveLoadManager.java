@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.HashSet;
 
 public class SaveLoadManager {
 
@@ -134,19 +135,49 @@ public class SaveLoadManager {
         if (fileName == null || fileName.trim().isEmpty()) {
             fileName = generateSaveFileName(player.getName(), player.getFarmName());
         } else {
-            // If filename is provided, make sure it has safe characters
-            fileName = fileName.replaceAll("[^a-zA-Z0-9_-]", "_") + SAVE_FILE_EXTENSION;
+            // For existing files, we'll use the exact name as provided
+            // This is important for overwriting existing saves
+            
+            // Check if this is a full path or just a filename
+            if (!fileName.contains("/") && !fileName.contains("\\")) {
+                // It's just a filename, so ensure it has safe characters
+                String safeFileName = fileName.replaceAll("[^a-zA-Z0-9_.-]", "_");
+                
+                // If it doesn't have the extension, add it
+                if (!safeFileName.toLowerCase().endsWith(SAVE_FILE_EXTENSION.toLowerCase())) {
+                    safeFileName = safeFileName + SAVE_FILE_EXTENSION;
+                }
+                
+                fileName = safeFileName;
+            }
         }
         
-        // Ensure it has the correct extension
-        if (!fileName.endsWith(SAVE_FILE_EXTENSION)) {
-            fileName = fileName + SAVE_FILE_EXTENSION;
+        // If the file doesn't have a path, add the save directory
+        String filePath;
+        if (fileName.contains("/") || fileName.contains("\\")) {
+            filePath = fileName;
+        } else {
+            filePath = SAVE_DIRECTORY + "/" + fileName;
         }
         
-        String filePath = SAVE_DIRECTORY + "/" + fileName;
+        // Check if file exists
+        File saveFile = new File(filePath);
+        if (saveFile.exists()) {
+            System.out.println("Overwriting existing save file: " + fileName);
+        }
+        
         SaveData saveData = createSaveData(farm, player, timeService);
         
-        // Tulis ke file JSON
+        // Ensure save directory exists
+        File saveDir = new File(SAVE_DIRECTORY);
+        if (!saveDir.exists()) {
+            if (!saveDir.mkdirs()) {
+                System.err.println("Failed to create save directory: " + SAVE_DIRECTORY);
+                return null;
+            }
+        }
+        
+        // Write to JSON file
         try (FileWriter writer = new FileWriter(filePath)) {
             gson.toJson(saveData, writer);
             System.out.println("Game saved successfully to " + filePath);
@@ -309,6 +340,64 @@ public class SaveLoadManager {
             }
         }
         saveData.setFarmDeployedObjects(farmObjectsData);
+
+        // 10. Populate Statistics Data
+        if (farm.getStatistics() != null) {
+            com.spakborhills.model.Util.EndGameStatistics statistics = farm.getStatistics();
+            SaveData.StatisticsData statsData = new SaveData.StatisticsData();
+            
+            // Basic statistics
+            statsData.setTotalIncome(statistics.getTotalIncome());
+            statsData.setTotalExpenditure(statistics.getTotalExpenditure());
+            statsData.setTotalDaysPlayed(statistics.getTotalDaysPlayed());
+            
+            // Convert Season keys to String for serialization
+            Map<String, Integer> seasonalIncome = new HashMap<>();
+            for (Map.Entry<Season, Integer> entry : statistics.getSeasonalIncome().entrySet()) {
+                seasonalIncome.put(entry.getKey().toString(), entry.getValue());
+            }
+            statsData.setSeasonalIncome(seasonalIncome);
+            
+            Map<String, Integer> seasonalExpenditure = new HashMap<>();
+            for (Map.Entry<Season, Integer> entry : statistics.getSeasonalExpenditure().entrySet()) {
+                seasonalExpenditure.put(entry.getKey().toString(), entry.getValue());
+            }
+            statsData.setSeasonalExpenditure(seasonalExpenditure);
+            
+            // NPC interactions
+            statsData.setChatFrequency(new HashMap<>(statistics.getChatFrequency()));
+            statsData.setGiftFrequency(new HashMap<>(statistics.getGiftFrequency()));
+            statsData.setVisitFrequency(new HashMap<>(statistics.getVisitFrequency()));
+            
+            // Crops and fish data
+            statsData.setCropsHarvestedCount(new HashMap<>(statistics.getCropsHarvestedCount()));
+            statsData.setUniqueCropsHarvested(new HashSet<>(statistics.getUniqueCropsHarvested()));
+            
+            // Convert FishRarity keys to String for serialization
+            Map<String, Map<String, Integer>> fishCaught = new HashMap<>();
+            for (Map.Entry<String, Map<com.spakborhills.model.Enum.FishRarity, Integer>> entry : statistics.getFishCaught().entrySet()) {
+                Map<String, Integer> rarityMap = new HashMap<>();
+                for (Map.Entry<com.spakborhills.model.Enum.FishRarity, Integer> rarityEntry : entry.getValue().entrySet()) {
+                    rarityMap.put(rarityEntry.getKey().toString(), rarityEntry.getValue());
+                }
+                fishCaught.put(entry.getKey(), rarityMap);
+            }
+            statsData.setFishCaught(fishCaught);
+            
+            statsData.setUniqueFishCaught(new HashSet<>(statistics.getUniqueFishCaught()));
+            
+            // Achievement tracking
+            statsData.setKeyEventsOrItemsObtained(new HashSet<>(statistics.getKeyEventsOrItemsObtained()));
+            
+            saveData.setStatisticsData(statsData);
+            System.out.println("Statistics data saved: Total Income: " + statsData.getTotalIncome() + 
+                               ", Total Expenditure: " + statsData.getTotalExpenditure() + 
+                               ", Seasonal Income: " + statsData.getSeasonalIncome().size() + " seasons" +
+                               ", Seasonal Expenditure: " + statsData.getSeasonalExpenditure().size() + " seasons" +
+                               ", Unique Crops: " + statsData.getUniqueCropsHarvested().size() +
+                               ", Unique Fish: " + statsData.getUniqueFishCaught().size() +
+                               ", Events: " + statsData.getKeyEventsOrItemsObtained().size());
+        }
 
         return saveData;
     }
@@ -633,6 +722,123 @@ public class SaveLoadManager {
             System.err.println("Could not load deployed farm objects: FarmMap is not an instance of com.spakborhills.model.Map.FarmMap");
         }
         System.out.println("Farm deployed objects loading process completed.");
+
+        // 10. Apply Statistics Data
+        if (saveData.getStatisticsData() != null && farm.getStatistics() != null) {
+            com.spakborhills.model.Util.EndGameStatistics currentStats = farm.getStatistics();
+            SaveData.StatisticsData statsData = saveData.getStatisticsData();
+            
+            // Create a new EndGameStatistics instance with the saved data
+            // We'll use the existing stats for data we can't load (like references to NPCs)
+            // Start by getting values from the saved data
+            int totalIncome = statsData.getTotalIncome();
+            int totalExpenditure = statsData.getTotalExpenditure();
+            int totalDaysPlayed = statsData.getTotalDaysPlayed();
+            
+            // Directly set the total values to ensure they match exactly what was saved
+            currentStats.setTotalIncome(totalIncome);
+            currentStats.setTotalExpenditure(totalExpenditure);
+            currentStats.setTotalDaysPlayed(totalDaysPlayed);
+            
+            Map<String, Integer> chatFrequency = statsData.getChatFrequency();
+            Map<String, Integer> giftFrequency = statsData.getGiftFrequency();
+            Map<String, Integer> visitFrequency = statsData.getVisitFrequency();
+            
+            // Now use the EndGameStatistics API to update the current stats
+            // For each income amount by season
+            for (Map.Entry<String, Integer> entry : statsData.getSeasonalIncome().entrySet()) {
+                try {
+                    Season season = Season.valueOf(entry.getKey().toUpperCase());
+                    // This will update the total income as well
+                    currentStats.recordIncome(entry.getValue(), season);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Error loading season data: " + e.getMessage());
+                }
+            }
+            
+            // For each expenditure amount by season
+            for (Map.Entry<String, Integer> entry : statsData.getSeasonalExpenditure().entrySet()) {
+                try {
+                    Season season = Season.valueOf(entry.getKey().toUpperCase());
+                    // This will update the total expenditure as well
+                    currentStats.recordExpenditure(entry.getValue(), season);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Error loading season data: " + e.getMessage());
+                }
+            }
+            
+            // To update NPC-related data, we need to loop through the maps
+            if (chatFrequency != null) {
+                for (Map.Entry<String, Integer> entry : chatFrequency.entrySet()) {
+                    // Record each chat interaction the number of times it was recorded
+                    for (int i = 0; i < entry.getValue(); i++) {
+                        currentStats.recordChat(entry.getKey());
+                    }
+                }
+            }
+            
+            if (giftFrequency != null) {
+                for (Map.Entry<String, Integer> entry : giftFrequency.entrySet()) {
+                    // Record each gift interaction the number of times it was recorded
+                    for (int i = 0; i < entry.getValue(); i++) {
+                        currentStats.recordGift(entry.getKey());
+                    }
+                }
+            }
+            
+            if (visitFrequency != null) {
+                for (Map.Entry<String, Integer> entry : visitFrequency.entrySet()) {
+                    // Record each visit interaction the number of times it was recorded
+                    for (int i = 0; i < entry.getValue(); i++) {
+                        currentStats.recordVisit(entry.getKey());
+                    }
+                }
+            }
+            
+            // For fish caught data, we need to handle the conversion of string rarity back to enum
+            if (statsData.getFishCaught() != null) {
+                for (Map.Entry<String, Map<String, Integer>> entry : statsData.getFishCaught().entrySet()) {
+                    String fishName = entry.getKey();
+                    Map<String, Integer> rarityMap = entry.getValue();
+                    
+                    for (Map.Entry<String, Integer> rarityEntry : rarityMap.entrySet()) {
+                        try {
+                            com.spakborhills.model.Enum.FishRarity rarity = 
+                                com.spakborhills.model.Enum.FishRarity.valueOf(rarityEntry.getKey().toUpperCase());
+                            // Record this fish catch the number of times it was caught
+                            for (int i = 0; i < rarityEntry.getValue(); i++) {
+                                currentStats.recordFishCatch(fishName, rarity);
+                            }
+                        } catch (IllegalArgumentException e) {
+                            System.err.println("Error loading fish rarity data: " + e.getMessage());
+                        }
+                    }
+                }
+            }
+            
+            // We can't easily handle crop harvests without crop objects, so we'll skip that for now
+            
+            // For key events, we can just record each one
+            if (statsData.getKeyEventsOrItemsObtained() != null) {
+                for (String eventKey : statsData.getKeyEventsOrItemsObtained()) {
+                    currentStats.recordKeyEventOrItem(eventKey);
+                }
+            }
+            
+            // Set crops harvested data
+            if (statsData.getCropsHarvestedCount() != null) {
+                Map<String, Integer> cropsHarvestedCount = statsData.getCropsHarvestedCount();
+                for (Map.Entry<String, Integer> entry : cropsHarvestedCount.entrySet()) {
+                    // We'll call recordHarvest once for each crop type with the total quantity
+                    currentStats.recordHarvest(entry.getKey(), entry.getValue());
+                }
+            }
+            
+            System.out.println("Statistics data loaded: Total Income: " + statsData.getTotalIncome() + 
+                              ", Total Expenditure: " + statsData.getTotalExpenditure() + 
+                              ", Unique Crops: " + (statsData.getUniqueCropsHarvested() != null ? statsData.getUniqueCropsHarvested().size() : 0) +
+                              ", Unique Fish: " + (statsData.getUniqueFishCaught() != null ? statsData.getUniqueFishCaught().size() : 0));
+        }
 
         System.out.println("All save data applied to game state.");
     }

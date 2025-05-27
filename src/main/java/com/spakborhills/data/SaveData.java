@@ -3,6 +3,9 @@ package com.spakborhills.data;
 import java.io.Serializable;
 import java.util.List; // Ditambahkan untuk placedObjects
 import java.util.Map; // Diubah untuk farmTiles agar lebih fleksibel dengan koordinat
+import java.util.Set;
+import java.util.HashMap;
+import java.util.HashSet;
 // Import kelas-kelas lain yang mungkin dibutuhkan nanti
 // import com.spakborhills.model.Player;
 // import com.spakborhills.model.FarmModel;
@@ -48,6 +51,9 @@ public class SaveData implements Serializable {
 
     // Data Progres & Event
     private List<String> milestonesAchieved; // New
+
+    // Data Statistik
+    private StatisticsData statisticsData; // Add field to store statistics
 
     // Data Bonus
     private BonusData bonusData; //New
@@ -227,6 +233,14 @@ public class SaveData implements Serializable {
 
     public void setMilestonesAchieved(List<String> milestonesAchieved) {
         this.milestonesAchieved = milestonesAchieved;
+    }
+
+    public StatisticsData getStatisticsData() {
+        return statisticsData;
+    }
+
+    public void setStatisticsData(StatisticsData statisticsData) {
+        this.statisticsData = statisticsData;
     }
 
     public BonusData getBonusData() {
@@ -430,6 +444,157 @@ public class SaveData implements Serializable {
 
         public void setY(int y) {
             this.y = y;
+        }
+    }
+
+    // Statistics Data class to store all game statistics
+    public static class StatisticsData implements Serializable {
+        private static final long serialVersionUID = 1L;
+        
+        private int totalIncome;
+        private int totalExpenditure;
+        private Map<String, Integer> seasonalIncome; // Season name -> amount
+        private Map<String, Integer> seasonalExpenditure; // Season name -> amount
+        private Map<String, Integer> daysPlayedInSeason; // Season name -> days count
+        private int totalDaysPlayed;
+        
+        private Map<String, Integer> chatFrequency; // NPC name -> count
+        private Map<String, Integer> giftFrequency; // NPC name -> count
+        private Map<String, Integer> visitFrequency; // NPC name -> count
+        
+        private Map<String, Integer> cropsHarvestedCount; // Crop name -> count
+        private Set<String> uniqueCropsHarvested; // Names of crops harvested
+        
+        private Map<String, Map<String, Integer>> fishCaught; // Fish name -> (Rarity -> count)
+        private Set<String> uniqueFishCaught; // Names of fish caught
+        
+        private Set<String> keyEventsOrItemsObtained; // Event keys/item names
+        
+        public StatisticsData() {
+            this.seasonalIncome = new HashMap<>();
+            this.seasonalExpenditure = new HashMap<>();
+            this.daysPlayedInSeason = new HashMap<>();
+            this.chatFrequency = new HashMap<>();
+            this.giftFrequency = new HashMap<>();
+            this.visitFrequency = new HashMap<>();
+            this.cropsHarvestedCount = new HashMap<>();
+            this.uniqueCropsHarvested = new HashSet<>();
+            this.fishCaught = new HashMap<>();
+            this.uniqueFishCaught = new HashSet<>();
+            this.keyEventsOrItemsObtained = new HashSet<>();
+        }
+
+        // Getters and setters
+        public int getTotalIncome() {
+            return totalIncome;
+        }
+
+        public void setTotalIncome(int totalIncome) {
+            this.totalIncome = totalIncome;
+        }
+
+        public int getTotalExpenditure() {
+            return totalExpenditure;
+        }
+
+        public void setTotalExpenditure(int totalExpenditure) {
+            this.totalExpenditure = totalExpenditure;
+        }
+
+        public Map<String, Integer> getSeasonalIncome() {
+            return seasonalIncome;
+        }
+
+        public void setSeasonalIncome(Map<String, Integer> seasonalIncome) {
+            this.seasonalIncome = seasonalIncome;
+        }
+
+        public Map<String, Integer> getSeasonalExpenditure() {
+            return seasonalExpenditure;
+        }
+
+        public void setSeasonalExpenditure(Map<String, Integer> seasonalExpenditure) {
+            this.seasonalExpenditure = seasonalExpenditure;
+        }
+
+        public Map<String, Integer> getDaysPlayedInSeason() {
+            return daysPlayedInSeason;
+        }
+
+        public void setDaysPlayedInSeason(Map<String, Integer> daysPlayedInSeason) {
+            this.daysPlayedInSeason = daysPlayedInSeason;
+        }
+
+        public int getTotalDaysPlayed() {
+            return totalDaysPlayed;
+        }
+
+        public void setTotalDaysPlayed(int totalDaysPlayed) {
+            this.totalDaysPlayed = totalDaysPlayed;
+        }
+
+        public Map<String, Integer> getChatFrequency() {
+            return chatFrequency;
+        }
+
+        public void setChatFrequency(Map<String, Integer> chatFrequency) {
+            this.chatFrequency = chatFrequency;
+        }
+
+        public Map<String, Integer> getGiftFrequency() {
+            return giftFrequency;
+        }
+
+        public void setGiftFrequency(Map<String, Integer> giftFrequency) {
+            this.giftFrequency = giftFrequency;
+        }
+
+        public Map<String, Integer> getVisitFrequency() {
+            return visitFrequency;
+        }
+
+        public void setVisitFrequency(Map<String, Integer> visitFrequency) {
+            this.visitFrequency = visitFrequency;
+        }
+
+        public Map<String, Integer> getCropsHarvestedCount() {
+            return cropsHarvestedCount;
+        }
+
+        public void setCropsHarvestedCount(Map<String, Integer> cropsHarvestedCount) {
+            this.cropsHarvestedCount = cropsHarvestedCount;
+        }
+
+        public Set<String> getUniqueCropsHarvested() {
+            return uniqueCropsHarvested;
+        }
+
+        public void setUniqueCropsHarvested(Set<String> uniqueCropsHarvested) {
+            this.uniqueCropsHarvested = uniqueCropsHarvested;
+        }
+
+        public Map<String, Map<String, Integer>> getFishCaught() {
+            return fishCaught;
+        }
+
+        public void setFishCaught(Map<String, Map<String, Integer>> fishCaught) {
+            this.fishCaught = fishCaught;
+        }
+
+        public Set<String> getUniqueFishCaught() {
+            return uniqueFishCaught;
+        }
+
+        public void setUniqueFishCaught(Set<String> uniqueFishCaught) {
+            this.uniqueFishCaught = uniqueFishCaught;
+        }
+
+        public Set<String> getKeyEventsOrItemsObtained() {
+            return keyEventsOrItemsObtained;
+        }
+
+        public void setKeyEventsOrItemsObtained(Set<String> keyEventsOrItemsObtained) {
+            this.keyEventsOrItemsObtained = keyEventsOrItemsObtained;
         }
     }
 

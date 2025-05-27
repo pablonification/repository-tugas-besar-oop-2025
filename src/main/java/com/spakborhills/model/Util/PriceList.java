@@ -76,6 +76,7 @@ public class PriceList {
         // Harga jual harus lebih murah dari harga beli. Ditentuin sendiri
         addPrice("Coal", 20, 10);
         addPrice("Firewood", 15, 5); // Contoh harga
+        addPrice("Stone", 5, 2);
 
         // --- Equipment (Halaman 20, 23) ---
         // tidak dibeli/dijual, harga 0.

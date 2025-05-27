@@ -26,6 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.text.SimpleDateFormat;
+import javax.swing.border.EmptyBorder;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
 
 public class GameFrame extends JFrame {
 
@@ -172,19 +175,59 @@ public class GameFrame extends JFrame {
             return;
         }
         
-        // Create a dialog to let the user select a save file
-        SaveLoadManager.SaveSlot selectedSave = (SaveLoadManager.SaveSlot) JOptionPane.showInputDialog(
-            this,
-            "Select a save file to load:",
-            "Load Game",
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            saveSlots.toArray(),
-            saveSlots.get(0)
+        // Create a JComboBox dropdown with save files
+        JComboBox<SaveLoadManager.SaveSlot> saveComboBox = new JComboBox<>();
+        DefaultComboBoxModel<SaveLoadManager.SaveSlot> comboModel = new DefaultComboBoxModel<>();
+        
+        for (SaveLoadManager.SaveSlot save : saveSlots) {
+            comboModel.addElement(save);
+        }
+        
+        saveComboBox.setModel(comboModel);
+        saveComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, 
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof SaveLoadManager.SaveSlot) {
+                    SaveLoadManager.SaveSlot save = (SaveLoadManager.SaveSlot) value;
+                    setText(String.format("%s - %s's %s - %s Day %d, Year %d",
+                        save.getFileName(),
+                        save.getPlayerName(),
+                        save.getFarmName(),
+                        save.getSeason(),
+                        save.getDay(),
+                        save.getYear()
+                    ));
+                }
+                return this;
+            }
+        });
+        
+        // Create a panel for the dialog
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.add(new JLabel("Select a save file to load:"), BorderLayout.NORTH);
+        panel.add(saveComboBox, BorderLayout.CENTER);
+        
+        // Show the dialog
+        int result = JOptionPane.showConfirmDialog(
+            this, 
+            panel, 
+            "Load Game", 
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE
         );
         
-        if (selectedSave == null) {
+        if (result != JOptionPane.OK_OPTION) {
             // User cancelled
+            showMainMenu();
+            return;
+        }
+        
+        SaveLoadManager.SaveSlot selectedSave = (SaveLoadManager.SaveSlot) saveComboBox.getSelectedItem();
+        if (selectedSave == null) {
+            // No save selected
             showMainMenu();
             return;
         }
@@ -414,71 +457,111 @@ public class GameFrame extends JFrame {
         // Create a dialog to let the user manage save files
         boolean keepManaging = true;
         while (keepManaging) {
-            SaveLoadManager.SaveSlot selectedSave = (SaveLoadManager.SaveSlot) JOptionPane.showInputDialog(
+            // Create a JComboBox dropdown with save files
+            JComboBox<SaveLoadManager.SaveSlot> saveComboBox = new JComboBox<>();
+            DefaultComboBoxModel<SaveLoadManager.SaveSlot> comboModel = new DefaultComboBoxModel<>();
+            
+            for (SaveLoadManager.SaveSlot save : saveSlots) {
+                comboModel.addElement(save);
+            }
+            
+            saveComboBox.setModel(comboModel);
+            saveComboBox.setRenderer(new DefaultListCellRenderer() {
+                @Override
+                public Component getListCellRendererComponent(JList<?> list, Object value, 
+                        int index, boolean isSelected, boolean cellHasFocus) {
+                    super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                    if (value instanceof SaveLoadManager.SaveSlot) {
+                        SaveLoadManager.SaveSlot save = (SaveLoadManager.SaveSlot) value;
+                        setText(String.format("%s - %s's %s - %s Day %d, Year %d",
+                            save.getFileName(),
+                            save.getPlayerName(),
+                            save.getFarmName(),
+                            save.getSeason(),
+                            save.getDay(),
+                            save.getYear()
+                        ));
+                    }
+                    return this;
+                }
+            });
+            
+            // Create a panel for the dialog
+            JPanel panel = new JPanel(new BorderLayout(10, 10));
+            panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            panel.add(new JLabel("Select a save file to manage:"), BorderLayout.NORTH);
+            panel.add(saveComboBox, BorderLayout.CENTER);
+            
+            // Show the dialog
+            int result = JOptionPane.showConfirmDialog(
                 this, 
-                "Select a save file to manage:",
-                "Manage Saves",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                saveSlots.toArray(),
-                saveSlots.get(0)
+                panel, 
+                "Manage Saves", 
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE
             );
             
-            if (selectedSave == null) {
-                // User cancelled
+            if (result != JOptionPane.OK_OPTION) {
+                // User cancelled or closed dialog
                 keepManaging = false;
             } else {
-                // Only show delete option
-                String[] options = {"Delete", "Cancel"};
-                int action = JOptionPane.showOptionDialog(
-                    this,
-                    "Do you want to delete the selected save file?\n" + 
-                    "Filename: " + selectedSave.getFileName() + "\n" +
-                    "Player: " + selectedSave.getPlayerName() + "\n" +
-                    "Farm: " + selectedSave.getFarmName() + "\n" +
-                    "Date: " + selectedSave.getSeason() + " Day " + selectedSave.getDay() + ", Year " + selectedSave.getYear() + "\n" +
-                    "Last Modified: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(selectedSave.getLastModified()),
-                    "Delete Save",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.WARNING_MESSAGE,
-                    null,
-                    options,
-                    options[1] // Default to Cancel
-                );
+                SaveLoadManager.SaveSlot selectedSave = (SaveLoadManager.SaveSlot) saveComboBox.getSelectedItem();
                 
-                if (action == 0) { // Delete
-                    int confirm = JOptionPane.showConfirmDialog(
+                if (selectedSave != null) {
+                    // Only show delete option
+                    String[] options = {"Delete", "Cancel"};
+                    int action = JOptionPane.showOptionDialog(
                         this,
-                        "Are you sure you want to delete " + selectedSave.getFileName() + "?",
-                        "Confirm Delete",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE
+                        "Do you want to delete the selected save file?\n" + 
+                        "Filename: " + selectedSave.getFileName() + "\n" +
+                        "Player: " + selectedSave.getPlayerName() + "\n" +
+                        "Farm: " + selectedSave.getFarmName() + "\n" +
+                        "Date: " + selectedSave.getSeason() + " Day " + selectedSave.getDay() + ", Year " + selectedSave.getYear() + "\n" +
+                        "Last Modified: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(selectedSave.getLastModified()),
+                        "Delete Save",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.WARNING_MESSAGE,
+                        null,
+                        options,
+                        options[1] // Default to Cancel
                     );
                     
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        boolean deleted = saveLoadManager.deleteSave(selectedSave.getFileName());
-                        if (deleted) {
-                            JOptionPane.showMessageDialog(this,
-                                "Save file deleted successfully.",
-                                "Delete Save",
-                                JOptionPane.INFORMATION_MESSAGE
-                            );
-                            // Refresh the list of saves
-                            saveSlots = saveLoadManager.getSaveSlots();
-                            if (saveSlots.isEmpty()) {
-                                JOptionPane.showMessageDialog(this, "No more save files available.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
-                                keepManaging = false;
+                    if (action == 0) { // Delete
+                        int confirm = JOptionPane.showConfirmDialog(
+                            this,
+                            "Are you sure you want to delete " + selectedSave.getFileName() + "?",
+                            "Confirm Delete",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.WARNING_MESSAGE
+                        );
+                        
+                        if (confirm == JOptionPane.YES_OPTION) {
+                            boolean deleted = saveLoadManager.deleteSave(selectedSave.getFileName());
+                            if (deleted) {
+                                JOptionPane.showMessageDialog(this,
+                                    "Save file deleted successfully.",
+                                    "Delete Save",
+                                    JOptionPane.INFORMATION_MESSAGE
+                                );
+                                // Refresh the list of saves
+                                saveSlots = saveLoadManager.getSaveSlots();
+                                if (saveSlots.isEmpty()) {
+                                    JOptionPane.showMessageDialog(this, "No more save files available.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
+                                    keepManaging = false;
+                                }
+                            } else {
+                                JOptionPane.showMessageDialog(this,
+                                    "Failed to delete save file.",
+                                    "Delete Save",
+                                    JOptionPane.ERROR_MESSAGE
+                                );
                             }
-                        } else {
-                            JOptionPane.showMessageDialog(this,
-                                "Failed to delete save file.",
-                                "Delete Save",
-                                JOptionPane.ERROR_MESSAGE
-                            );
                         }
+                    } else {
+                        // Cancel or dialog closed
+                        keepManaging = false;
                     }
                 } else {
-                    // Cancel or dialog closed
                     keepManaging = false;
                 }
             }

@@ -111,6 +111,11 @@ public class Store implements MapArea{
         // Crop lain seperti Potato, Hot Pepper, Melon, Cranberry punya harga beli '-' atau tidak ada,
         // jadi tidak dimasukkan sebagai item yang bisa dibeli di sini.
 
+        // Misc Items (Halaman 20)
+        itemNamesForSale.add("Coal");
+        itemNamesForSale.add("Firewood");
+        itemNamesForSale.add("Stone");
+
         // Koran (Bonus Free Market, Halaman 39)
         itemNamesForSale.add("Koran Edisi Baru"); // Nama item koran
     }

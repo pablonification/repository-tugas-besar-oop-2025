@@ -52,6 +52,12 @@ import javax.sound.sampled.Clip;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.text.SimpleDateFormat;
+import javax.swing.Timer;
+import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
 
 public class GamePanel extends JPanel implements KeyListener { // Implement KeyListener
 
@@ -3701,7 +3707,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                         break;
                     case "Save Game":
                         if (gameController != null) {
-                            String[] options = {"Quick Save", "Save As", "Cancel"};
+                            String[] options = {"Quick Save", "Save As", "Overwrite Existing Save", "Cancel"};
                             int choice = JOptionPane.showOptionDialog(
                                 this,
                                 "Choose Save Option",
@@ -3739,11 +3745,93 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                                         setGeneralGameMessage("Error: Failed to save game.", true);
                                     }
                                 }
-                            } else if (choice == 2) { // Cancel
-                                // Do nothing
+                            } else if (choice == 2) { // Overwrite Existing Save
+                                // Get list of existing save files
+                                List<SaveLoadManager.SaveSlot> saveSlots = gameController.getSaveSlots();
+                                
+                                if (saveSlots.isEmpty()) {
+                                    JOptionPane.showMessageDialog(
+                                        this,
+                                        "No save files found to overwrite.",
+                                        "Overwrite Save",
+                                        JOptionPane.INFORMATION_MESSAGE
+                                    );
+                                } else {
+                                    // Create a JComboBox dropdown with save files
+                                    JComboBox<SaveLoadManager.SaveSlot> saveComboBox = new JComboBox<>();
+                                    DefaultComboBoxModel<SaveLoadManager.SaveSlot> comboModel = new DefaultComboBoxModel<>();
+                                    
+                                    for (SaveLoadManager.SaveSlot save : saveSlots) {
+                                        comboModel.addElement(save);
+                                    }
+                                    
+                                    saveComboBox.setModel(comboModel);
+                                    saveComboBox.setRenderer(new DefaultListCellRenderer() {
+                                        @Override
+                                        public Component getListCellRendererComponent(JList<?> list, Object value, 
+                                                int index, boolean isSelected, boolean cellHasFocus) {
+                                            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                                            if (value instanceof SaveLoadManager.SaveSlot) {
+                                                SaveLoadManager.SaveSlot save = (SaveLoadManager.SaveSlot) value;
+                                                setText(String.format("%s - %s's %s - %s Day %d, Year %d",
+                                                    save.getFileName(),
+                                                    save.getPlayerName(),
+                                                    save.getFarmName(),
+                                                    save.getSeason(),
+                                                    save.getDay(),
+                                                    save.getYear()
+                                                ));
+                                            }
+                                            return this;
+                                        }
+                                    });
+                                    
+                                    // Create a panel for the dialog
+                                    JPanel panel = new JPanel(new BorderLayout(10, 10));
+                                    panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                                    panel.add(new JLabel("Select a save file to overwrite:"), BorderLayout.NORTH);
+                                    panel.add(saveComboBox, BorderLayout.CENTER);
+                                    
+                                    // Show the dialog
+                                    int result = JOptionPane.showConfirmDialog(
+                                        this, 
+                                        panel, 
+                                        "Overwrite Save", 
+                                        JOptionPane.OK_CANCEL_OPTION,
+                                        JOptionPane.QUESTION_MESSAGE
+                                    );
+                                    
+                                    if (result == JOptionPane.OK_OPTION) {
+                                        SaveLoadManager.SaveSlot selectedSave = 
+                                            (SaveLoadManager.SaveSlot) saveComboBox.getSelectedItem();
+                                        
+                                        if (selectedSave != null) {
+                                            // Confirm overwrite
+                                            int confirm = JOptionPane.showConfirmDialog(
+                                                this,
+                                                "Are you sure you want to overwrite:\n" + 
+                                                selectedSave.getFileName() + "\n" +
+                                                "Player: " + selectedSave.getPlayerName() + "\n" +
+                                                "Farm: " + selectedSave.getFarmName() + "\n" +
+                                                "Date: " + selectedSave.getSeason() + " Day " + selectedSave.getDay() + ", Year " + selectedSave.getYear(),
+                                                "Confirm Overwrite",
+                                                JOptionPane.YES_NO_OPTION,
+                                                JOptionPane.WARNING_MESSAGE
+                                            );
+                                            
+                                            if (confirm == JOptionPane.YES_OPTION) {
+                                                // Use the dedicated method for overwriting saves
+                                                String actualFileName = gameController.overwriteSaveFile(selectedSave.getFileName());
+                                                if (actualFileName != null) {
+                                                    setGeneralGameMessage("Game Saved (Overwritten): " + actualFileName, false);
+                                                } else {
+                                                    setGeneralGameMessage("Error: Failed to overwrite save.", true);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                        } else {
-                            setGeneralGameMessage("Error: Could not save game.", true);
                         }
                         break;
                     case "Manage Saves":
@@ -3810,89 +3898,111 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         } else {
             boolean keepManaging = true;
             while (keepManaging) {
-                // Create a string array with detailed save information
-                String[] saveOptions = new String[saves.size()];
-                for (int i = 0; i < saves.size(); i++) {
-                    SaveLoadManager.SaveSlot save = saves.get(i);
-                    saveOptions[i] = String.format("%s - %s's %s - %s Day %d, Year %d",
-                        save.getFileName(),
-                        save.getPlayerName(),
-                        save.getFarmName(),
-                        save.getSeason(),
-                        save.getDay(),
-                        save.getYear()
-                    );
+                // Create a JComboBox dropdown with save files
+                JComboBox<SaveLoadManager.SaveSlot> saveComboBox = new JComboBox<>();
+                DefaultComboBoxModel<SaveLoadManager.SaveSlot> comboModel = new DefaultComboBoxModel<>();
+                
+                for (SaveLoadManager.SaveSlot save : saves) {
+                    comboModel.addElement(save);
                 }
                 
-                // Show dialog with detailed save info
-                int selectedIndex = JOptionPane.showOptionDialog(
-                    this,
-                    "Select a save file to manage:",
-                    "Manage Saves",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    saveOptions,
-                    saveOptions[0]
+                saveComboBox.setModel(comboModel);
+                saveComboBox.setRenderer(new DefaultListCellRenderer() {
+                    @Override
+                    public Component getListCellRendererComponent(JList<?> list, Object value, 
+                            int index, boolean isSelected, boolean cellHasFocus) {
+                        super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                        if (value instanceof SaveLoadManager.SaveSlot) {
+                            SaveLoadManager.SaveSlot save = (SaveLoadManager.SaveSlot) value;
+                            setText(String.format("%s - %s's %s - %s Day %d, Year %d",
+                                save.getFileName(),
+                                save.getPlayerName(),
+                                save.getFarmName(),
+                                save.getSeason(),
+                                save.getDay(),
+                                save.getYear()
+                            ));
+                        }
+                        return this;
+                    }
+                });
+                
+                // Create a panel for the dialog
+                JPanel panel = new JPanel(new BorderLayout(10, 10));
+                panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                panel.add(new JLabel("Select a save file to manage:"), BorderLayout.NORTH);
+                panel.add(saveComboBox, BorderLayout.CENTER);
+                
+                // Show the dialog
+                int result = JOptionPane.showConfirmDialog(
+                    this, 
+                    panel, 
+                    "Manage Saves", 
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
                 );
                 
-                if (selectedIndex < 0 || selectedIndex >= saves.size()) {
+                if (result != JOptionPane.OK_OPTION) {
                     // User cancelled or closed dialog
                     keepManaging = false;
                 } else {
-                    SaveLoadManager.SaveSlot selectedSave = saves.get(selectedIndex);
+                    SaveLoadManager.SaveSlot selectedSave = (SaveLoadManager.SaveSlot) saveComboBox.getSelectedItem();
                     
-                    // Only show delete option
-                    String[] options = {"Delete", "Cancel"};
-                    int action = JOptionPane.showOptionDialog(
-                        this,
-                        "Do you want to delete the selected save file?\n" + 
-                        "Filename: " + selectedSave.getFileName() + "\n" +
-                        "Player: " + selectedSave.getPlayerName() + "\n" +
-                        "Farm: " + selectedSave.getFarmName() + "\n" +
-                        "Date: " + selectedSave.getSeason() + " Day " + selectedSave.getDay() + ", Year " + selectedSave.getYear() + "\n" +
-                        "Last Modified: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(selectedSave.getLastModified()),
-                        "Delete Save",
-                        JOptionPane.DEFAULT_OPTION,
-                        JOptionPane.WARNING_MESSAGE,
-                        null,
-                        options,
-                        options[1] // Default to Cancel
-                    );
-                    
-                    if (action == 0) { // Delete
-                        int confirm = JOptionPane.showConfirmDialog(
+                    if (selectedSave != null) {
+                        // Only show delete option
+                        String[] options = {"Delete", "Cancel"};
+                        int action = JOptionPane.showOptionDialog(
                             this,
-                            "Are you sure you want to delete " + selectedSave.getFileName() + "?",
-                            "Confirm Delete",
-                            JOptionPane.YES_NO_OPTION,
-                            JOptionPane.WARNING_MESSAGE
+                            "Do you want to delete the selected save file?\n" + 
+                            "Filename: " + selectedSave.getFileName() + "\n" +
+                            "Player: " + selectedSave.getPlayerName() + "\n" +
+                            "Farm: " + selectedSave.getFarmName() + "\n" +
+                            "Date: " + selectedSave.getSeason() + " Day " + selectedSave.getDay() + ", Year " + selectedSave.getYear() + "\n" +
+                            "Last Modified: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(selectedSave.getLastModified()),
+                            "Delete Save",
+                            JOptionPane.DEFAULT_OPTION,
+                            JOptionPane.WARNING_MESSAGE,
+                            null,
+                            options,
+                            options[1] // Default to Cancel
                         );
                         
-                        if (confirm == JOptionPane.YES_OPTION) {
-                            boolean deleted = gameController.deleteSaveFile(selectedSave.getFileName());
-                            if (deleted) {
-                                JOptionPane.showMessageDialog(this,
-                                    "Save file deleted successfully.",
-                                    "Delete Save",
-                                    JOptionPane.INFORMATION_MESSAGE
-                                );
-                                // Refresh the list of saves
-                                saves = gameController.getSaveSlots();
-                                if (saves.isEmpty()) {
-                                    JOptionPane.showMessageDialog(this, "No more save files available.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
-                                    keepManaging = false;
+                        if (action == 0) { // Delete
+                            int confirm = JOptionPane.showConfirmDialog(
+                                this,
+                                "Are you sure you want to delete " + selectedSave.getFileName() + "?",
+                                "Confirm Delete",
+                                JOptionPane.YES_NO_OPTION,
+                                JOptionPane.WARNING_MESSAGE
+                            );
+                            
+                            if (confirm == JOptionPane.YES_OPTION) {
+                                boolean deleted = gameController.deleteSaveFile(selectedSave.getFileName());
+                                if (deleted) {
+                                    JOptionPane.showMessageDialog(this,
+                                        "Save file deleted successfully.",
+                                        "Delete Save",
+                                        JOptionPane.INFORMATION_MESSAGE
+                                    );
+                                    // Refresh the list of saves
+                                    saves = gameController.getSaveSlots();
+                                    if (saves.isEmpty()) {
+                                        JOptionPane.showMessageDialog(this, "No more save files available.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
+                                        keepManaging = false;
+                                    }
+                                } else {
+                                    JOptionPane.showMessageDialog(this,
+                                        "Failed to delete save file.",
+                                        "Delete Save",
+                                        JOptionPane.ERROR_MESSAGE
+                                    );
                                 }
-                            } else {
-                                JOptionPane.showMessageDialog(this,
-                                    "Failed to delete save file.",
-                                    "Delete Save",
-                                    JOptionPane.ERROR_MESSAGE
-                                );
                             }
+                        } else {
+                            // Cancel or dialog closed
+                            keepManaging = false;
                         }
                     } else {
-                        // Cancel or dialog closed
                         keepManaging = false;
                     }
                 }

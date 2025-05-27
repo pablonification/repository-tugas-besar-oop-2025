@@ -585,6 +585,12 @@ public class GameController {
         boolean success = store.sellToPlayer(player, itemToBuy, quantity, priceList, itemRegistry);
 
         if (success) {
+            // Record the expenditure in statistics
+            if (farmModel.getStatistics() != null && totalPrice > 0) {
+                farmModel.getStatistics().recordExpenditure(totalPrice, farmModel.getCurrentTime().getCurrentSeason());
+                System.out.println("Recorded expenditure: " + totalPrice + "g for " + quantity + " " + itemToBuy.getName());
+            }
+            
             if (gamePanel != null) {
                  gamePanel.updatePlayerInfoPanel();
             }
@@ -633,6 +639,14 @@ public class GameController {
         if (success) {
             System.out.println("Purchased " + quantity + " of " + itemName);
 
+            // Record the expenditure in statistics
+            int buyPrice = priceList.getBuyPrice(itemName);
+            int totalPrice = buyPrice * quantity;
+            if (farmModel.getStatistics() != null && totalPrice > 0) {
+                farmModel.getStatistics().recordExpenditure(totalPrice, farmModel.getCurrentTime().getCurrentSeason());
+                System.out.println("Recorded expenditure: " + totalPrice + "g for " + quantity + " " + itemToBuy.getName());
+            }
+
             // Check if the bought item unlocks a recipe
             if (itemToBuy instanceof Food) { // Recipes bought from store are Food items
                 // String normalizedItemName = itemName.toUpperCase().replace(" ", "_");
@@ -651,8 +665,8 @@ public class GameController {
                 }
             }
             // No direct energy cost for buying, so no checkPassOut() here unless specified.
-             if (gamePanel != null) {
-                 gamePanel.updatePlayerInfoPanel();
+            if (gamePanel != null) {
+                gamePanel.updatePlayerInfoPanel();
             }
         }
         return success;
@@ -2409,6 +2423,27 @@ public class GameController {
         }
         SaveLoadManager saveLoadManager = new SaveLoadManager();
         return saveLoadManager.deleteSave(fileName);
+    }
+
+    /**
+     * Overwrite an existing save file
+     * @param existingFileName The full filename of the save file to overwrite (with extension)
+     * @return The filename that was actually used, or null if the operation failed
+     */
+    public String overwriteSaveFile(String existingFileName) {
+        if (farmModel == null || farmModel.getPlayer() == null || farmModel.getCurrentTime() == null) {
+            System.err.println("GameController: Cannot save game. Essential models are null.");
+            return null;
+        }
+        
+        if (existingFileName == null || existingFileName.trim().isEmpty()) {
+            System.err.println("GameController: Cannot overwrite save. Filename is null or empty.");
+            return null;
+        }
+        
+        // Don't modify the filename at all - pass it directly to saveLoadManager
+        SaveLoadManager saveLoadManager = new SaveLoadManager();
+        return saveLoadManager.saveGame(existingFileName, farmModel, farmModel.getPlayer(), farmModel.getCurrentTime());
     }
 } // End of GameController class
 
