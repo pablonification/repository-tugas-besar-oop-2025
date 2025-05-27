@@ -55,14 +55,19 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
     // GamePanel class: Handles all visual rendering and user input for the game.
 
-    private static final int TILE_SIZE = 96;
+    // private static final int TILE_SIZE = 96;
     private static final int VIEWPORT_WIDTH_IN_TILES = 20;
     private static final int VIEWPORT_HEIGHT_IN_TILES = 10;
-    private static final int INFO_PANEL_HEIGHT = 100;
+    // private static final int INFO_PANEL_HEIGHT = 100;
     private Farm farmModel;
     private GameController gameController;
-    private static final Font DIALOG_FONT = new Font("Arial", Font.PLAIN, 20); // Updated font size to 20
-    private static final Font NPC_DIALOG_FONT = new Font("Arial", Font.PLAIN, 16); // Font for NPC dialogues
+    // private static final Font DIALOG_F   ONT = new Font("Arial", Font.PLAIN, 20); // Updated font size to 20
+    // private static final Font NPC_DIALOG_FONT = new Font("Arial", Font.PLAIN, 16); // Font for NPC dialogues
+    private final int TILE_SIZE;
+    private final int INFO_PANEL_HEIGHT;
+    // Tambahkan juga field untuk Font yang sudah diskalakan jika diperlukan
+    private final Font DIALOG_FONT;
+    private final Font NPC_DIALOG_FONT;
 
     // private NPC currentInteractingNPC;
 
@@ -220,6 +225,8 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
     private GameFrame gameFrame; // Added to hold reference to the main frame
 
+
+
     // Audio for Main Menu
     private Clip menuMusicClip;
     private boolean isMenuMusicPlaying = false;
@@ -240,16 +247,71 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final Color PAUSE_MENU_TEXT_COLOR = Color.WHITE;
     private static final Color PAUSE_MENU_HIGHLIGHT_COLOR = Color.YELLOW;
 
-    public GamePanel(Farm farmModel, GameController gameController, GameFrame gameFrame) { // Added GameFrame parameter
+    // Di dalam GameFrame, sebelum membuat GamePanel
+    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    // Atau lebih baik, gunakan bounds yang memperhitungkan taskbar:
+    // Rectangle usableScreenBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+    // int screenHeight = usableScreenBounds.height;
+    // int screenWidth = usableScreenBounds.width;
+    int screenHeight = screenSize.height; // Contoh sederhana
+
+    // Target persentase tinggi layar untuk jendela game
+    double targetHeightRatio = 0.85; // Misal, gunakan 85% tinggi layar
+    int targetWindowHeight = (int) (screenHeight * targetHeightRatio);
+
+    // Nilai referensi dari desain Anda
+    int originalViewportTilesHeight = 10; // VIEWPORT_HEIGHT_IN_TILES
+    double originalInfoPanelHeightToTileRatio = 100.0 / 96.0; // Rasio INFO_PANEL_HEIGHT terhadap TILE_SIZE asli
+
+    // 1. Lakukan kalkulasi awal dan simpan ke variabel sementara
+    int calculatedTileSize = (int) (targetWindowHeight / (originalViewportTilesHeight + originalInfoPanelHeightToTileRatio));
+
+    // 2. Batasi (clamp) hasil kalkulasi tersebut ke dalam rentang yang diinginkan (misal, 32px hingga 128px)
+    int dynamicTileSize = Math.max(32, Math.min(calculatedTileSize, 128));
+
+    // Sekarang Anda memiliki nilai `dynamicTileSize` yang sudah final dan aman untuk digunakan.
+    int dynamicInfoPanelHeight = (int) (originalInfoPanelHeightToTileRatio * dynamicTileSize);
+
+    // Saat membuat GamePanel, teruskan nilai dinamis yang sudah aman ini:
+    // GamePanel gamePanel = new GamePanel(farmModel, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
+
+    // Saat membuat GamePanel, teruskan nilai dinamis ini:
+    // GamePanel gamePanel = new GamePanel(farmModel, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
+
+    public GamePanel(Farm farmModel, GameController gameController, GameFrame gameFrame, int dynamicTileSize, int dynamicInfoPanelHeight) { // Added GameFrame parameter
         this.farmModel = farmModel;
         this.gameController = gameController;
         this.gameFrame = gameFrame; // Store GameFrame reference
 
-        setPreferredSize(new Dimension(VIEWPORT_WIDTH_IN_TILES * TILE_SIZE, 
-                                       VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT));
+        // setPreferredSize(new Dimension(VIEWPORT_WIDTH_IN_TILES * TILE_SIZE, 
+        //                                VIEWPORT_HEIGHT_IN_TILES * TILE_SIZE + INFO_PANEL_HEIGHT));
+        // setBackground(Color.GRAY);
+        // addKeyListener(this);
+        // setFocusable(true); // Important to receive key events
+
+        this.TILE_SIZE = dynamicTileSize;
+        this.INFO_PANEL_HEIGHT = dynamicInfoPanelHeight;
+    
+        // Hitung faktor skala berdasarkan TILE_SIZE baru relatif terhadap TILE_SIZE desain asli (misal 96)
+        double scaleFactor = this.TILE_SIZE / 96.0;
+    
+        // Inisialisasi Font dengan ukuran yang diskalakan
+        // Pastikan ada ukuran font minimal agar teks tetap terbaca
+        this.DIALOG_FONT = new Font("Arial", Font.PLAIN, Math.max(12, (int)(20 * scaleFactor)));
+        this.NPC_DIALOG_FONT = new Font("Arial", Font.PLAIN, Math.max(10, (int)(16 * scaleFactor)));
+
+
+        // Update default UIManager jika diperlukan (setelah font diinisialisasi)
+        UIManager.put("OptionPane.messageFont", this.DIALOG_FONT);
+        UIManager.put("OptionPane.buttonFont", this.DIALOG_FONT);
+        UIManager.put("TextField.font", this.DIALOG_FONT);
+
+        // Set preferredSize menggunakan nilai dinamis
+        setPreferredSize(new Dimension(VIEWPORT_WIDTH_IN_TILES * this.TILE_SIZE,
+                                    VIEWPORT_HEIGHT_IN_TILES * this.TILE_SIZE + this.INFO_PANEL_HEIGHT));
         setBackground(Color.GRAY);
         addKeyListener(this);
-        setFocusable(true); // Important to receive key events
+        setFocusable(true);
 
         // Initialize and start the game timer
         // 1 real second = 5 game minutes

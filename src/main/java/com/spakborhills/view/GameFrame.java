@@ -49,7 +49,7 @@ public class GameFrame extends JFrame {
 
         // Initialize GamePanel here with nulls for now, primarily for its music system.
         // It will be replaced with a fully initialized one when the game starts.
-        gamePanel = new GamePanel(null, null, this);
+        gamePanel = new GamePanel(null, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
         mainPanelContainer.add(gamePanel, GAME_PANEL_KEY); 
         // Note: GameController will be set later when it's created.
 
@@ -79,6 +79,37 @@ public class GameFrame extends JFrame {
         setLocationRelativeTo(null);
         setVisible(true);
     }
+
+        // Di dalam GameFrame, sebelum membuat GamePanel
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        // Atau lebih baik, gunakan bounds yang memperhitungkan taskbar:
+        // Rectangle usableScreenBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        // int screenHeight = usableScreenBounds.height;
+        // int screenWidth = usableScreenBounds.width;
+        int screenHeight = screenSize.height; // Contoh sederhana
+    
+        // Target persentase tinggi layar untuk jendela game
+        double targetHeightRatio = 0.85; // Misal, gunakan 85% tinggi layar
+        int targetWindowHeight = (int) (screenHeight * targetHeightRatio);
+    
+        // Nilai referensi dari desain Anda
+        int originalViewportTilesHeight = 10; // VIEWPORT_HEIGHT_IN_TILES
+        double originalInfoPanelHeightToTileRatio = 100.0 / 96.0; // Rasio INFO_PANEL_HEIGHT terhadap TILE_SIZE asli
+    
+        // 1. Lakukan kalkulasi awal dan simpan ke variabel sementara
+        int calculatedTileSize = (int) (targetWindowHeight / (originalViewportTilesHeight + originalInfoPanelHeightToTileRatio));
+    
+        // 2. Batasi (clamp) hasil kalkulasi tersebut ke dalam rentang yang diinginkan (misal, 32px hingga 128px)
+        int dynamicTileSize = Math.max(32, Math.min(calculatedTileSize, 128));
+    
+        // Sekarang Anda memiliki nilai `dynamicTileSize` yang sudah final dan aman untuk digunakan.
+        int dynamicInfoPanelHeight = (int) (originalInfoPanelHeightToTileRatio * dynamicTileSize);
+    
+        // Saat membuat GamePanel, teruskan nilai dinamis yang sudah aman ini:
+        // GamePanel gamePanel = new GamePanel(farmModel, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
+    
+        // Saat membuat GamePanel, teruskan nilai dinamis ini:
+        // GamePanel gamePanel = new GamePanel(farmModel, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
 
     public void showMainMenu() {
         cardLayout.show(mainPanelContainer, MAIN_MENU_PANEL_KEY);
@@ -167,7 +198,7 @@ public class GameFrame extends JFrame {
                 mainPanelContainer.remove(this.gamePanel);
             }
             // Create and add the new GamePanel with proper Farm and GameController
-            gamePanel = new GamePanel(this.farm, this.gameController, this);
+            gamePanel = new GamePanel(this.farm, this.gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
             mainPanelContainer.add(gamePanel, GAME_PANEL_KEY);
             
             if (this.gameController != null) { // gameController should be non-null here
