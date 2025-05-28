@@ -294,7 +294,6 @@ PENTING:
 - [SOLVED] SAAT LOAD SAVE NAMA SEMUA ILANG, MAP MAP ASSET TILES GA KELOAD
 - [SOLVED] FOTO PROFIL BLM DI CUT NPC
 - BLACK BAR HUD BEDA BEDA KETIKA DIFFERENT SCREEN (DILAPTOP GA COVER SEMUA HUD JADI ANEH)
-tapi harus ada verifikasi ga sih apakah nama dan nama farmnya sama? both ketika overwrite save atau bikin new game?
-parsnip dari nanem dan beli entity beda jir
-logic panen ancur jir masa gw nyiram 1 parsnip besoknya bisa di harvest semua
-store di laptop ga keliatan semua
+- [SOLVED] parsnip dari nanem dan beli entity beda jir
+- [SOLVED] logic panen ancur jir masa gw nyiram 1 parsnip besoknya bisa di harvest semua
+- [SOLVED] store di laptop ga keliatan semua

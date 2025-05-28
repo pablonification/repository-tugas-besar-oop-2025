@@ -258,7 +258,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private static final Color PAUSE_MENU_TEXT_COLOR = Color.WHITE;
     private static final Color PAUSE_MENU_HIGHLIGHT_COLOR = Color.YELLOW;
 
-
+    private int storeScrollOffset = 0; // Add this new field for tracking scroll position
 
     public GamePanel(Farm farmModel, GameController gameController, GameFrame gameFrame, int dynamicTileSize, int dynamicInfoPanelHeight) { // Added GameFrame parameter
         this.farmModel = farmModel;
@@ -2333,18 +2333,39 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 case KeyEvent.VK_UP:
                     if (currentStoreItemSelectionIndex > 0) {
                         currentStoreItemSelectionIndex--;
+                        // Adjust scroll offset when selection moves up
+                        adjustStoreScrollOffset();
                     } else {
                         currentStoreItemSelectionIndex = storeItemsForDisplay.size() - 1; // Wrap around
+                        // Set scroll offset to show the last items
+                        storeScrollOffset = Math.max(0, storeItemsForDisplay.size() - getVisibleStoreItemCount());
                     }
                     storeFeedbackMessage = ""; // Hapus feedback saat navigasi
                     break;
                 case KeyEvent.VK_DOWN:
                     if (currentStoreItemSelectionIndex < storeItemsForDisplay.size() - 1) {
                         currentStoreItemSelectionIndex++;
+                        // Adjust scroll offset when selection moves down
+                        adjustStoreScrollOffset();
                     } else {
                         currentStoreItemSelectionIndex = 0; // Wrap around
+                        storeScrollOffset = 0; // Reset scroll offset when wrapping to top
                     }
                     storeFeedbackMessage = ""; // Hapus feedback saat navigasi
+                    break;
+                case KeyEvent.VK_PAGE_UP:
+                    // Jump up by page size or to beginning
+                    int visibleCount = getVisibleStoreItemCount();
+                    currentStoreItemSelectionIndex = Math.max(0, currentStoreItemSelectionIndex - visibleCount);
+                    adjustStoreScrollOffset();
+                    storeFeedbackMessage = "";
+                    break;
+                case KeyEvent.VK_PAGE_DOWN:
+                    // Jump down by page size or to end
+                    visibleCount = getVisibleStoreItemCount();
+                    currentStoreItemSelectionIndex = Math.min(storeItemsForDisplay.size() - 1, currentStoreItemSelectionIndex + visibleCount);
+                    adjustStoreScrollOffset();
+                    storeFeedbackMessage = "";
                     break;
                 case KeyEvent.VK_ENTER:
                 case KeyEvent.VK_E: // Use E as confirm
@@ -2509,10 +2530,48 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
         int bottomReservedSpace = (itemLineHeight * 3) + 20; // Naikkan sedikit untuk feedback message
 
-        if (storeItemsForDisplay != null) {
-            for (int i = 0; i < storeItemsForDisplay.size(); i++) {
-                if (itemY > (storeItemListRect.y + storeItemListRect.height - bottomReservedSpace)) {
-                    g2d.drawString("...", storeItemListRect.x, itemY);
+        // Calculate visible area information
+        int visibleItemCount = getVisibleStoreItemCount();
+        int maxY = storeItemListRect.y + storeItemListRect.height - bottomReservedSpace;
+        
+        // Draw scroll indicators if needed
+        if (storeItemsForDisplay != null && storeItemsForDisplay.size() > visibleItemCount) {
+            // Up indicator
+            if (storeScrollOffset > 0) {
+                g2d.setColor(STORE_HIGHLIGHT_COLOR);
+                g2d.drawString("↑", storeItemListRect.x + storeItemListRect.width - 20, storeItemListRect.y + itemLineHeight);
+            }
+            
+            // Down indicator
+            if (storeScrollOffset + visibleItemCount < storeItemsForDisplay.size()) {
+                g2d.setColor(STORE_HIGHLIGHT_COLOR);
+                g2d.drawString("↓", storeItemListRect.x + storeItemListRect.width - 20, maxY - itemLineHeight);
+            }
+            
+            // Draw scrollbar
+            int scrollbarHeight = maxY - (storeItemListRect.y + itemLineHeight * 2);
+            int thumbHeight = Math.max(30, scrollbarHeight * visibleItemCount / storeItemsForDisplay.size());
+            int thumbY = storeItemListRect.y + itemLineHeight * 2 + 
+                        (scrollbarHeight - thumbHeight) * storeScrollOffset / 
+                        Math.max(1, storeItemsForDisplay.size() - visibleItemCount);
+            
+            // Draw track
+            g2d.setColor(new Color(80, 80, 80, 100));
+            g2d.fillRect(storeItemListRect.x + storeItemListRect.width - 10, 
+                        storeItemListRect.y + itemLineHeight * 2, 
+                        5, scrollbarHeight);
+            
+            // Draw thumb
+            g2d.setColor(new Color(180, 180, 180, 180));
+            g2d.fillRect(storeItemListRect.x + storeItemListRect.width - 10, 
+                        thumbY, 5, thumbHeight);
+        }
+
+        if (storeItemsForDisplay != null && !storeItemsForDisplay.isEmpty()) {
+            int endIndex = Math.min(storeScrollOffset + visibleItemCount, storeItemsForDisplay.size());
+            
+            for (int i = storeScrollOffset; i < endIndex; i++) {
+                if (itemY > maxY) {
                     break;
                 }
                 Item item = storeItemsForDisplay.get(i);
@@ -2561,7 +2620,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             } else {
                 g2d.setFont(this.STORE_FONT_SCALED);
                 g2d.setColor(STORE_TEXT_COLOR);
-                String instructionText = "([Up]/[Down] Pilih Item, [E/Enter] Pilih)";
+                String instructionText = "([Up]/[Down] Pilih Item, [PgUp]/[PgDn] Page, [E/Enter] Pilih)";
                 FontMetrics instructionFm = g2d.getFontMetrics();
                 // Gambar instruksi umum di atas feedback atau Gold
                 g2d.drawString(instructionText, storePanelRect.x + Math.max(10, (int)(20 * this.scaleFactor)), feedbackTextY - bottomTextHeight -5 ); 
@@ -2918,6 +2977,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         this.currentStoreItemSelectionIndex = 0;
         this.currentBuyQuantity = 1;
         this.storeInputMode = "selecting_item";
+        this.storeScrollOffset = 0; // Reset scroll offset when opening store
         // farmModel.setCurrentGameState(GameState.STORE_UI); // This should be done by controller or here
         this.isStoreUiActive = true; // This flag should be linked to GameState.STORE_UI
         farmModel.setCurrentGameState(GameState.STORE_UI); // Explicitly set game state
@@ -4008,5 +4068,45 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 }
             }
         }
+    }
+
+    // Helper method to calculate how many items can be shown in the store
+    private int getVisibleStoreItemCount() {
+        if (storeItemListRect == null) return 5; // Fallback value
+        
+        // Get the font metrics for the item font to calculate line height
+        Graphics2D g2d = (Graphics2D) getGraphics();
+        if (g2d == null) return 5; // Another fallback if graphics context is null
+        
+        g2d.setFont(this.STORE_ITEM_FONT_SCALED);
+        FontMetrics fm = g2d.getFontMetrics();
+        int itemLineHeight = fm.getHeight() + Math.max(1, (int)(2 * this.scaleFactor));
+        
+        // Bottom reserved space for instructions and feedback
+        int bottomReservedSpace = (itemLineHeight * 3) + 20;
+        
+        // Calculate visible height and divide by line height (minus 2 for header rows)
+        int visibleHeight = storeItemListRect.height - bottomReservedSpace;
+        int visibleCount = visibleHeight / itemLineHeight;
+        
+        g2d.dispose();
+        return Math.max(1, visibleCount - 2); // Subtract header rows, ensure minimum of 1
+    }
+
+    // Helper method to adjust scroll offset based on selection
+    private void adjustStoreScrollOffset() {
+        int visibleCount = getVisibleStoreItemCount();
+        
+        // If selection is beyond the visible area (bottom)
+        if (currentStoreItemSelectionIndex >= storeScrollOffset + visibleCount) {
+            storeScrollOffset = currentStoreItemSelectionIndex - visibleCount + 1;
+        }
+        // If selection is before the visible area (top)
+        else if (currentStoreItemSelectionIndex < storeScrollOffset) {
+            storeScrollOffset = currentStoreItemSelectionIndex;
+        }
+        
+        // Ensure storeScrollOffset is within valid range
+        storeScrollOffset = Math.max(0, Math.min(storeScrollOffset, Math.max(0, storeItemsForDisplay.size() - visibleCount)));
     }
 }

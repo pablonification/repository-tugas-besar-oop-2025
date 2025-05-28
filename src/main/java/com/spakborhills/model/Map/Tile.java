@@ -231,6 +231,11 @@ public class Tile {
             if (effectivelyWateredForGrowth) {
                 if (!isHarvestable()) { // Only increment growthDays if not already harvestable
                     this.growthDays++;
+                    System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") tumbuh: day " + 
+                        this.growthDays + "/" + plantedSeed.getDaysToHarvest() + " (watered)");
+                } else {
+                    System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + 
+                        ") sudah siap panen: day " + this.growthDays + "/" + plantedSeed.getDaysToHarvest());
                 }
                 this.daysSinceLastWatered = 0; // Reset counter because it got water
             } else {
