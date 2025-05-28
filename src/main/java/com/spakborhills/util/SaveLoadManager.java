@@ -40,13 +40,21 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Arrays;
 
+/**
+ * SaveLoadManager implemented as a Singleton pattern.
+ * This ensures there's only one instance of SaveLoadManager throughout the application.
+ */
 public class SaveLoadManager {
 
     private static final String SAVE_DIRECTORY = "saves";
     private static final String SAVE_FILE_EXTENSION = ".json";
     private Gson gson;
-
-    public SaveLoadManager() {
+    
+    // Singleton instance
+    private static SaveLoadManager instance;
+    
+    // Private constructor to prevent instantiation from outside
+    private SaveLoadManager() {
         // GsonBuilder untuk pretty printing agar file JSON mudah dibaca
         this.gson = new GsonBuilder()
                         .setPrettyPrinting()
@@ -60,6 +68,17 @@ public class SaveLoadManager {
         }
     }
     
+    /**
+     * Get the singleton instance of SaveLoadManager
+     * @return The SaveLoadManager instance
+     */
+    public static synchronized SaveLoadManager getInstance() {
+        if (instance == null) {
+            instance = new SaveLoadManager();
+        }
+        return instance;
+    }
+
     /**
      * Get a list of all available save files
      * @return List of save slot information with file names and metadata

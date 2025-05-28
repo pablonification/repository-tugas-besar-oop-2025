@@ -166,8 +166,11 @@ public class GameFrame extends JFrame {
         }
     }
 
+    /**
+     * Load a game from a selected save file
+     */
     private void loadGameAndStart() {
-        SaveLoadManager saveLoadManager = new SaveLoadManager();
+        SaveLoadManager saveLoadManager = SaveLoadManager.getInstance();
         List<SaveLoadManager.SaveSlot> saveSlots = saveLoadManager.getSaveSlots();
         
         if (saveSlots.isEmpty()) {
@@ -351,26 +354,90 @@ public class GameFrame extends JFrame {
         // Create a list of items to choose from as favorite
         List<String> favoriteItemOptions = new ArrayList<>();
         
-        // Add a selection of popular items from different categories
+        favoriteItemOptions.add("Parsnip Seeds");
+        favoriteItemOptions.add("Cauliflower Seeds");
+        favoriteItemOptions.add("Potato Seeds");
+        favoriteItemOptions.add("Wheat Seeds");
+        favoriteItemOptions.add("Blueberry Seeds");
+        favoriteItemOptions.add("Tomato Seeds");
+        favoriteItemOptions.add("Hot Pepper Seeds");
+        favoriteItemOptions.add("Melon Seeds");
+        favoriteItemOptions.add("Cranberry Seeds");
+        favoriteItemOptions.add("Pumpkin Seeds");
+        favoriteItemOptions.add("Grape Seeds");
+        
         // Crops
         favoriteItemOptions.add("Parsnip");
         favoriteItemOptions.add("Cauliflower");
+        favoriteItemOptions.add("Potato");
+        favoriteItemOptions.add("Wheat");
         favoriteItemOptions.add("Blueberry");
+        favoriteItemOptions.add("Tomato");
+        favoriteItemOptions.add("Hot Pepper");
+        favoriteItemOptions.add("Melon");
+        favoriteItemOptions.add("Cranberry");
         favoriteItemOptions.add("Pumpkin");
+        favoriteItemOptions.add("Grape");
         
-        // Fish
-        favoriteItemOptions.add("Legend");
+        // Fish - Common
+        favoriteItemOptions.add("Bullhead");
+        favoriteItemOptions.add("Carp");
+        favoriteItemOptions.add("Chub");
+        
+        // Fish - Regular
+        favoriteItemOptions.add("Largemouth Bass");
+        favoriteItemOptions.add("Rainbow Trout");
+        favoriteItemOptions.add("Sturgeon");
+        favoriteItemOptions.add("Midnight Carp");
+        favoriteItemOptions.add("Flounder");
+        favoriteItemOptions.add("Halibut");
+        favoriteItemOptions.add("Octopus");
+        favoriteItemOptions.add("Pufferfish");
+        favoriteItemOptions.add("Sardine");
+        favoriteItemOptions.add("Super Cucumber");
+        favoriteItemOptions.add("Catfish");
         favoriteItemOptions.add("Salmon");
+        
+        // Fish - Legendary
+        favoriteItemOptions.add("Angler");
+        favoriteItemOptions.add("Crimsonfish");
+        favoriteItemOptions.add("Glacierfish");
+        favoriteItemOptions.add("Legend");
         
         // Food
         favoriteItemOptions.add("Fish n' Chips");
         favoriteItemOptions.add("Baguette");
+        favoriteItemOptions.add("Sashimi");
+        favoriteItemOptions.add("Fugu");
         favoriteItemOptions.add("Wine");
         favoriteItemOptions.add("Pumpkin Pie");
+        favoriteItemOptions.add("Veggie Soup");
+        favoriteItemOptions.add("Fish Stew");
+        favoriteItemOptions.add("Spakbor Salad");
+        favoriteItemOptions.add("Fish Sandwich");
+        favoriteItemOptions.add("The Legends of Spakbor");
+        favoriteItemOptions.add("Cooked Pig's Head");
         
         // Equipment
-        favoriteItemOptions.add("Fishing Rod");
         favoriteItemOptions.add("Hoe");
+        favoriteItemOptions.add("Watering Can");
+        favoriteItemOptions.add("Pickaxe");
+        favoriteItemOptions.add("Fishing Rod");
+        
+        // Miscellaneous Items
+        favoriteItemOptions.add("Coal");
+        favoriteItemOptions.add("Firewood");
+        favoriteItemOptions.add("Egg");
+        favoriteItemOptions.add("Eggplant");
+        favoriteItemOptions.add("Proposal Ring");
+        favoriteItemOptions.add("Koran");
+        
+        // Furnitures (Bonus)
+        // favoriteItemOptions.add("Single Bed");
+        // favoriteItemOptions.add("Queen Bed");
+        // favoriteItemOptions.add("King Bed");
+        // favoriteItemOptions.add("Stove");
+        // favoriteItemOptions.add("Television (TV)");
         
         // Sort the options alphabetically for easier selection
         Collections.sort(favoriteItemOptions);
@@ -499,7 +566,7 @@ public class GameFrame extends JFrame {
      * Display the manage saves dialog
      */
     private void manageSaves() {
-        SaveLoadManager saveLoadManager = new SaveLoadManager();
+        SaveLoadManager saveLoadManager = SaveLoadManager.getInstance();
         List<SaveLoadManager.SaveSlot> saveSlots = saveLoadManager.getSaveSlots();
         
         if (saveSlots.isEmpty()) {
