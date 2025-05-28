@@ -5,7 +5,7 @@
   "playerY": 14,
   "currentMapId": "Farm",
   "playerMoney": 500,
-  "playerEnergy": 100,
+  "playerEnergy": 95,
   "playerFarmName": "Budi",
   "playerInventory": {
     "items": [
@@ -75,7 +75,7 @@
   "favoriteItemName": "Fishing Rod",
   "currentDay": 1,
   "currentHour": 7,
-  "currentMinute": 10,
+  "currentMinute": 20,
   "currentSeason": "SPRING",
   "currentYear": 1,
   "currentWeather": "SUNNY",
@@ -2277,7 +2277,7 @@
       "lastWateredDay": 0
     },
     "5,14": {
-      "tileType": "TILLABLE",
+      "tileType": "TILLED",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6259,14 +6259,14 @@
     "seasonalIncome": {
       "SPRING": 0,
       "WINTER": 0,
-      "FALL": 0,
-      "SUMMER": 0
+      "SUMMER": 0,
+      "FALL": 0
     },
     "seasonalExpenditure": {
       "SPRING": 0,
       "WINTER": 0,
-      "FALL": 0,
-      "SUMMER": 0
+      "SUMMER": 0,
+      "FALL": 0
     },
     "daysPlayedInSeason": {},
     "totalDaysPlayed": 0,
@@ -6294,12 +6294,6 @@
       "objectClassType": "com.spakborhills.model.Object.House",
       "x": 6,
       "y": 9
-    },
-    {
-      "objectName": "Kolam",
-      "objectClassType": "com.spakborhills.model.Object.Pond",
-      "x": 19,
-      "y": 23
     }
   ]
 }

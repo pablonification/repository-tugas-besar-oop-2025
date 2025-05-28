@@ -14,9 +14,9 @@ import com.spakborhills.model.Item.Crop; // Sellable
 import com.spakborhills.model.Item.Fish; // Sellable
 import com.spakborhills.model.Item.Food; // Sellable
 import com.spakborhills.model.Item.MiscItem; // Sellable
-import com.spakborhills.model.Util.PriceList; // For getting item prices in store
+// import com.spakborhills.model.Util.PriceList; // For getting item prices in store
 import com.spakborhills.model.Object.ShippingBinObject; // For checking instance
-import com.spakborhills.model.Util.Inventory;
+// import com.spakborhills.model.Util.Inventory;
 import com.spakborhills.model.Enum.Weather; // Tambahkan impor untuk Weather
 import com.spakborhills.model.Enum.Season; // Tambahkan impor untuk Season
 import com.spakborhills.model.Map.MapArea;
@@ -42,8 +42,8 @@ import java.io.IOException; // For image loading
 import java.util.List;
 import java.util.ArrayList; // For creating list of sellable items
 import java.util.Map; // For iterating inventory
-import java.util.Set; // For alreadyDrawnLargeObjects
-import java.util.HashSet; // For alreadyDrawnLargeObjects
+// import java.util.Set; // For alreadyDrawnLargeObjects
+// import java.util.HashSet; // For alreadyDrawnLargeObjects
 import java.io.File; // For fallback file loading
 import java.io.InputStream; // For resource stream loading
 import javax.sound.sampled.AudioInputStream;
@@ -53,9 +53,9 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.text.SimpleDateFormat;
 import javax.swing.Timer;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
+// import javax.swing.border.Border;
+// import javax.swing.border.EmptyBorder;
+// import javax.swing.border.LineBorder;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 
@@ -130,9 +130,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
     // Shipping Bin UI State
     private List<Item> playerSellableItems; // Items from player inventory that can be sold
-    private List<Item> itemsInBinSession; // Items added to bin in current session
+    // private List<Item> itemsInBinSession; // Items added to bin in current session
     private int currentPlayerItemSelectionIndex = 0;
-    private int currentBinItemSelectionIndex = 0; // If we allow selecting/managing items in bin UI
+    // private int currentBinItemSelectionIndex = 0; // If we allow selecting/managing items in bin UI
     private String shippingBinInputMode = "selecting_player_item"; // "selecting_player_item", "inputting_quantity"
     private String shippingBinQuantityInputString = "";
     private Item currentShippingBinItemForQuantity;
@@ -140,7 +140,7 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     private Rectangle playerItemsListRect;
     private Rectangle binItemsListRect;
     private Rectangle shippingBinQuantityRect;
-    private Rectangle shippingBinConfirmButtonRect; // Could be implicit with Enter
+    // private Rectangle shippingBinConfirmButtonRect; // Could be implicit with Enter
     private Rectangle shippingBinCloseButtonRect;
     private static final Font SHIPPING_BIN_FONT = new Font("Arial", Font.PLAIN, 18);
     private static final Font SHIPPING_BIN_ITEM_FONT = new Font("Monospaced", Font.PLAIN, 16);
@@ -229,13 +229,13 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
     // Statistics View UI State
     private Rectangle statisticsPanelRect;
-    private static final Font STATISTICS_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
+    // private static final Font STATISTICS_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
     // Added: Track scroll position for statistics view
     private int statsScrollOffset = 0;
     private static final int STATS_SCROLL_AMOUNT = 24; // Scroll one line at a time
     // Font for text area will be set directly
-    private static final Color STATISTICS_BG_COLOR = new Color(100, 70, 70, 230); // Darker red-purple
-    private static final Color STATISTICS_TEXT_COLOR = Color.WHITE;
+    // private static final Color STATISTICS_BG_COLOR = new Color(100, 70, 70, 230); // Darker red-purple
+    // private static final Color STATISTICS_TEXT_COLOR = Color.WHITE;
 
     private GameFrame gameFrame; // Added to hold reference to the main frame
 

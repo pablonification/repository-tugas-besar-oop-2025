@@ -14,7 +14,7 @@ import java.util.HashSet;
 // Added imports for new data structures
 import com.spakborhills.model.Enum.Gender;
 import com.spakborhills.model.Enum.RelationshipStatus;
-import com.spakborhills.model.NPC.NPC;
+// import com.spakborhills.model.NPC.NPC;
 
 public class SaveData implements Serializable {
     private static final long serialVersionUID = 1L; // Untuk kontrol versi serialisasi
@@ -607,6 +607,5 @@ public class SaveData implements Serializable {
         }
     }
 
-    // TODO: Tambahkan getter dan setter untuk placedObjects jika sudah dibuat
     
 } 

@@ -181,29 +181,29 @@ public abstract class NPC {
         }
     }
 
-    private void fallbackToSpritesheetPortrait() { 
-        // This method is now potentially confusing or deprecated if dialoguePortraitPath is the primary source for portrait sheets.
-        // It attempts to crop from this.fullSpritesheet (character animation sheet)
-        // using coordinates that are likely intended for a different portrait-specific spritesheet.
-        System.err.println("PERINGATAN: fallbackToSpritesheetPortrait() dipanggil untuk NPC " + this.name + 
-                           ". Ini mencoba memotong potret dari spritesheet animasi karakter utama (" + this.spritesheetPath +
-                           ") menggunakan koordinat X:" + this.defaultPortraitX + ", Y:" + this.defaultPortraitY +
-                           ", W:" + this.portraitWidth + ", H:" + this.portraitHeight + ". Hasilnya mungkin salah.");
-        if (this.fullSpritesheet == null) {
-            loadSpritesheet(); // Ensure main character animation spritesheet is loaded
-        }
-        if (this.fullSpritesheet != null) {
-            try {
-                this.dialoguePortraitImage = this.fullSpritesheet.getSubimage(defaultPortraitX, defaultPortraitY, portraitWidth, portraitHeight);
-            } catch (Exception e) {
-                System.err.println("Gagal memotong fallback potret dialog dari spritesheet animasi karakter untuk NPC: " + this.name + ": " + e.getMessage());
-                this.dialoguePortraitImage = null; 
-            }
-        } else {
-            System.err.println("Fallback potret dialog (dari spritesheet animasi karakter) gagal total untuk NPC: " + this.name + " karena spritesheet utama ("+ this.spritesheetPath +") juga null.");
-            this.dialoguePortraitImage = null; 
-        }
-    }
+    // private void fallbackToSpritesheetPortrait() { 
+    //     // This method is now potentially confusing or deprecated if dialoguePortraitPath is the primary source for portrait sheets.
+    //     // It attempts to crop from this.fullSpritesheet (character animation sheet)
+    //     // using coordinates that are likely intended for a different portrait-specific spritesheet.
+    //     System.err.println("PERINGATAN: fallbackToSpritesheetPortrait() dipanggil untuk NPC " + this.name + 
+    //                        ". Ini mencoba memotong potret dari spritesheet animasi karakter utama (" + this.spritesheetPath +
+    //                        ") menggunakan koordinat X:" + this.defaultPortraitX + ", Y:" + this.defaultPortraitY +
+    //                        ", W:" + this.portraitWidth + ", H:" + this.portraitHeight + ". Hasilnya mungkin salah.");
+    //     if (this.fullSpritesheet == null) {
+    //         loadSpritesheet(); // Ensure main character animation spritesheet is loaded
+    //     }
+    //     if (this.fullSpritesheet != null) {
+    //         try {
+    //             this.dialoguePortraitImage = this.fullSpritesheet.getSubimage(defaultPortraitX, defaultPortraitY, portraitWidth, portraitHeight);
+    //         } catch (Exception e) {
+    //             System.err.println("Gagal memotong fallback potret dialog dari spritesheet animasi karakter untuk NPC: " + this.name + ": " + e.getMessage());
+    //             this.dialoguePortraitImage = null; 
+    //         }
+    //     } else {
+    //         System.err.println("Fallback potret dialog (dari spritesheet animasi karakter) gagal total untuk NPC: " + this.name + " karena spritesheet utama ("+ this.spritesheetPath +") juga null.");
+    //         this.dialoguePortraitImage = null; 
+    //     }
+    // }
 
     // Mendapatkan frame sprite default untuk di peta
     public Image getCurrentSpriteFrame() {

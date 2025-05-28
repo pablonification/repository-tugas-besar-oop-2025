@@ -609,9 +609,9 @@ public class GameController {
      * @param itemName The name of the item to buy.
      * @param quantity The quantity of the item to buy.
      * @return true if the purchase was successful, false otherwise.
-     * @deprecated Use requestBuyItemAndGetMessage for detailed feedback.
+    //  * @deprecated Use requestBuyItemAndGetMessage for detailed feedback.
      */
-    @Deprecated
+    // @Deprecated
     public boolean requestBuyItem(String itemName, int quantity) {
         if (farmModel == null || farmModel.getStore() == null || farmModel.getPlayer() == null || 
             farmModel.getPriceList() == null || farmModel.getItemRegistry() == null) {
@@ -927,7 +927,6 @@ public class GameController {
     //     // For now, assume if getAssociatedObject is not null, it's blocking.
     //     // A more robust way would be DeployedObject having an isPassable() method.
     //     if (map.getObjectAt(x,y) != null) { 
-    //         // TODO: Check if the object is passable. For now, assume all objects are obstacles.
     //         // For example, a small rug (DeployedObject) might be on a WOOD_FLOOR tile and should be passable.
     //         // A House object would not be.
     //         // This currently uses a simplified check: if there's an object, it's not walkable.
@@ -996,9 +995,9 @@ public class GameController {
         } else if (currentMap instanceof FarmMap) {
             // Exiting FarmMap to another location
             int playerExitX = player.getCurrentTileX();
-            int playerExitY = player.getCurrentTileY();
+            // int playerExitY = player.getCurrentTileY();
             int farmMapWidth = currentMap.getSize().width;
-            int farmMapHeight = currentMap.getSize().height;
+            // int farmMapHeight = currentMap.getSize().height;
 
             // Default to a central entry point on the target map
             if (targetEntryPoints != null && !targetEntryPoints.isEmpty()) {
@@ -1628,7 +1627,6 @@ public class GameController {
             System.out.println(player.getName() + " mulai memasak " + servingsMade + " " + cookResultOutcome + ". Energi: " + player.getEnergy() + ", Waktu: " + gameTime.getTimeString());
 
             // Simulasi selesai masak setelah 1 jam
-            // TODO: Ganti dengan GameTaskManager yang sebenarnya
             final int finalServings = servingsMade;
             // Untuk sekarang, kita simulasikan selesai langsung untuk testing, tapi idealnya pakai TaskManager
             for (int i = 0; i < finalServings; i++) {
@@ -2367,48 +2365,47 @@ public class GameController {
     // The general isTileWalkable method below is for pathfinding, not spawning.
 
     // Helper method to check if a tile is walkable (general purpose pathfinding)
-    private boolean isTileWalkable(Tile tile, MapArea map, int x, int y) {
-        if (tile == null) return false;
-        TileType type = tile.getType();
-        // Walkable types: GRASS, TILLABLE, TILLED, PLANTED, ENTRY_POINT (if base is walkable)
-        // Also includes various floor types.
-        // Unwalkable: WATER, OBSTACLE, or if there's a DEPLOYED_OBJECT that's not passable
-        boolean isBaseTypeWalkable = type == TileType.GRASS || 
-                                     type == TileType.TILLABLE || 
-                                     type == TileType.TILLED || 
-                                     type == TileType.PLANTED || // A planted tile is walkable; harvestability is a state of the plant, not the tile type itself for walkability.
-                                     type == TileType.ENTRY_POINT || // Assuming entry points are placed on walkable base
-                                     type == TileType.WOOD_FLOOR ||  
-                                     type == TileType.STONE_FLOOR ||
-                                     type == TileType.CARPET_FLOOR ||
-                                     type == TileType.LUXURY_FLOOR ||
-                                     type == TileType.DIRT_FLOOR;
+    // private boolean isTileWalkable(Tile tile, MapArea map, int x, int y) {
+    //     if (tile == null) return false;
+    //     TileType type = tile.getType();
+    //     // Walkable types: GRASS, TILLABLE, TILLED, PLANTED, ENTRY_POINT (if base is walkable)
+    //     // Also includes various floor types.
+    //     // Unwalkable: WATER, OBSTACLE, or if there's a DEPLOYED_OBJECT that's not passable
+    //     boolean isBaseTypeWalkable = type == TileType.GRASS || 
+    //                                  type == TileType.TILLABLE || 
+    //                                  type == TileType.TILLED || 
+    //                                  type == TileType.PLANTED || // A planted tile is walkable; harvestability is a state of the plant, not the tile type itself for walkability.
+    //                                  type == TileType.ENTRY_POINT || // Assuming entry points are placed on walkable base
+    //                                  type == TileType.WOOD_FLOOR ||  
+    //                                  type == TileType.STONE_FLOOR ||
+    //                                  type == TileType.CARPET_FLOOR ||
+    //                                  type == TileType.LUXURY_FLOOR ||
+    //                                  type == TileType.DIRT_FLOOR;
 
-        if (!isBaseTypeWalkable) return false;
+    //     if (!isBaseTypeWalkable) return false;
 
-        // Check for blocking deployed objects. 
-        // The isOccupied check might be slightly different from "isWalkable".
-        // For now, assume if getAssociatedObject is not null, it's blocking.
-        // A more robust way would be DeployedObject having an isPassable() method.
-        if (map.getObjectAt(x,y) != null) { 
-            // TODO: Check if the object is passable. For now, assume all objects are obstacles.
-            // For example, a small rug (DeployedObject) might be on a WOOD_FLOOR tile and should be passable.
-            // A House object would not be.
-            // This currently uses a simplified check: if there's an object, it's not walkable.
-            // This might conflict with the definition of some maps if entry points are on tiles with non-blocking objects.
-            // For now, if the object is the map itself (e.g. a house in an NPC map), allow it.
-            DeployedObject obj = map.getObjectAt(x,y);
-            if (obj!= null && obj.getName().toLowerCase().contains("house") && map.getName().toLowerCase().contains("home")){
-                 //This is likely an NPC house map, player can spawn inside.
-            } else if (obj != null){
-                // System.out.println("Tile ("+x+","+y+") on map "+map.getName()+" has object: "+obj.getName()+", considered not walkable for spawn.");
-                // return false; 
-                // Temporarily allowing spawn on occupied tiles if base type is walkable, to avoid getting stuck
-                // This needs better logic based on object passability.
-            }
-        }
-        return true;
-    }
+    //     // Check for blocking deployed objects. 
+    //     // The isOccupied check might be slightly different from "isWalkable".
+    //     // For now, assume if getAssociatedObject is not null, it's blocking.
+    //     // A more robust way would be DeployedObject having an isPassable() method.
+    //     if (map.getObjectAt(x,y) != null) { 
+    //         // For example, a small rug (DeployedObject) might be on a WOOD_FLOOR tile and should be passable.
+    //         // A House object would not be.
+    //         // This currently uses a simplified check: if there's an object, it's not walkable.
+    //         // This might conflict with the definition of some maps if entry points are on tiles with non-blocking objects.
+    //         // For now, if the object is the map itself (e.g. a house in an NPC map), allow it.
+    //         DeployedObject obj = map.getObjectAt(x,y);
+    //         if (obj!= null && obj.getName().toLowerCase().contains("house") && map.getName().toLowerCase().contains("home")){
+    //              //This is likely an NPC house map, player can spawn inside.
+    //         } else if (obj != null){
+    //             // System.out.println("Tile ("+x+","+y+") on map "+map.getName()+" has object: "+obj.getName()+", considered not walkable for spawn.");
+    //             // return false; 
+    //             // Temporarily allowing spawn on occupied tiles if base type is walkable, to avoid getting stuck
+    //             // This needs better logic based on object passability.
+    //         }
+    //     }
+    //     return true;
+    // }
 
     // Method to save the game state
     public void saveGame() {

@@ -4,7 +4,7 @@ import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Enum.TileType; // Untuk tile default
 import com.spakborhills.model.Object.DeployedObject; // Jika ada objek di world map
 import com.spakborhills.model.Store; 
-import com.spakborhills.model.NPC.*; // Import all NPC classes
+// import com.spakborhills.model.NPC.*; // Import all NPC classes
 
 import java.awt.Dimension;
 import java.awt.Point;
