@@ -1,12 +1,12 @@
 {
   "playerName": "Hero",
   "playerGender": "MALE",
-  "playerX": 9,
-  "playerY": 6,
+  "playerX": 5,
+  "playerY": 14,
   "currentMapId": "Farm",
   "playerMoney": 500,
-  "playerEnergy": 50,
-  "playerFarmName": "Hero\u0027s Farm",
+  "playerEnergy": 100,
+  "playerFarmName": "Budi",
   "playerInventory": {
     "items": [
       {
@@ -14,31 +14,68 @@
         "quantity": 1
       },
       {
-        "itemId": "Pickaxe",
-        "quantity": 1
+        "itemId": "Wine",
+        "quantity": 10
+      },
+      {
+        "itemId": "Legend",
+        "quantity": 2
       },
       {
         "itemId": "Watering Can",
         "quantity": 1
       },
       {
+        "itemId": "Pickaxe",
+        "quantity": 1
+      },
+      {
+        "itemId": "Cranberry",
+        "quantity": 10
+      },
+      {
         "itemId": "Fishing Rod",
         "quantity": 1
+      },
+      {
+        "itemId": "Potato",
+        "quantity": 10
+      },
+      {
+        "itemId": "Blueberry",
+        "quantity": 10
+      },
+      {
+        "itemId": "Firewood",
+        "quantity": 10
       },
       {
         "itemId": "Parsnip Seeds",
         "quantity": 15
       },
       {
+        "itemId": "Coal",
+        "quantity": 10
+      },
+      {
+        "itemId": "Wheat",
+        "quantity": 10
+      },
+      {
         "itemId": "Hoe",
         "quantity": 1
+      },
+      {
+        "itemId": "Hot Pepper",
+        "quantity": 10
       }
     ]
   },
   "unlockedRecipes": [],
+  "favoriteItemName": "Fishing Rod",
   "currentDay": 1,
   "currentHour": 7,
-  "currentMinute": 25,
+  "currentMinute": 10,
   "currentSeason": "SPRING",
   "currentYear": 1,
   "currentWeather": "SUNNY",
@@ -122,13 +159,13 @@
       "lastWateredDay": 0
     },
     "8,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "8,13": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -140,7 +177,7 @@
       "lastWateredDay": 0
     },
     "8,14": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -152,13 +189,13 @@
       "lastWateredDay": 0
     },
     "8,11": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "8,12": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -392,7 +429,7 @@
       "lastWateredDay": 0
     },
     "6,6": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -410,7 +447,7 @@
       "lastWateredDay": 0
     },
     "6,9": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -476,7 +513,7 @@
       "lastWateredDay": 0
     },
     "15,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -1352,7 +1389,7 @@
       "lastWateredDay": 0
     },
     "19,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -1364,7 +1401,7 @@
       "lastWateredDay": 0
     },
     "19,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -1604,19 +1641,19 @@
       "lastWateredDay": 0
     },
     "21,25": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "21,24": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "21,23": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -1712,13 +1749,13 @@
       "lastWateredDay": 0
     },
     "17,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "17,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -1778,13 +1815,13 @@
       "lastWateredDay": 0
     },
     "28,7": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "28,6": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -1850,7 +1887,7 @@
       "lastWateredDay": 0
     },
     "28,5": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -1982,7 +2019,7 @@
       "lastWateredDay": 0
     },
     "15,8": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2048,25 +2085,25 @@
       "lastWateredDay": 0
     },
     "15,7": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "15,6": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "15,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "15,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2180,19 +2217,19 @@
       "lastWateredDay": 0
     },
     "26,7": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "26,6": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "26,5": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2360,7 +2397,7 @@
       "lastWateredDay": 0
     },
     "13,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2426,13 +2463,13 @@
       "lastWateredDay": 0
     },
     "13,8": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "13,7": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2444,7 +2481,7 @@
       "lastWateredDay": 0
     },
     "13,6": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2456,13 +2493,13 @@
       "lastWateredDay": 0
     },
     "13,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "13,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2654,7 +2691,7 @@
       "lastWateredDay": 0
     },
     "9,6": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2690,7 +2727,7 @@
       "lastWateredDay": 0
     },
     "9,9": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2744,7 +2781,7 @@
       "lastWateredDay": 0
     },
     "7,14": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2804,25 +2841,25 @@
       "lastWateredDay": 0
     },
     "7,11": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "7,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "7,13": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "7,12": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -2894,31 +2931,31 @@
       "lastWateredDay": 0
     },
     "11,8": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "11,7": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "11,6": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "11,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "11,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3044,31 +3081,31 @@
       "lastWateredDay": 0
     },
     "11,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "11,12": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "11,11": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "11,14": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "11,13": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3152,7 +3189,7 @@
       "lastWateredDay": 0
     },
     "7,6": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3170,7 +3207,7 @@
       "lastWateredDay": 0
     },
     "7,9": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3344,19 +3381,19 @@
       "lastWateredDay": 0
     },
     "9,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "9,11": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "9,14": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3368,13 +3405,13 @@
       "lastWateredDay": 0
     },
     "9,12": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "9,13": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3494,7 +3531,7 @@
       "lastWateredDay": 0
     },
     "5,4": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3506,7 +3543,7 @@
       "lastWateredDay": 0
     },
     "5,5": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3524,7 +3561,7 @@
       "lastWateredDay": 0
     },
     "5,6": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3542,7 +3579,7 @@
       "lastWateredDay": 0
     },
     "5,7": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3560,7 +3597,7 @@
       "lastWateredDay": 0
     },
     "5,8": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -3572,13 +3609,13 @@
       "lastWateredDay": 0
     },
     "5,9": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "14,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -4442,7 +4479,7 @@
       "lastWateredDay": 0
     },
     "18,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -4538,7 +4575,7 @@
       "lastWateredDay": 0
     },
     "18,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -4586,43 +4623,43 @@
       "lastWateredDay": 0
     },
     "10,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "29,7": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "10,11": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "29,6": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "10,12": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "29,5": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "10,13": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -4652,7 +4689,7 @@
       "lastWateredDay": 0
     },
     "10,14": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -4952,7 +4989,7 @@
       "lastWateredDay": 0
     },
     "27,7": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -4976,7 +5013,7 @@
       "lastWateredDay": 0
     },
     "19,23": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -4988,13 +5025,13 @@
       "lastWateredDay": 0
     },
     "19,25": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "19,24": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5018,7 +5055,7 @@
       "lastWateredDay": 0
     },
     "27,6": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5030,7 +5067,7 @@
       "lastWateredDay": 0
     },
     "27,5": {
-      "tileType": "WATER",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5138,7 +5175,7 @@
       "lastWateredDay": 0
     },
     "20,25": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5150,7 +5187,7 @@
       "lastWateredDay": 0
     },
     "20,24": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5192,7 +5229,7 @@
       "lastWateredDay": 0
     },
     "20,23": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5312,31 +5349,31 @@
       "lastWateredDay": 0
     },
     "14,8": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "14,7": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "14,6": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "14,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "14,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5552,13 +5589,13 @@
       "lastWateredDay": 0
     },
     "6,14": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "6,13": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5630,19 +5667,19 @@
       "lastWateredDay": 0
     },
     "6,10": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "6,12": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "6,11": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5798,7 +5835,7 @@
       "lastWateredDay": 0
     },
     "12,9": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5810,13 +5847,13 @@
       "lastWateredDay": 0
     },
     "12,8": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "12,7": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5828,19 +5865,19 @@
       "lastWateredDay": 0
     },
     "12,6": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "12,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "12,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -5972,7 +6009,7 @@
       "lastWateredDay": 0
     },
     "8,6": {
-      "tileType": "TILLED",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6014,7 +6051,7 @@
       "lastWateredDay": 0
     },
     "8,9": {
-      "tileType": "TILLABLE",
+      "tileType": "DEPLOYED_OBJECT",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6098,7 +6135,7 @@
       "lastWateredDay": 0
     },
     "10,4": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6122,13 +6159,13 @@
       "lastWateredDay": 0
     },
     "22,25": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "22,24": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6140,7 +6177,7 @@
       "lastWateredDay": 0
     },
     "22,23": {
-      "tileType": "TILLABLE",
+      "tileType": "WATER",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6152,7 +6189,7 @@
       "lastWateredDay": 0
     },
     "10,7": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6164,7 +6201,7 @@
       "lastWateredDay": 0
     },
     "10,8": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6176,13 +6213,13 @@
       "lastWateredDay": 0
     },
     "10,5": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
     },
     "10,6": {
-      "tileType": "DEPLOYED_OBJECT",
+      "tileType": "TILLABLE",
       "growthStage": 0,
       "isWatered": false,
       "lastWateredDay": 0
@@ -6222,14 +6259,14 @@
     "seasonalIncome": {
       "SPRING": 0,
       "WINTER": 0,
-      "SUMMER": 0,
-      "FALL": 0
+      "FALL": 0,
+      "SUMMER": 0
     },
     "seasonalExpenditure": {
       "SPRING": 0,
       "WINTER": 0,
-      "SUMMER": 0,
-      "FALL": 0
+      "FALL": 0,
+      "SUMMER": 0
     },
     "daysPlayedInSeason": {},
     "totalDaysPlayed": 0,
@@ -6249,14 +6286,20 @@
     {
       "objectName": "Shipping Bin",
       "objectClassType": "com.spakborhills.model.Object.ShippingBinObject",
-      "x": 17,
-      "y": 4
+      "x": 13,
+      "y": 9
     },
     {
       "objectName": "Rumah",
       "objectClassType": "com.spakborhills.model.Object.House",
-      "x": 10,
-      "y": 4
+      "x": 6,
+      "y": 9
+    },
+    {
+      "objectName": "Kolam",
+      "objectClassType": "com.spakborhills.model.Object.Pond",
+      "x": 19,
+      "y": 23
     }
   ]
 }

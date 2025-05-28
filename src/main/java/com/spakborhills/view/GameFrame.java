@@ -29,6 +29,7 @@ import java.text.SimpleDateFormat;
 import javax.swing.border.EmptyBorder;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
+import java.util.Collections;
 
 public class GameFrame extends JFrame {
 
@@ -339,8 +340,57 @@ public class GameFrame extends JFrame {
         if (farmName.trim().isEmpty()) {
             farmName = playerName + "'s Farm";
         }
+        
+        // Get the item registry to populate favorite item options
+        Map<String, Item> itemRegistry = Main.setupItemRegistry();
+        if (itemRegistry == null || itemRegistry.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Error: Item Registry setup failed! Cannot start game.", "Initialization Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        // Create a list of items to choose from as favorite
+        List<String> favoriteItemOptions = new ArrayList<>();
+        
+        // Add a selection of popular items from different categories
+        // Crops
+        favoriteItemOptions.add("Parsnip");
+        favoriteItemOptions.add("Cauliflower");
+        favoriteItemOptions.add("Blueberry");
+        favoriteItemOptions.add("Pumpkin");
+        
+        // Fish
+        favoriteItemOptions.add("Legend");
+        favoriteItemOptions.add("Salmon");
+        
+        // Food
+        favoriteItemOptions.add("Fish n' Chips");
+        favoriteItemOptions.add("Baguette");
+        favoriteItemOptions.add("Wine");
+        favoriteItemOptions.add("Pumpkin Pie");
+        
+        // Equipment
+        favoriteItemOptions.add("Fishing Rod");
+        favoriteItemOptions.add("Hoe");
+        
+        // Sort the options alphabetically for easier selection
+        Collections.sort(favoriteItemOptions);
+        
+        // Show dialog to select favorite item
+        String favoriteItemName = (String) JOptionPane.showInputDialog(
+                this,
+                "Choose your favorite item:",
+                "Player Favorite Item",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                favoriteItemOptions.toArray(),
+                favoriteItemOptions.get(0)
+        );
+        
+        if (favoriteItemName == null) { // User cancelled
+            favoriteItemName = ""; // Default to empty string
+        }
 
-        initializeGame(playerName, playerGender, farmName);
+        initializeGame(playerName, playerGender, farmName, favoriteItemName);
         if (this.farm != null && this.gameController != null) {
             // Remove the old "headless" gamePanel if it exists from the container
             if (this.gamePanel != null) { // gamePanel here is the one from the constructor
@@ -367,7 +417,7 @@ public class GameFrame extends JFrame {
         }
     }
 
-    private void initializeGame(String playerName, Gender playerGender, String farmName) {
+    private void initializeGame(String playerName, Gender playerGender, String farmName, String favoriteItemName) {
         Map<String, Item> itemRegistry = Main.setupItemRegistry();
         if (itemRegistry == null || itemRegistry.isEmpty()) {
             System.err.println("ERROR: Failed to setup Item Registry. Cannot start game.");
@@ -391,6 +441,9 @@ public class GameFrame extends JFrame {
         Player newPlayer = new Player(playerName, playerGender, farmName, farmMap, 5, 5,
                                    itemRegistry, playerSpritesheetPath,
                                    playerSpriteWidth, playerSpriteHeight);
+        // Set the player's favorite item
+        newPlayer.setFavoriteItemName(favoriteItemName);
+        
         EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), newPlayer);
 
         // Create a default House object to pass to the Farm constructor

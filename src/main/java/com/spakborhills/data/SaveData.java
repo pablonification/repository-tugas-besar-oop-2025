@@ -31,6 +31,7 @@ public class SaveData implements Serializable {
     private PartnerData playerPartner; // New
     private InventoryData playerInventory; // Diaktifkan
     private List<String> unlockedRecipes; // New
+    private String favoriteItemName; // New field for player's favorite item
 
     // Data Waktu & Dunia Game
     private int currentDay;
@@ -257,6 +258,14 @@ public class SaveData implements Serializable {
 
     public void setFarmDeployedObjects(List<PlacedObjectData> farmDeployedObjects) {
         this.farmDeployedObjects = farmDeployedObjects;
+    }
+
+    public String getFavoriteItemName() {
+        return favoriteItemName;
+    }
+
+    public void setFavoriteItemName(String favoriteItemName) {
+        this.favoriteItemName = favoriteItemName;
     }
 
     // Inner classes for structured data

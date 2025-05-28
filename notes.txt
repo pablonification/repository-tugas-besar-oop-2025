@@ -213,6 +213,7 @@ F: Makan
 B: ShippingBin (Jual)
 P: Proposal
 M: Marry
+R: Refresh Stats
 K: Cooking
 L: Sleeping
 X: Chat

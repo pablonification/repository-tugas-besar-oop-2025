@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.HashSet;
+import java.util.Set;
+import java.util.Arrays;
 
 public class SaveLoadManager {
 
@@ -210,6 +212,7 @@ public class SaveLoadManager {
         saveData.setPlayerMoney(player.getGold());
         saveData.setPlayerEnergy(player.getEnergy());
         saveData.setPlayerFarmName(player.getFarmName());
+        saveData.setFavoriteItemName(player.getFavoriteItemName()); // Save favorite item name
 
         if (player.getPartner() != null) {
             saveData.setPlayerPartner(new SaveData.PartnerData(player.getPartner().getName(), player.getPartner().getRelationshipStatus()));
@@ -321,7 +324,6 @@ public class SaveLoadManager {
 
         // 9. Populate Farm Deployed Objects
         List<SaveData.PlacedObjectData> farmObjectsData = new ArrayList<>();
-        // Ensure farmMap is an instance of FarmMap before casting or calling specific methods
         if (farmMap instanceof com.spakborhills.model.Map.FarmMap) {
             com.spakborhills.model.Map.FarmMap concreteFarmMap = (com.spakborhills.model.Map.FarmMap) farmMap;
             if (concreteFarmMap.getDeployedObjectsMap() != null) { 
@@ -373,20 +375,26 @@ public class SaveLoadManager {
             statsData.setCropsHarvestedCount(new HashMap<>(statistics.getCropsHarvestedCount()));
             statsData.setUniqueCropsHarvested(new HashSet<>(statistics.getUniqueCropsHarvested()));
             
-            // Convert FishRarity keys to String for serialization
-            Map<String, Map<String, Integer>> fishCaught = new HashMap<>();
+            // For fish caught data, convert enum FishRarity keys to String for serialization
+            Map<String, Map<String, Integer>> fishCaughtStringKeys = new HashMap<>();
+            
             for (Map.Entry<String, Map<com.spakborhills.model.Enum.FishRarity, Integer>> entry : statistics.getFishCaught().entrySet()) {
-                Map<String, Integer> rarityMap = new HashMap<>();
-                for (Map.Entry<com.spakborhills.model.Enum.FishRarity, Integer> rarityEntry : entry.getValue().entrySet()) {
-                    rarityMap.put(rarityEntry.getKey().toString(), rarityEntry.getValue());
+                String fishName = entry.getKey();
+                Map<com.spakborhills.model.Enum.FishRarity, Integer> rarityMap = entry.getValue();
+                Map<String, Integer> convertedRarityMap = new HashMap<>();
+                
+                // Convert enum rarities to string
+                for (Map.Entry<com.spakborhills.model.Enum.FishRarity, Integer> rarityEntry : rarityMap.entrySet()) {
+                    convertedRarityMap.put(rarityEntry.getKey().toString(), rarityEntry.getValue());
                 }
-                fishCaught.put(entry.getKey(), rarityMap);
+                
+                if (!convertedRarityMap.isEmpty()) {
+                    fishCaughtStringKeys.put(fishName, convertedRarityMap);
+                }
             }
-            statsData.setFishCaught(fishCaught);
             
+            statsData.setFishCaught(fishCaughtStringKeys);
             statsData.setUniqueFishCaught(new HashSet<>(statistics.getUniqueFishCaught()));
-            
-            // Achievement tracking
             statsData.setKeyEventsOrItemsObtained(new HashSet<>(statistics.getKeyEventsOrItemsObtained()));
             
             saveData.setStatisticsData(statsData);
@@ -465,6 +473,7 @@ public class SaveLoadManager {
         player.setFarmName(saveData.getPlayerFarmName());
         player.setGold(saveData.getPlayerMoney());
         player.setEnergy(saveData.getPlayerEnergy());
+        player.setFavoriteItemName(saveData.getFavoriteItemName()); // Load favorite item name
 
         if (saveData.getPlayerPartner() != null && farm.getNpcs() !=null) {
             Optional<NPC> partnerNpcOpt = farm.findNPC(saveData.getPlayerPartner().getName());
@@ -508,7 +517,10 @@ public class SaveLoadManager {
                 for (InventoryItemData itemData : saveData.getPlayerInventory().getItems()) {
                     Item itemTemplate = itemRegistry.get(itemData.getItemId());
                     if (itemTemplate != null) {
-                        player.getInventory().addItem(itemTemplate.cloneItem(), itemData.getQuantity()); // cloneItem if necessary
+                        // Use the item template directly instead of cloning
+                        // This ensures we're using a consistent instance of each item type
+                        player.getInventory().addItem(itemTemplate, itemData.getQuantity());
+                        System.out.println("Loaded inventory item: " + itemTemplate.getName() + " x" + itemData.getQuantity());
                     } else {
                         System.err.println("Error loading inventory: Item ID '" + itemData.getItemId() + "' tidak ditemukan di registry.");
                     }
@@ -635,7 +647,9 @@ public class SaveLoadManager {
                 for (SaveData.ShippingBinItemData itemData : saveData.getShippingBinContents()) {
                     Item itemTemplate = itemRegistry.get(itemData.getItemId());
                     if (itemTemplate != null) {
-                        shippingBin.addItem(itemTemplate.cloneItem(), itemData.getQuantity()); // cloneItem if necessary
+                        // Use the item template directly instead of cloning
+                        shippingBin.addItem(itemTemplate, itemData.getQuantity());
+                        System.out.println("Loaded shipping bin item: " + itemTemplate.getName() + " x" + itemData.getQuantity());
                     } else {
                         System.err.println("Error loading shipping bin: Item ID '" + itemData.getItemId() + "' tidak ditemukan di registry.");
                     }
@@ -694,27 +708,75 @@ public class SaveLoadManager {
             concreteFarmMap.clearAllDeployedObjects(); // Clear existing objects first
 
             if (saveData.getFarmDeployedObjects() != null) {
+                // Create categorized lists for ordering placement by object type
+                List<SaveData.PlacedObjectData> houseObjects = new ArrayList<>();
+                List<SaveData.PlacedObjectData> shippingBinObjects = new ArrayList<>();
+                List<SaveData.PlacedObjectData> pondObjects = new ArrayList<>();
+                List<SaveData.PlacedObjectData> otherObjects = new ArrayList<>();
+                
+                // Sort objects by type
                 for (SaveData.PlacedObjectData placedObjectData : saveData.getFarmDeployedObjects()) {
-                    try {
-                        Class<?> deployedObjectClass = Class.forName(placedObjectData.getObjectClassType());
-                        // Assuming a no-arg constructor for all DeployedObject types
-                        DeployedObject deployedObjectInstance = (DeployedObject) deployedObjectClass.getDeclaredConstructor().newInstance();
-                        
-                        boolean placed = concreteFarmMap.placeObject(deployedObjectInstance, placedObjectData.getX(), placedObjectData.getY());
-                        if (placed) {
-                            System.out.println("Loaded and placed deployed object: " + deployedObjectInstance.getName() + " of type " + placedObjectData.getObjectClassType() + " at (" + placedObjectData.getX() + "," + placedObjectData.getY() + ")");
-                        } else {
-                            System.err.println("Error loading deployed object: Failed to place " + placedObjectData.getObjectName() + " of type " + placedObjectData.getObjectClassType() + " at (" + placedObjectData.getX() + "," + placedObjectData.getY() + ")");
+                    String className = placedObjectData.getObjectClassType();
+                    if (className.endsWith("House")) {
+                        houseObjects.add(placedObjectData);
+                    } else if (className.endsWith("ShippingBinObject")) {
+                        shippingBinObjects.add(placedObjectData);
+                    } else if (className.endsWith("Pond")) {
+                        pondObjects.add(placedObjectData);
+                    } else {
+                        otherObjects.add(placedObjectData);
+                    }
+                }
+                
+                System.out.println("Load order: " + houseObjects.size() + " houses, " + 
+                                   shippingBinObjects.size() + " shipping bins, " + 
+                                   pondObjects.size() + " ponds, " + 
+                                   otherObjects.size() + " other objects");
+                
+                // Combined ordered list for placement (houses first, then shipping bins, then ponds, then others)
+                List<List<SaveData.PlacedObjectData>> orderedObjectCategories = Arrays.asList(
+                    houseObjects, shippingBinObjects, pondObjects, otherObjects
+                );
+                
+                // Process each category in order
+                for (List<SaveData.PlacedObjectData> objectCategory : orderedObjectCategories) {
+                    for (SaveData.PlacedObjectData placedObjectData : objectCategory) {
+                        try {
+                            Class<?> deployedObjectClass = Class.forName(placedObjectData.getObjectClassType());
+                            // Assuming a no-arg constructor for all DeployedObject types
+                            DeployedObject deployedObjectInstance = (DeployedObject) deployedObjectClass.getDeclaredConstructor().newInstance();
+                            
+                            // Extra verification: check if area is free before placing
+                            int x = placedObjectData.getX();
+                            int y = placedObjectData.getY();
+                            int width = deployedObjectInstance.getWidth();
+                            int height = deployedObjectInstance.getHeight();
+                            
+                            // Use reflection to check if area is available (since isAreaAvailable is private)
+                            // If we can't use reflection, we can at least do logging to help diagnose
+                            System.out.println("Attempting to place " + deployedObjectInstance.getName() + 
+                                              " (" + width + "x" + height + ") at (" + x + "," + y + ")");
+                            
+                            boolean placed = concreteFarmMap.placeObject(deployedObjectInstance, x, y);
+                            if (placed) {
+                                System.out.println("Successfully placed " + deployedObjectInstance.getName() + 
+                                                  " of type " + placedObjectData.getObjectClassType() + 
+                                                  " at (" + x + "," + y + ")");
+                            } else {
+                                System.err.println("ERROR: Failed to place " + placedObjectData.getObjectName() + 
+                                                 " of type " + placedObjectData.getObjectClassType() + 
+                                                 " at (" + x + "," + y + ") - area may be occupied by another object");
+                            }
+                        } catch (ClassNotFoundException e) {
+                            System.err.println("Error loading deployed object: Class not found - " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
+                        } catch (NoSuchMethodException e) {
+                            System.err.println("Error loading deployed object: No-arg constructor not found for " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
+                        } catch (InstantiationException | IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
+                            System.err.println("Error loading deployed object: Failed to instantiate " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
+                        } catch (Exception e) { // Catch any other unexpected errors during object restoration
+                            System.err.println("Unexpected error loading deployed object " + placedObjectData.getObjectName() + ": " + e.getMessage());
+                            e.printStackTrace();
                         }
-                    } catch (ClassNotFoundException e) {
-                        System.err.println("Error loading deployed object: Class not found - " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
-                    } catch (NoSuchMethodException e) {
-                        System.err.println("Error loading deployed object: No-arg constructor not found for " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
-                    } catch (InstantiationException | IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
-                        System.err.println("Error loading deployed object: Failed to instantiate " + placedObjectData.getObjectClassType() + ". " + e.getMessage());
-                    } catch (Exception e) { // Catch any other unexpected errors during object restoration
-                        System.err.println("Unexpected error loading deployed object " + placedObjectData.getObjectName() + ": " + e.getMessage());
-                        e.printStackTrace();
                     }
                 }
             }
@@ -722,7 +784,7 @@ public class SaveLoadManager {
             System.err.println("Could not load deployed farm objects: FarmMap is not an instance of com.spakborhills.model.Map.FarmMap");
         }
         System.out.println("Farm deployed objects loading process completed.");
-
+        
         // 10. Apply Statistics Data
         if (saveData.getStatisticsData() != null && farm.getStatistics() != null) {
             com.spakborhills.model.Util.EndGameStatistics currentStats = farm.getStatistics();
@@ -795,28 +857,42 @@ public class SaveLoadManager {
                 }
             }
             
-            // For fish caught data, we need to handle the conversion of string rarity back to enum
+            // For fish caught data, convert string keys back to FishRarity enum
             if (statsData.getFishCaught() != null) {
+                // IMPROVED FISH DATA LOADING: Use direct assignment instead of rebuilding
+                Map<String, Map<com.spakborhills.model.Enum.FishRarity, Integer>> fishCaughtMap = new HashMap<>();
+                Set<String> uniqueFishSet = new HashSet<>();
+                
                 for (Map.Entry<String, Map<String, Integer>> entry : statsData.getFishCaught().entrySet()) {
                     String fishName = entry.getKey();
                     Map<String, Integer> rarityMap = entry.getValue();
+                    Map<com.spakborhills.model.Enum.FishRarity, Integer> convertedRarityMap = new HashMap<>();
                     
+                    // Convert string rarities back to enum
                     for (Map.Entry<String, Integer> rarityEntry : rarityMap.entrySet()) {
                         try {
                             com.spakborhills.model.Enum.FishRarity rarity = 
                                 com.spakborhills.model.Enum.FishRarity.valueOf(rarityEntry.getKey().toUpperCase());
-                            // Record this fish catch the number of times it was caught
-                            for (int i = 0; i < rarityEntry.getValue(); i++) {
-                                currentStats.recordFishCatch(fishName, rarity);
-                            }
+                            convertedRarityMap.put(rarity, rarityEntry.getValue());
+                            
+                            // Track unique fish
+                            uniqueFishSet.add(fishName);
+                            
                         } catch (IllegalArgumentException e) {
                             System.err.println("Error loading fish rarity data: " + e.getMessage());
                         }
                     }
+                    
+                    if (!convertedRarityMap.isEmpty()) {
+                        fishCaughtMap.put(fishName, convertedRarityMap);
+                    }
                 }
+                
+                // Set the fish data directly instead of rebuilding it with recordFishCatch
+                System.out.println("SAVE LOAD: Setting fish data directly: " + 
+                    uniqueFishSet.size() + " unique fish types");
+                currentStats.setFishData(fishCaughtMap, uniqueFishSet);
             }
-            
-            // We can't easily handle crop harvests without crop objects, so we'll skip that for now
             
             // For key events, we can just record each one
             if (statsData.getKeyEventsOrItemsObtained() != null) {

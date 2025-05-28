@@ -147,16 +147,58 @@ public class EndGameStatistics {
 
     public void recordFishCatch(String fishName, FishRarity fishRarity) {
         if (fishName != null && !fishName.isBlank() && fishRarity != null) {
-            this.fishCaught.putIfAbsent(fishName, new HashMap<>());
-            Map<FishRarity, Integer> rarityMap = this.fishCaught.get(fishName);
-            rarityMap.put(fishRarity, rarityMap.getOrDefault(fishRarity, 0) + 1);
-            this.uniqueFishCaught.add(fishName); // Catat jenis ikan unik
-            if (fishName.equalsIgnoreCase("Pufferfish")) {
-                this.keyEventsOrItemsObtained.add("FISH_PUFFERFISH");
+            // Debug logging to track when this method is called
+            System.out.println("DEBUG: Recording fish catch in statistics - " + fishName + " (Rarity: " + fishRarity + ")");
+            
+            // IMPORTANT FIX: Ensure direct access and manipulation of the storage maps to avoid any reference issues
+            synchronized (this) { // Add synchronization to prevent any concurrent modification issues
+                // Ensure the fish map exists for this fish type
+                if (!this.fishCaught.containsKey(fishName)) {
+                    this.fishCaught.put(fishName, new HashMap<>());
+                    System.out.println("DEBUG: Created new entry for fish: " + fishName);
+                }
+                
+                Map<FishRarity, Integer> rarityMap = this.fishCaught.get(fishName);
+                
+                // Update the count for this rarity
+                int currentCount = rarityMap.getOrDefault(fishRarity, 0);
+                int newCount = currentCount + 1;
+                rarityMap.put(fishRarity, newCount);
+                System.out.println("DEBUG: Updated count for " + fishName + " (" + fishRarity + "): " + currentCount + " -> " + newCount);
+                
+                // Add to unique fish caught set (ensure this is actually happening)
+                boolean wasNewFish = !this.uniqueFishCaught.contains(fishName);
+                this.uniqueFishCaught.add(fishName);
+                if (wasNewFish) {
+                    System.out.println("DEBUG: Added new unique fish: " + fishName);
+                }
+                
+                // Log the current state for debugging
+                int totalFishCount = getTotalFishCaughtCount();
+                System.out.println("DEBUG: After recording - Total Fish Caught: " + totalFishCount);
+                System.out.println("DEBUG: Unique Fish Types: " + uniqueFishCaught.size() + " - " + String.join(", ", uniqueFishCaught));
+                
+                // Dump the full fish caught map for debugging
+                System.out.println("DEBUG: Full fish caught map:");
+                for (Map.Entry<String, Map<FishRarity, Integer>> entry : fishCaught.entrySet()) {
+                    System.out.println("DEBUG:   Fish: " + entry.getKey());
+                    for (Map.Entry<FishRarity, Integer> rarityEntry : entry.getValue().entrySet()) {
+                        System.out.println("DEBUG:     " + rarityEntry.getKey() + ": " + rarityEntry.getValue());
+                    }
+                }
+                
+                // Record special fish events if applicable
+                if (fishName.equalsIgnoreCase("Pufferfish")) {
+                    this.keyEventsOrItemsObtained.add("FISH_PUFFERFISH");
+                }
+                if (fishName.equalsIgnoreCase("Legend")) {
+                    this.keyEventsOrItemsObtained.add("FISH_LEGEND");
+                }
             }
-            if (fishName.equalsIgnoreCase("Legend")) {
-                this.keyEventsOrItemsObtained.add("FISH_LEGEND");
-            }
+        } else {
+            System.err.println("ERROR: Attempted to record invalid fish catch - Name: " + 
+                (fishName != null ? fishName : "null") + ", Rarity: " + 
+                (fishRarity != null ? fishRarity.toString() : "null"));
         }
     }
 
@@ -184,13 +226,15 @@ public class EndGameStatistics {
     }
 
     public int getTotalFishCaughtCount() {
-        int total = 0;
-        for (Map<FishRarity, Integer> rarityMap : fishCaught.values()) {
-            for (int count : rarityMap.values()) {
-                total += count;
+        synchronized (this) { // Add synchronization for consistency
+            int total = 0;
+            for (Map<FishRarity, Integer> rarityMap : fishCaught.values()) {
+                for (int count : rarityMap.values()) {
+                    total += count;
+                }
             }
+            return total;
         }
-        return total;
     }
 
     public boolean hasHarvestedAnyCrop() {
@@ -223,7 +267,7 @@ public class EndGameStatistics {
         sb.append("\nIncome by Season (Average per day):\n");
         for (Season s : Season.values()) {
             if (s != Season.ANY && daysPlayedInSeason.getOrDefault(s, 0) > 0) {
-                sb.append(String.format("  • %s: %dg (Avg: %.2fg)\n",
+                sb.append(String.format("  - %s: %dg (Avg: %.2fg)\n",
                                         s,
                                         seasonalIncome.getOrDefault(s, 0),
                                         getAverageSeasonalIncome(s)));
@@ -232,7 +276,7 @@ public class EndGameStatistics {
         sb.append("\nExpenditure by Season (Average per day):\n");
         for (Season s : Season.values()) {
             if (s != Season.ANY && daysPlayedInSeason.getOrDefault(s, 0) > 0) {
-                sb.append(String.format("  • %s: %dg (Avg: %.2fg)\n",
+                sb.append(String.format("  - %s: %dg (Avg: %.2fg)\n",
                                         s,
                                         seasonalExpenditure.getOrDefault(s, 0),
                                         getAverageSeasonalExpenditure(s)));
@@ -251,16 +295,45 @@ public class EndGameStatistics {
               .append("\n");
         }
 
+        // Before generating crop statistics, log the state
+        System.out.println("DEBUG: Generating Statistics Summary");
+        System.out.println("DEBUG: Crops Harvested Count entries: " + cropsHarvestedCount.size());
+        System.out.println("DEBUG: Unique Crops Harvested: " + uniqueCropsHarvested.size());
+
         sb.append("\nCrops Harvested (Total):\n");
         if (cropsHarvestedCount.isEmpty()) sb.append("  No crops harvested yet.\n");
         for (Map.Entry<String, Integer> entry : cropsHarvestedCount.entrySet()) {
             sb.append("  • ").append(entry.getKey()).append(": ").append(entry.getValue()).append(" units\n");
         }
 
+        // Log fish stats before generating that section
+        int totalFish = getTotalFishCaughtCount();
+        System.out.println("DEBUG: Total Fish Caught Count: " + totalFish);
+        System.out.println("DEBUG: Unique Fish Count: " + uniqueFishCaught.size());
+        System.out.println("DEBUG: Fish Caught Map entries: " + fishCaught.size());
+        
+        // Enhanced Dump fish caught details for debugging
+        System.out.println("DEBUG: Detailed fish caught map state before summary generation:");
+        for (Map.Entry<String, Map<FishRarity, Integer>> fishEntry : fishCaught.entrySet()) {
+            String fishNameForLog = fishEntry.getKey();
+            Map<FishRarity, Integer> innerMap = fishEntry.getValue();
+            System.out.println("DEBUG:   Processing Fish: [" + fishNameForLog + "]");
+            if (innerMap == null) {
+                System.out.println("DEBUG:     INNER MAP FOR [" + fishNameForLog + "] IS NULL!");
+            } else if (innerMap.isEmpty()) {
+                System.out.println("DEBUG:     INNER MAP FOR [" + fishNameForLog + "] IS EMPTY!");
+            } else {
+                System.out.println("DEBUG:     Inner map for [" + fishNameForLog + "] contains:");
+                for (Map.Entry<FishRarity, Integer> rarityEntry : innerMap.entrySet()) {
+                    System.out.println("DEBUG:       - Rarity: " + rarityEntry.getKey() + ", Count: " + rarityEntry.getValue());
+                }
+            }
+        }
+
         sb.append("\nFish Caught (Total by Type & Rarity):\n");
         if (fishCaught.isEmpty()) sb.append("  No fish caught yet.\n");
         for (Map.Entry<String, Map<FishRarity, Integer>> entry : fishCaught.entrySet()) {
-            sb.append("  • ").append(entry.getKey()).append(":\n");
+            sb.append("  - ").append(entry.getKey()).append(":\n");
             for (Map.Entry<FishRarity, Integer> rarityEntry : entry.getValue().entrySet()) {
                 sb.append("    - ").append(rarityEntry.getKey()).append(": ").append(rarityEntry.getValue()).append(" fish\n");
             }
@@ -374,11 +447,14 @@ public class EndGameStatistics {
     }
 
     /**
-     * Mengembalikan set nama ikan unik yang pernah ditangkap.
-     * @return Set yang unmodifiable.
+     * Returns a copy of the uniqueFishCaught set to prevent external modification.
+     * @return A new Set containing the same elements as uniqueFishCaught.
      */
     public Set<String> getUniqueFishCaught() {
-        return Collections.unmodifiableSet(uniqueFishCaught);
+        synchronized (this) {
+            // Return a new HashSet to prevent external modification of our internal set
+            return new HashSet<>(uniqueFishCaught);
+        }
     }
 
     /**
@@ -390,19 +466,43 @@ public class EndGameStatistics {
     }
 
     /**
-     * Mengembalikan map jumlah ikan yang ditangkap, dikelompokkan berdasarkan nama dan raritas.
-     * Kunci luar adalah nama Ikan, nilai adalah Map lain.
-     * Kunci dalam adalah FishRarity, nilai adalah jumlah.
-     * @return Map bersarang yang unmodifiable.
+     * Returns a deep copy of the fishCaught map to prevent external modification.
+     * This is safer than returning an unmodifiable view that might still allow inner map modification.
+     * @return A deep copy of the fishCaught map.
      */
     public Map<String, Map<FishRarity, Integer>> getFishCaught() {
-        // Membuat deep unmodifiable map bisa sedikit lebih rumit jika ingin benar-benar aman
-        // Untuk kesederhanaan, kita buat unmodifiable untuk map luar.
-        // Jika map dalam juga ingin unmodifiable, perlu iterasi.
-        Map<String, Map<FishRarity, Integer>> unmodifiableOuterMap = new HashMap<>();
-        for (Map.Entry<String, Map<FishRarity, Integer>> entry : fishCaught.entrySet()) {
-            unmodifiableOuterMap.put(entry.getKey(), Collections.unmodifiableMap(new HashMap<>(entry.getValue())));
+        synchronized (this) {
+            Map<String, Map<FishRarity, Integer>> deepCopy = new HashMap<>();
+            for (Map.Entry<String, Map<FishRarity, Integer>> entry : fishCaught.entrySet()) {
+                Map<FishRarity, Integer> innerCopy = new HashMap<>(entry.getValue());
+                deepCopy.put(entry.getKey(), innerCopy);
+            }
+            return deepCopy;
         }
-        return Collections.unmodifiableMap(unmodifiableOuterMap);
+    }
+
+    /**
+     * Directly sets the fish caught data from a save.
+     * This is used when loading a save to ensure fish data is preserved.
+     * @param fishCaught The fish caught map to set
+     * @param uniqueFishCaught The unique fish caught set to set
+     */
+    public void setFishData(Map<String, Map<FishRarity, Integer>> fishCaught, Set<String> uniqueFishCaught) {
+        if (fishCaught != null && uniqueFishCaught != null) {
+            synchronized (this) {
+                this.fishCaught.clear();
+                for (Map.Entry<String, Map<FishRarity, Integer>> entry : fishCaught.entrySet()) {
+                    this.fishCaught.put(entry.getKey(), new HashMap<>(entry.getValue()));
+                }
+                
+                this.uniqueFishCaught.clear();
+                this.uniqueFishCaught.addAll(uniqueFishCaught);
+                
+                System.out.println("DEBUG: Fish data loaded from save: " + this.uniqueFishCaught.size() + 
+                                  " unique fish, total caught: " + getTotalFishCaughtCount());
+            }
+        } else {
+            System.err.println("WARNING: Attempted to set null fish data");
+        }
     }
 }

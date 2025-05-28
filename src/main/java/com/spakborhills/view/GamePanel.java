@@ -230,6 +230,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
     // Statistics View UI State
     private Rectangle statisticsPanelRect;
     private static final Font STATISTICS_FONT_TITLE = new Font("Arial", Font.BOLD, 28);
+    // Added: Track scroll position for statistics view
+    private int statsScrollOffset = 0;
+    private static final int STATS_SCROLL_AMOUNT = 24; // Scroll one line at a time
     // Font for text area will be set directly
     private static final Color STATISTICS_BG_COLOR = new Color(100, 70, 70, 230); // Darker red-purple
     private static final Color STATISTICS_TEXT_COLOR = Color.WHITE;
@@ -3443,6 +3446,15 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             infoLines.add("Name: " + player.getName());
             infoLines.add("Gender: " + player.getGender().toString());
             infoLines.add("Energy: " + player.getEnergy() + "/" + Player.MAX_ENERGY);
+            
+            // Add favorite item display
+            String favoriteItem = player.getFavoriteItemName();
+            if (favoriteItem != null && !favoriteItem.trim().isEmpty()) {
+                infoLines.add("Favorite Item: " + favoriteItem);
+            } else {
+                infoLines.add("Favorite Item: None");
+            }
+            
             infoLines.add("Gold: " + player.getGold() + " G");
             String partnerName = "None";
             NPC partner = player.getPartner();
@@ -3475,9 +3487,15 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             return;
         }
 
-        // Determine the text to display
+        // Ensure GameController is available and call refreshStatisticsData
+        if (gameController != null) {
+            gameController.refreshStatisticsData();
+        }
+
+        // Force refresh statistics from the model - always get latest data
         String currentSummaryText;
         if (farmModel != null && farmModel.getStatistics() != null) {
+            // Force regeneration of the summary to get the latest data
             String summaryFromModel = farmModel.getStatistics().getSummary();
             if (summaryFromModel == null) {
                 currentSummaryText = "Statistics summary is null. Unable to display data.";
@@ -3489,32 +3507,40 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         } else {
             currentSummaryText = "Error: Statistics data is not available (FarmModel or Statistics object is null).";
         }
-        
+
         // Panel Background - Using PLAYER_INFO_BG_COLOR for consistency
-        g2d.setColor(PLAYER_INFO_BG_COLOR); // Changed to PLAYER_INFO_BG_COLOR
+        g2d.setColor(PLAYER_INFO_BG_COLOR);
         g2d.fill(statisticsPanelRect);
-        g2d.setColor(PLAYER_INFO_TEXT_COLOR.brighter()); // Changed to PLAYER_INFO_TEXT_COLOR
+        g2d.setColor(PLAYER_INFO_TEXT_COLOR.brighter());
         g2d.draw(statisticsPanelRect);
 
-        int currentY = statisticsPanelRect.y + 40;
         int textX = statisticsPanelRect.x + 30;
         int textWidth = statisticsPanelRect.width - 60;
-
+        int textAreaHeight = statisticsPanelRect.height - 100; // Space for title and prompt
+ 
         // Title - Using PLAYER_INFO_FONT_TITLE and PLAYER_INFO_TEXT_COLOR
         g2d.setFont(PLAYER_INFO_FONT_TITLE); 
         g2d.setColor(PLAYER_INFO_TEXT_COLOR);
-        String title = "Game Statistics"; 
+        String title = "Game Statistics";
         if (statisticsShown) { // statisticsShown is true if end condition was met.
             title = "End Game Statistics";
         }
         FontMetrics fmTitle = g2d.getFontMetrics();
         int titleWidthVal = fmTitle.stringWidth(title);
-        g2d.drawString(title, statisticsPanelRect.x + (statisticsPanelRect.width - titleWidthVal) / 2, currentY);
-        currentY += fmTitle.getHeight() + 20;
+        g2d.drawString(title, statisticsPanelRect.x + (statisticsPanelRect.width - titleWidthVal) / 2, statisticsPanelRect.y + 40);
+
+        // Calculate visible area for content based on scroll position
+        int initialY = statisticsPanelRect.y + 80;
+        int currentY = initialY - statsScrollOffset; // Apply scroll offset
 
         // Statistics Text - Using PLAYER_INFO_FONT_TEXT and PLAYER_INFO_TEXT_COLOR
         g2d.setFont(PLAYER_INFO_FONT_TEXT);
         g2d.setColor(PLAYER_INFO_TEXT_COLOR);
+
+        // Create clipping region for text area to prevent overflow outside panel
+        Shape originalClip = g2d.getClip();
+        g2d.setClip(statisticsPanelRect.x + 10, initialY, statisticsPanelRect.width - 20, textAreaHeight);
+
         FontMetrics fmText = g2d.getFontMetrics();
         String[] lines = currentSummaryText.split("\n"); // Split summary into lines
 
@@ -3522,35 +3548,47 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
             // Basic wrapping for each line if it's too long (can be improved)
             List<String> wrappedLines = getWrappedText(line, textWidth, fmText);
             for (String wrappedLine : wrappedLines) {
-                 if (currentY + fmText.getHeight() > statisticsPanelRect.y + statisticsPanelRect.height - 50) { // Check bounds before drawing prompt
-                    g2d.drawString("...", textX, currentY); // Indicate more text if it overflows
-                    break; // Stop drawing lines if panel is full
+                // Only draw lines that are within the visible area
+                if (currentY >= initialY - fmText.getHeight() && currentY <= initialY + textAreaHeight) {
+                    g2d.drawString(wrappedLine, textX, currentY);
                 }
-                g2d.drawString(wrappedLine, textX, currentY);
                 currentY += fmText.getHeight();
             }
-            if (currentY + fmText.getHeight() > statisticsPanelRect.y + statisticsPanelRect.height - 50) break; // Check again after outer loop
         }
-        // currentY += 20; // Extra spacing if needed, adjusted based on content length
+        
+        // Restore original clip
+        g2d.setClip(originalClip);
+        
+        // Draw scrollbar if content exceeds visible area
+        int totalContentHeight = lines.length * fmText.getHeight() * 2; // Approximation with wrapping
+        if (totalContentHeight > textAreaHeight) {
+            int scrollBarWidth = 8;
+            int scrollBarX = statisticsPanelRect.x + statisticsPanelRect.width - scrollBarWidth - 10;
+            int scrollBarHeight = statisticsPanelRect.height - 100;
+            
+            // Background track
+            g2d.setColor(new Color(0, 0, 0, 80));
+            g2d.fillRect(scrollBarX, initialY, scrollBarWidth, scrollBarHeight);
+            
+            // Calculate thumb position and size
+            float contentRatio = (float)textAreaHeight / totalContentHeight;
+            int thumbHeight = Math.max(30, (int)(scrollBarHeight * contentRatio));
+            int maxScrollOffset = totalContentHeight - textAreaHeight;
+            float scrollRatio = maxScrollOffset > 0 ? (float)statsScrollOffset / maxScrollOffset : 0;
+            int thumbY = initialY + (int)(scrollRatio * (scrollBarHeight - thumbHeight));
+            
+            // Draw thumb
+            g2d.setColor(new Color(255, 255, 255, 180));
+            g2d.fillRect(scrollBarX, thumbY, scrollBarWidth, thumbHeight);
+        }
 
         // Prompt to close - Styled like Player Info
         g2d.setFont(PLAYER_INFO_FONT_TEXT.deriveFont(Font.ITALIC));
         g2d.setColor(PLAYER_INFO_TEXT_COLOR); // Ensure prompt color is consistent
-        String continuePrompt = "Press O or Esc to close...";
+        String continuePrompt = "Press O or Esc to close, ↑↓ to scroll...";
         FontMetrics fmPrompt = g2d.getFontMetrics();
         int promptWidth = fmPrompt.stringWidth(continuePrompt);
         g2d.drawString(continuePrompt, statisticsPanelRect.x + (statisticsPanelRect.width - promptWidth) / 2, statisticsPanelRect.y + statisticsPanelRect.height - 30);
-    }
-
-    // New method to handle input for Player Info view
-    private void handlePlayerInfoViewInput(int keyCode) {
-        if (farmModel.getCurrentGameState() != GameState.PLAYER_INFO_VIEW) {
-            return;
-        }
-        if (keyCode == KeyEvent.VK_J || keyCode == KeyEvent.VK_ESCAPE) {
-            farmModel.setCurrentGameState(GameState.IN_GAME);
-            playInGameMusic(); // Resume in-game music
-        }
     }
 
     // New method to handle input for Statistics view
@@ -3558,10 +3596,32 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         if (farmModel.getCurrentGameState() != GameState.STATISTICS_VIEW) {
             return;
         }
-        if (keyCode == KeyEvent.VK_O || keyCode == KeyEvent.VK_ESCAPE) {
-            farmModel.setCurrentGameState(GameState.IN_GAME);
-            playInGameMusic(); // Resume in-game music
-            // statisticsScrollPane.setVisible(false); // REMOVED - No longer using JScrollPane
+        
+        switch (keyCode) {
+            case KeyEvent.VK_O:
+            case KeyEvent.VK_ESCAPE:
+                // Reset scroll position when closing
+                statsScrollOffset = 0;
+                farmModel.setCurrentGameState(GameState.IN_GAME);
+                playInGameMusic(); // Resume in-game music
+                break;
+            case KeyEvent.VK_R:
+                // Refresh statistics manually
+                if (gameController != null) {
+                    gameController.refreshStatisticsData();
+                    repaint();
+                }
+                break;
+            case KeyEvent.VK_UP:
+                // Scroll up
+                statsScrollOffset = Math.max(0, statsScrollOffset - STATS_SCROLL_AMOUNT);
+                repaint();
+                break;
+            case KeyEvent.VK_DOWN:
+                // Scroll down - no hard limit, but content clipping will prevent issues
+                statsScrollOffset += STATS_SCROLL_AMOUNT;
+                repaint();
+                break;
         }
     }
 
@@ -4149,5 +4209,16 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         
         // Ensure storeScrollOffset is within valid range
         storeScrollOffset = Math.max(0, Math.min(storeScrollOffset, Math.max(0, storeItemsForDisplay.size() - visibleCount)));
+    }
+
+    // New method to handle input for Player Info view
+    private void handlePlayerInfoViewInput(int keyCode) {
+        if (farmModel.getCurrentGameState() != GameState.PLAYER_INFO_VIEW) {
+            return;
+        }
+        if (keyCode == KeyEvent.VK_J || keyCode == KeyEvent.VK_ESCAPE) {
+            farmModel.setCurrentGameState(GameState.IN_GAME);
+            playInGameMusic(); // Resume in-game music
+        }
     }
 }

@@ -72,56 +72,190 @@ public class FarmMap implements MapArea{
 
     /**
      * Menempatkan objek-objek awal (House, Pond, Shipping Bin) di FarmMap.
-     * Penempatan House dan Pond di-randomize.
-     * Shipping Bin selalu berjarak 1 petak dari rumah.
+     * Penempatan House dan Pond di-randomize dengan pertimbangan ukuran peta.
+     * Shipping Bin ditempatkan dengan prioritas di sebelah kanan rumah.
      */
     private void placeInitialDeployedObjects() {
         Random random = new Random();
 
-        // A. Tempatkan House (6x6) secara acak
-        House playerHouse = new House(); // Asumsi konstruktor default ada
+        // Margin dari tepi peta untuk memastikan ruang yang cukup
+        int edgeMargin = 4;
+        
+        // A. Tempatkan House (6x6) secara acak dengan margin yang cukup
+        House playerHouse = new House();
         boolean housePlaced = false;
-        while (!housePlaced) {
-            // Batasi area penempatan agar tidak terlalu mepet pinggir
-            int houseX = random.nextInt(DEFAULT_WIDTH - playerHouse.getWidth() - 2) + 1; // +1 agar tidak di kolom 0
-            int houseY = random.nextInt(DEFAULT_HEIGHT - playerHouse.getHeight() - 2) + 1; // +1 agar tidak di baris 0
-            if (placeObject(playerHouse, houseX, houseY)) {
+        int houseX = 0;
+        int houseY = 0;
+        
+        // Coba sebanyak kali yang diperlukan untuk menempatkan rumah dengan posisi yang baik
+        int houseAttempts = 0;
+        while (!housePlaced && houseAttempts < 50) {
+            // Tempatkan rumah dengan margin yang cukup dari tepi
+            houseX = random.nextInt(DEFAULT_WIDTH - playerHouse.getWidth() - (2 * edgeMargin)) + edgeMargin;
+            houseY = random.nextInt(DEFAULT_HEIGHT - playerHouse.getHeight() - (2 * edgeMargin)) + edgeMargin;
+            
+            // Pastikan juga tidak terlalu dekat dengan entry point
+            boolean tooCloseToEntry = false;
+            for (Point entry : entryPoints) {
+                int entryDistance = Math.abs(entry.x - houseX) + Math.abs(entry.y - houseY);
+                if (entryDistance < 5) { // Minimal 5 tile dari entry point
+                    tooCloseToEntry = true;
+                    break;
+                }
+            }
+            
+            if (!tooCloseToEntry && placeObject(playerHouse, houseX, houseY)) {
                 housePlaced = true;
-                System.out.println("Rumah ditempatkan di (" + houseX + "," + houseY + ")");
+                System.out.println("Rumah berhasil ditempatkan di (" + houseX + "," + houseY + ")");
+                // Set player spawn di dekat rumah
+                playerSpawnX = houseX - 1;  // Sedikit di sebelah kiri rumah
+                playerSpawnY = houseY + playerHouse.getHeight(); // Di depan rumah
+            }
+            houseAttempts++;
+        }
+        
+        if (!housePlaced) {
+            // Fallback jika tidak berhasil setelah banyak percobaan
+            System.err.println("PERINGATAN: Tidak bisa menempatkan rumah setelah banyak percobaan. Menggunakan posisi default.");
+            houseX = edgeMargin;
+            houseY = edgeMargin;
+            if (placeObject(playerHouse, houseX, houseY)) {
+                System.out.println("Rumah ditempatkan di posisi default (" + houseX + "," + houseY + ")");
+            } else {
+                System.err.println("KRITIS: Bahkan posisi default untuk rumah gagal!");
+            }
+        }
 
-                // B. Tempatkan Shipping Bin (3x2) 1 petak dari rumah (Halaman 21)
-                // Coba tempatkan di sebelah kanan rumah
-                ShippingBinObject shippingBin = new ShippingBinObject(); // Asumsi konstruktor default
-                int binX = houseX + playerHouse.getWidth() + 1; // 1 petak di kanan rumah
-                int binY = houseY; // Sejajar dengan bagian atas rumah (bisa disesuaikan)
-                // Pastikan bin masih dalam batas peta
-                if (isAreaAvailable(binX, binY, shippingBin.getWidth(), shippingBin.getHeight())) {
-                    placeObject(shippingBin, binX, binY);
-                    System.out.println("Shipping Bin ditempatkan di (" + binX + "," + binY + ")");
-                } else {
-                    // Coba di kiri, atas, atau bawah jika kanan tidak bisa (logika bisa lebih kompleks)
-                    System.err.println("PERINGATAN: Tidak bisa menempatkan Shipping Bin di sebelah kanan rumah. Perlu logika penempatan alternatif.");
+        // B. Tempatkan Shipping Bin (3x2) dengan prioritas posisi yang baik
+        ShippingBinObject shippingBin = new ShippingBinObject();
+        boolean binPlaced = false;
+        
+        // Coba beberapa posisi dengan prioritas:
+        // 1. Di sebelah kanan rumah
+        // 2. Di sebelah kiri rumah
+        // 3. Di bawah rumah
+        // 4. Pilihan lain yang valid
+        
+        // Posisi 1: Sebelah kanan rumah (prioritas tertinggi)
+        int binX = houseX + playerHouse.getWidth() + 1;
+        int binY = houseY;
+        if (isAreaAvailable(binX, binY, shippingBin.getWidth(), shippingBin.getHeight()) && 
+            binX + shippingBin.getWidth() < DEFAULT_WIDTH - edgeMargin) {
+            placeObject(shippingBin, binX, binY);
+            System.out.println("Shipping Bin ditempatkan di kanan rumah (" + binX + "," + binY + ")");
+            binPlaced = true;
+        } 
+        
+        // Posisi 2: Sebelah kiri rumah
+        if (!binPlaced) {
+            binX = houseX - shippingBin.getWidth() - 1;
+            binY = houseY;
+            if (binX >= edgeMargin && isAreaAvailable(binX, binY, shippingBin.getWidth(), shippingBin.getHeight())) {
+                placeObject(shippingBin, binX, binY);
+                System.out.println("Shipping Bin ditempatkan di kiri rumah (" + binX + "," + binY + ")");
+                binPlaced = true;
+            }
+        }
+        
+        // Posisi 3: Di bawah rumah
+        if (!binPlaced) {
+            binX = houseX;
+            binY = houseY + playerHouse.getHeight() + 1;
+            if (binY + shippingBin.getHeight() < DEFAULT_HEIGHT - edgeMargin && 
+                isAreaAvailable(binX, binY, shippingBin.getWidth(), shippingBin.getHeight())) {
+                placeObject(shippingBin, binX, binY);
+                System.out.println("Shipping Bin ditempatkan di bawah rumah (" + binX + "," + binY + ")");
+                binPlaced = true;
+            }
+        }
+        
+        // Posisi 4: Pencarian dengan spiral dari rumah untuk menemukan spot yang tersedia
+        if (!binPlaced) {
+            System.out.println("Mencari lokasi alternatif untuk Shipping Bin...");
+            int maxRadius = 10; // Radius maksimum pencarian dari rumah
+            int houseCenterX = houseX + playerHouse.getWidth() / 2;
+            int houseCenterY = houseY + playerHouse.getHeight() / 2;
+            
+            for (int radius = 2; radius <= maxRadius && !binPlaced; radius++) {
+                for (int offsetY = -radius; offsetY <= radius && !binPlaced; offsetY++) {
+                    for (int offsetX = -radius; offsetX <= radius && !binPlaced; offsetX++) {
+                        // Hanya periksa titik-titik di tepi kotak dengan radius tertentu
+                        if (Math.abs(offsetX) == radius || Math.abs(offsetY) == radius) {
+                            binX = houseCenterX + offsetX - (shippingBin.getWidth() / 2);
+                            binY = houseCenterY + offsetY - (shippingBin.getHeight() / 2);
+                            
+                            // Pastikan dalam batas peta dan tidak tumpang tindih
+                            if (binX >= edgeMargin && binY >= edgeMargin && 
+                                binX + shippingBin.getWidth() < DEFAULT_WIDTH - edgeMargin &&
+                                binY + shippingBin.getHeight() < DEFAULT_HEIGHT - edgeMargin &&
+                                isAreaAvailable(binX, binY, shippingBin.getWidth(), shippingBin.getHeight())) {
+                                
+                                placeObject(shippingBin, binX, binY);
+                                System.out.println("Shipping Bin ditempatkan di lokasi alternatif (" + binX + "," + binY + ")");
+                                binPlaced = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
+        
+        if (!binPlaced) {
+            System.err.println("KRITIS: Tidak bisa menempatkan Shipping Bin di manapun! Coba di lokasi sembarang yang valid.");
+            // Percobaan terakhir di lokasi random yang valid
+            int binAttempts = 0;
+            while (!binPlaced && binAttempts < 100) {
+                binX = random.nextInt(DEFAULT_WIDTH - shippingBin.getWidth() - (2 * edgeMargin)) + edgeMargin;
+                binY = random.nextInt(DEFAULT_HEIGHT - shippingBin.getHeight() - (2 * edgeMargin)) + edgeMargin;
+                
+                if (isAreaAvailable(binX, binY, shippingBin.getWidth(), shippingBin.getHeight())) {
+                    placeObject(shippingBin, binX, binY);
+                    System.out.println("Shipping Bin ditempatkan di lokasi random (" + binX + "," + binY + ")");
+                    binPlaced = true;
+                }
+                binAttempts++;
+            }
+        }
 
-
-        // C. Tempatkan Pond (4x3) secara acak, pastikan tidak tumpang tindih dengan House/Bin
-        Pond farmPond = new Pond(); // Asumsi konstruktor default ada
+        // C. Tempatkan Pond (4x3) secara acak, hindari rumah dan shipping bin
+        Pond farmPond = new Pond();
         boolean pondPlaced = false;
-        int maxAttempts = 100; // Hindari infinite loop jika peta terlalu penuh
+        int maxAttempts = 100;
         int attempts = 0;
+        
         while (!pondPlaced && attempts < maxAttempts) {
-            int pondX = random.nextInt(DEFAULT_WIDTH - farmPond.getWidth());
-            int pondY = random.nextInt(DEFAULT_HEIGHT - farmPond.getHeight());
-            if (placeObject(farmPond, pondX, pondY)) {
+            int pondX = random.nextInt(DEFAULT_WIDTH - farmPond.getWidth() - (2 * edgeMargin)) + edgeMargin;
+            int pondY = random.nextInt(DEFAULT_HEIGHT - farmPond.getHeight() - (2 * edgeMargin)) + edgeMargin;
+            
+            // Hindari penempatan terlalu dekat dengan rumah dan shipping bin
+            int distanceToHouse = Math.abs(pondX - houseX) + Math.abs(pondY - houseY);
+            int distanceToBin = Math.abs(pondX - binX) + Math.abs(pondY - binY);
+            
+            // Pastikan kolam tidak terlalu dekat dengan objek lain (minimal 3 tile)
+            if (distanceToHouse > 3 && distanceToBin > 3 && isAreaAvailable(pondX, pondY, farmPond.getWidth(), farmPond.getHeight())) {
+                placeObject(farmPond, pondX, pondY);
+                System.out.println("Pond berhasil ditempatkan di (" + pondX + "," + pondY + ")");
                 pondPlaced = true;
-                System.out.println("Pond ditempatkan di (" + pondX + "," + pondY + ")");
             }
             attempts++;
         }
+        
         if (!pondPlaced) {
-            System.err.println("PERINGATAN: Gagal menempatkan Pond setelah " + maxAttempts + " percobaan. Peta mungkin terlalu penuh.");
+            System.err.println("PERINGATAN: Gagal menempatkan Pond setelah " + maxAttempts + " percobaan. Mungkin peta terlalu penuh.");
+            // Coba di lokasi sembarang yang valid tanpa batasan jarak
+            attempts = 0;
+            while (!pondPlaced && attempts < 50) {
+                int pondX = random.nextInt(DEFAULT_WIDTH - farmPond.getWidth() - 2) + 1;
+                int pondY = random.nextInt(DEFAULT_HEIGHT - farmPond.getHeight() - 2) + 1;
+                
+                if (isAreaAvailable(pondX, pondY, farmPond.getWidth(), farmPond.getHeight())) {
+                    placeObject(farmPond, pondX, pondY);
+                    System.out.println("Pond ditempatkan di lokasi alternatif (" + pondX + "," + pondY + ")");
+                    pondPlaced = true;
+                }
+                attempts++;
+            }
         }
     }
 

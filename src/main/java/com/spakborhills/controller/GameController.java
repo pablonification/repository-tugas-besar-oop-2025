@@ -1305,12 +1305,40 @@ public class GameController {
             if (itemCaught != null && itemCaught instanceof Fish) { // Ensure it's a Fish object
                 Fish fishCaughtObject = (Fish) itemCaught;
                 farmModel.getPlayer().getInventory().addItem(fishCaughtObject, 1);
-                JOptionPane.showMessageDialog(gamePanel, "You caught a " + fishCaughtObject.getName() + "!");
                 
-                // Record the catch in statistics
+                // Record the catch in statistics - ENHANCED VERSION
                 if (farmModel.getStatistics() != null) {
-                    farmModel.getStatistics().recordFishCatch(fishCaughtObject.getName(), fishCaughtObject.getRarity());
-                    System.out.println("Fish catch recorded: " + fishCaughtObject.getName() + ", Rarity: " + fishCaughtObject.getRarity());
+                    // Explicitly get the statistic object to ensure we're using the same instance
+                    EndGameStatistics stats = farmModel.getStatistics();
+                    
+                    // Record the catch
+                    System.out.println("BEFORE recording fish: " + stats.getTotalFishCaughtCount() + " total fish caught");
+                    stats.recordFishCatch(fishCaughtObject.getName(), fishCaughtObject.getRarity());
+                    System.out.println("AFTER recording fish: " + stats.getTotalFishCaughtCount() + " total fish caught");
+                    
+                    // Force statistics to refresh immediately
+                    if (gamePanel != null) {
+                        JOptionPane.showMessageDialog(gamePanel, "You caught a " + fishCaughtObject.getName() + "!");
+                        // requestShowStatistics();
+                        refreshStatisticsData();
+                        // Display stats summary after catch
+                        // String fishStats = "Current Fish Stats:\n" + 
+                        //                    "- Total fish caught: " + stats.getTotalFishCaughtCount() + "\n" +
+                        //                    "- Unique fish types: " + stats.getUniqueFishCaught().size();
+                        // requestShowStatistics();
+                        // JOptionPane.showMessageDialog(gamePanel, fishStats, "Fish Statistics Updated", JOptionPane.INFORMATION_MESSAGE);
+                        
+                        // Give user option to view full statistics
+                        // int viewStats = JOptionPane.showConfirmDialog(gamePanel, 
+                        //         "Would you like to view your complete statistics?", 
+                        //         "View Statistics", 
+                        //         JOptionPane.YES_NO_OPTION);
+                        // if (viewStats == JOptionPane.YES_OPTION) {
+                        //     requestShowStatistics();
+                        // }
+                    } else {
+                        System.out.println("You caught a " + fishCaughtObject.getName() + "!");
+                    }
                 }
             } else {
                 JOptionPane.showMessageDialog(gamePanel, "You caught a fish, but it got away!");
@@ -2079,12 +2107,34 @@ public class GameController {
     }
 
     /**
+     * Ensures statistics data is properly refreshed before displaying.
+     * This method forces the repaint of the statistics view with fresh data.
+     */
+    public void refreshStatisticsData() {
+        if (farmModel != null && farmModel.getStatistics() != null) {
+            // Just accessing the statistics data will ensure it's properly loaded for display
+            System.out.println("CALLED_FROM_GAMEPANEL: GameController.refreshStatisticsData() - Refreshing statistics data:"); // MODIFIED LOG
+            System.out.println("- Crops Harvested Count: " + farmModel.getStatistics().getCropsHarvestedCount().size());
+            System.out.println("- Unique Fish Caught: " + farmModel.getStatistics().getUniqueFishCaught().size());
+            System.out.println("- Total Fish Caught: " + farmModel.getStatistics().getTotalFishCaughtCount());
+            
+            // Ensure the view is updated
+            if (gamePanel != null) {
+                gamePanel.repaint();
+            }
+        }
+    }
+
+    /**
      * Requests the display of end-of-game statistics.
      * This will fetch the summary from EndGameStatistics and tell GamePanel to show it.
      * It will also stop the game timer in GamePanel.
      */
     public void requestShowStatistics() {
         if (farmModel != null && farmModel.getStatistics() != null) {
+            // Refresh the statistics data first
+            refreshStatisticsData();
+            
             farmModel.setCurrentGameState(GameState.STATISTICS_VIEW);
             // GamePanel will handle fetching info and drawing. GamePanel should also stop timer.
             if (gamePanel != null) {

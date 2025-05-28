@@ -50,9 +50,9 @@ public class Fish extends Item implements EdibleItem {
 
         public int getDurationHours() {
             if (endHour >= startHour) {
-                return endHour - startHour + 1;
+                return endHour - startHour;
             } else {
-                return 24 - startHour + endHour + 1;
+                return (24 - startHour) + endHour;
             }
         }
 

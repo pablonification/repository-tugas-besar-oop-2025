@@ -11,6 +11,5 @@ public enum LocationType {
     CAROLINE_HOME,
     PERRY_HOME,
     DASCO_HOME,
-    ABIGAIL_HOME,
-    EMILY_HOME,
+    ABIGAIL_HOME
 }
