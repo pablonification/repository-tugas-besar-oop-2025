@@ -880,10 +880,6 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         Player player = farmModel.getPlayer();
         Graphics2D g2d = (Graphics2D) g.create(); // Work with a copy
 
-        // --- Panel Background ---
-        g2d.setColor(new Color(0, 0, 0, 200)); // Semi-transparent black
-        g2d.fillRect(0, 0, getWidth(), INFO_PANEL_HEIGHT);
-
         // --- Fonts ---
         Font labelFont = new Font("PixelMix", Font.BOLD, 18);
         Font valueFont = new Font("PixelMix", Font.PLAIN, 18);
@@ -910,6 +906,50 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
         int energyBarHeight = 14;
         int energyBarWidth = 100; // Reduced energy bar width
+        
+        // Pre-calculate total width needed for all content to ensure HUD background covers it
+        int totalWidth = 0;
+        
+        // First row width calculation
+        int nameWidth = labelFm.stringWidth("Name:") + H_PADDING_LABEL_VALUE + 
+                       valueFm.stringWidth(player.getName()) + H_PADDING_COLUMNS;
+        int goldWidth = labelFm.stringWidth("Gold:") + H_PADDING_LABEL_VALUE + 
+                       valueFm.stringWidth(String.format("%d G", player.getGold())) + H_PADDING_COLUMNS;
+        int energyWidth = labelFm.stringWidth("Energy:") + H_PADDING_LABEL_VALUE + 
+                         energyBarWidth + H_PADDING_LABEL_VALUE + 
+                         valueFm.stringWidth(String.format("%d/%d", player.getEnergy(), Player.MAX_ENERGY)) + H_PADDING_COLUMNS;
+        
+        int firstRowWidth = padding + nameWidth + goldWidth + energyWidth;
+        
+        // Second row width calculation
+        int timeWidth = labelFm.stringWidth("Time:") + H_PADDING_LABEL_VALUE + 
+                       valueFm.stringWidth(farmModel.getCurrentTime().getTimeString()) + H_PADDING_COLUMNS;
+        int dateSeasonWidth = labelFm.stringWidth("Date:") + H_PADDING_LABEL_VALUE + 
+                       valueFm.stringWidth(String.format("Day %d, %s", farmModel.getCurrentTime().getCurrentDay(), 
+                       farmModel.getCurrentTime().getCurrentSeason())) + H_PADDING_COLUMNS;
+        int weatherWidth = labelFm.stringWidth("Weather:") + H_PADDING_LABEL_VALUE + 
+                       valueFm.stringWidth(farmModel.getCurrentTime().getCurrentWeather().toString());
+        
+        int secondRowWidth = padding + timeWidth + dateSeasonWidth + weatherWidth;
+        
+        // Third row width (holding + items) - this is more variable based on inventory
+        Item selectedItem = player.getSelectedItem();
+        String selectedItemName = (selectedItem != null) ? selectedItem.getName() : "None";
+        int holdingWidth = padding + labelFm.stringWidth("Holding:") + H_PADDING_LABEL_VALUE + 
+                          valueFm.stringWidth(selectedItemName) + H_PADDING_COLUMNS + 10;
+        
+        // We'll allocate at least 200px for the hotbar items, but this is flexible
+        int hotbarMinWidth = 200;
+        
+        int thirdRowWidth = holdingWidth + labelFm.stringWidth("Items:") + H_PADDING_LABEL_VALUE + hotbarMinWidth;
+        
+        // Find the maximum width needed
+        totalWidth = Math.max(firstRowWidth, Math.max(secondRowWidth, thirdRowWidth));
+        
+        // --- Panel Background ---
+        // Always use the full width of the screen, no gaps
+        g2d.setColor(Color.BLACK); // Solid black instead of semi-transparent
+        g2d.fillRect(0, 0, getWidth(), INFO_PANEL_HEIGHT);
 
         // --- Top Row ---
         int topRowY = padding + valueFm.getAscent(); // Baseline for the first line of text
@@ -997,55 +1037,53 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
         g2d.drawString("Holding:", currentX, bottomRowY);
         currentX += labelFm.stringWidth("Holding:") + H_PADDING_LABEL_VALUE;
         
-        Item selectedItem = player.getSelectedItem();
-        String selectedItemName = (selectedItem != null) ? selectedItem.getName() : "None";
+        // Use the already defined selectedItem and selectedItemName variables
         g2d.setFont(valueFont);
         g2d.drawString(selectedItemName, currentX, bottomRowY);
         currentX += valueFm.stringWidth(selectedItemName) + H_PADDING_COLUMNS + 10; // Extra padding before hotbar
 
-
         // Hotbar (Text Only, improved logic)
         int hotbarStartX = currentX; 
         // Check if there's enough space for the hotbar label and at least one item
-        if (hotbarStartX < getWidth() - labelFm.stringWidth("Items: ") - 50) { // 50 is a rough estimate for one item
+        int maxRemainingWidth = getWidth() - hotbarStartX - padding;
+        
+        if (maxRemainingWidth > labelFm.stringWidth("Items: ") + 50) { // 50 is a rough estimate for one item
             g2d.setFont(labelFont);
             g2d.drawString("Items:", hotbarStartX, bottomRowY);
             hotbarStartX += labelFm.stringWidth("Items:") + H_PADDING_LABEL_VALUE;
             
             g2d.setFont(valueFont);
-        if (gameController != null) {
+            if (gameController != null) {
                 List<Item> allPlayerItems = gameController.getPlayerInventoryItems();
                 StringBuilder hotbarDisplayString = new StringBuilder();
                 int maxVisibleHotbarItems = 3; // Number of items to try to show in hotbar
-                int hotbarMaxWidth = getWidth() - hotbarStartX - padding; // Max width available for hotbar items string
+                int hotbarMaxWidth = maxRemainingWidth - labelFm.stringWidth("Items:") - H_PADDING_LABEL_VALUE; // Max width available for hotbar items string
 
-            if (allPlayerItems.isEmpty()) {
+                if (allPlayerItems.isEmpty()) {
                     hotbarDisplayString.append("Empty");
-            } else {
+                } else {
                     int selectedIdx = -1;
-                        if (selectedItem != null) {
+                    if (selectedItem != null) {
                         for (int i = 0; i < allPlayerItems.size(); i++) {
                             if (allPlayerItems.get(i).equals(selectedItem)) {
                                 selectedIdx = i;
-                                    break;
-                                }
+                                break;
                             }
                         }
+                    }
 
                     int startDisplayIdx = 0;
-                    int endDisplayIdx = allPlayerItems.size();
+                    int endDisplayIdx = Math.min(allPlayerItems.size(), maxVisibleHotbarItems);
 
                     if (allPlayerItems.size() > maxVisibleHotbarItems) {
                         if (selectedIdx != -1) {
-                            startDisplayIdx = Math.max(0, selectedIdx - (maxVisibleHotbarItems -1) / 2 ); // Try to center selected
+                            startDisplayIdx = Math.max(0, selectedIdx - (maxVisibleHotbarItems - 1) / 2); // Try to center selected
                             endDisplayIdx = Math.min(allPlayerItems.size(), startDisplayIdx + maxVisibleHotbarItems);
                             // If centering pushes startDisplayIdx too far left, adjust
                             if (endDisplayIdx - startDisplayIdx < maxVisibleHotbarItems && allPlayerItems.size() >= maxVisibleHotbarItems) {
-                                 endDisplayIdx = Math.min(allPlayerItems.size(), selectedIdx + (maxVisibleHotbarItems / 2) +1 );
-                                 startDisplayIdx = Math.max(0, endDisplayIdx - maxVisibleHotbarItems);
+                                endDisplayIdx = Math.min(allPlayerItems.size(), selectedIdx + (maxVisibleHotbarItems / 2) + 1);
+                                startDisplayIdx = Math.max(0, endDisplayIdx - maxVisibleHotbarItems);
                             }
-                        } else {
-                            endDisplayIdx = maxVisibleHotbarItems; // Show first few if no selection
                         }
                     }
 
@@ -1055,9 +1093,9 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
 
                     for (int i = startDisplayIdx; i < endDisplayIdx; i++) {
                         if (hotbarDisplayString.length() > 0 && !hotbarDisplayString.toString().equals("...")) {
-                             hotbarDisplayString.append(" | ");
+                            hotbarDisplayString.append(" | ");
                         } else if (hotbarDisplayString.length() > 0 && i > startDisplayIdx) {
-                            hotbarDisplayString.append(" | "); // Add separator if it's not the very first element after "..."
+                            hotbarDisplayString.append(" | ");
                         }
 
                         Item currentHotbarItem = allPlayerItems.get(i);
@@ -1066,23 +1104,26 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                         if (itemName.length() > 8) {
                             itemName = itemName.substring(0, 7) + ".";
                         }
+                        
                         // Check if adding this item exceeds hotbarMaxWidth
                         String tempString = hotbarDisplayString.toString() + itemName;
                         if (valueFm.stringWidth(tempString) > hotbarMaxWidth && i > startDisplayIdx) {
                             hotbarDisplayString.append("...");
                             break; // Stop adding items if it overflows
                         }
+                        
                         hotbarDisplayString.append(itemName);
                     }
 
-                    if (endDisplayIdx < allPlayerItems.size() && valueFm.stringWidth(hotbarDisplayString.toString() + " | ...") <= hotbarMaxWidth && !hotbarDisplayString.toString().endsWith("...")) {
-                         hotbarDisplayString.append(" | ...");
+                    if (endDisplayIdx < allPlayerItems.size()) {
+                        hotbarDisplayString.append("...");
+                    }
                 }
-            }
                 g2d.drawString(hotbarDisplayString.toString(), hotbarStartX, bottomRowY);
+            }
         }
-        }
-        g2d.dispose(); // Dispose of the graphics copy
+
+        g2d.dispose(); // Clean up
     }
 
     private void drawCurrentMap(Graphics g) {
