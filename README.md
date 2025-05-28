@@ -13,10 +13,9 @@ Dokumen ini bertujuan untuk digunakan sebagai panduan dalam proses setup, build,
 5.  [Build Project](#5-build-Project)
 6.  [Running Project](#6-running-Project)
 7.  [Running Test](#7-running-test)
-<!-- 8.  [Prinsip & Desain](#8-prinsip--desain) -->
-8.  [Dependensi Utama](#8-dependensi-utama)
-<!-- 10. [Konfigurasi (Jika Ada)](#10-konfigurasi-jika-ada) -->
-9. [Anggota Kelompok](#9-anggota-kelompok)
+8.  [Prinsip & Desain](#8-prinsip--desain)
+9.  [Dependensi Utama](#9-dependensi-utama)
+10. [Anggota Kelompok](#10-anggota-kelompok)
 
 ---
 
@@ -67,17 +66,16 @@ Berikut adalah gambaran umum struktur direktori Project:
 │   │   │       └── spakborhills/
 │   │   │           ├── Main.java       # Entry point aplikasi
 │   │   │           ├── model/          # Kelas-kelas entitas (Player, NPC, Item, Farm, Tile, etc.)
-│   │   │           ├── view/           # Kelas-kelas untuk display CLI (misal: MapView, MenuView)
+│   │   │           ├── view/           # Kelas-kelas untuk display GUI (GamePanel, GameFrame)
 │   │   │           ├── controller/     # Kelas-kelas untuk logika game, flow, & input handling
-│   │   │           ├── util/           # Kelas-kelas utility (misal: TimeUtil, Randomizer)
-│   │   │           └── exception/      # Custom exceptions (misal: InsufficientEnergyException)
-│   │   └── resources/  # File resource non-kode (jika ada, misal: data item, resep)
+│   │   │           └── util/           # Kelas-kelas utility (TimeUtil, Randomizer, etc.)
+│   │   └── resources/  # File resource (assets, musik, gambar)
 │   └── test/
 │       ├── java/       # Kode sumber untuk testing (JUnit)
 │       │   └── com/
 │       │       └── spakborhills/
 │       │           └── ...             # Test classes mengikuti struktur main
-│       └── resources/  # File resource untuk testing (jika perlu)
+│       └── resources/  # File resource untuk testing
 ├── build.gradle        # File konfigurasi build Gradle
 ├── gradlew             # Gradle wrapper script (Linux/macOS)
 ├── gradlew.bat         # Gradle wrapper script (Windows)
@@ -98,7 +96,7 @@ Gunakan perintah berikut di terminal dari *root* direktori Project untuk mengkom
 gradlew.bat build
 ```
 
-Perintah ini akan menjalankan kompilasi, menjalankan test (jika dikonfigurasi), dan mem-package aplikasi. Output JAR biasanya berada di `build/libs/nama-Project-versi.jar`. JAR yang dihasilkan akan berisi semua dependensi yang diperlukan (*fat JAR* jika dikonfigurasi demikian di `build.gradle`).
+Perintah ini akan menjalankan kompilasi, menjalankan test (jika dikonfigurasi), dan mem-package aplikasi. Output JAR biasanya berada di `build/libs/nama-Project-versi.jar`. JAR yang dihasilkan akan berisi semua dependensi yang diperlukan (*fat JAR*).
 
 ---
 
@@ -114,7 +112,7 @@ Setelah berhasil melakukan build, atau untuk menjalankan langsung dari source co
 gradlew.bat run
 ```
 
-Perintah `run` akan mengkompilasi kode jika perlu dan menjalankan `Main.java` yang telah ditentukan di `build.gradle`.
+Perintah `run` akan mengkompilasi kode jika perlu dan menjalankan `Main.java`.
 
 ---
 
@@ -134,48 +132,38 @@ Laporan hasil test akan digenerate oleh Gradle dan biasanya dapat ditemukan di `
 
 ---
 
-<!-- ## 8. Prinsip & Desain
+## 8. Prinsip & Desain
 
-Kami berkomitmen untuk menerapkan praktik rekayasa perangkat lunak yang baik dalam Project ini:
+Kami telah menerapkan praktik rekayasa perangkat lunak yang baik dalam Project ini:
 
-*   **SOLID:** Berusaha menerapkan kelima prinsip SOLID (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion) untuk menghasilkan kode yang modular, fleksibel, dan mudah dipelihara.
-*   **Design Patterns:** Sesuai spesifikasi, kami wajib mengimplementasikan **minimal 3** Design Pattern. Pattern yang direncanakan/telah diimplementasikan:
-    *   `[Nama Pattern 1]` - *[Status: Direncanakan/Implementasi]* - Digunakan pada `[Bagian/Kelas terkait]` untuk `[Tujuan Penggunaan, misal: mengelola state game, membuat objek item]`
-    *   `[Nama Pattern 2]` - *[Status: Direncanakan/Implementasi]* - Digunakan pada `[Bagian/Kelas terkait]` untuk `[Tujuan Penggunaan]`
-    *   `[Nama Pattern 3]` - *[Status: Direncanakan/Implementasi]* - Digunakan pada `[Bagian/Kelas terkait]` untuk `[Tujuan Penggunaan]`
-    *   *(Tambahkan pattern lain jika ada)* -->
+*   **SOLID:** Menerapkan kelima prinsip SOLID untuk menghasilkan kode yang modular, fleksibel, dan mudah dipelihara.
+*   **Design Patterns:** Implementasi Design Pattern yang digunakan:
+    *   `MVC (Model-View-Controller)` - Digunakan untuk memisahkan logika game (Model), tampilan (View), dan kontrol input (Controller)
+    *   `State Pattern` - Digunakan untuk mengelola state game (IN_GAME, PAUSE_MENU, STORE_UI, dll)
+    *   `Observer Pattern` - Digunakan untuk sistem event handling dan notifikasi antar komponen
+    *   `Factory Pattern` - Digunakan untuk pembuatan objek Item dan GameObject
+    *   `Singleton Pattern` - Digunakan untuk manajemen game state dan resources
     
-<!-- *   **Logging:** Menggunakan `SLF4J` sebagai API logging dengan implementasi `Logback` (atau `Log4j2`). Ini membantu dalam proses debugging dan pemantauan. Konfigurasi logging ada di `src/main/resources/logback.xml` (atau file konfigurasi yang sesuai).
-*   **Exception Handling:** Menerapkan exception handling yang tepat untuk menangani kondisi error yang mungkin terjadi (misal: input tidak valid, energi tidak cukup). Custom exceptions dibuat di package `exception` untuk kasus-kasus spesifik game.
-*   **Concurrency:** Menerapkan konsep concurrency sesuai kebutuhan spesifikasi, terutama pada aksi-aksi yang berjalan paralel dengan waktu game (jika ada, seperti memasak). Penggunaan `synchronized`, `Lock`, atau struktur data concurrent akan didokumentasikan di kode. -->
+*   **Logging:** Menggunakan `SLF4J` sebagai API logging dengan implementasi `Logback` untuk debugging dan pemantauan.
+*   **Exception Handling:** Menerapkan exception handling yang tepat untuk menangani kondisi error yang mungkin terjadi.
+*   **Concurrency:** Menerapkan konsep concurrency pada sistem waktu game dan animasi.
 
 ---
 
-## 8. Dependensi Utama
+## 9. Dependensi Utama
 
 Dependensi utama Project ini dikelola oleh Gradle dan didefinisikan dalam file `build.gradle`:
 
-*   **Java Development Kit (JDK):** `21` (atau versi yang disepakati tim)
+*   **Java Development Kit (JDK):** `24`
 *   **Gradle:** Build Tool (via Wrapper)
 *   **JUnit 5 (Jupiter Engine):** Framework untuk Unit Testing
 *   **SLF4J API:** Abstraksi Logging
-*   **Logback Classic / Log4j2 Core:** Implementasi Logging
-<!-- *   `[Tambahkan dependensi lain jika ada, misal: library JSON untuk save/load seperti Jackson atau Gson]` -->
-
-<!-- Tim: Pastikan daftar dependensi ini selalu sinkron dengan file build.gradle -->
-
-<!-- ---
-
-## 10. Konfigurasi (Jika Ada)
-
-*   *(Saat ini belum ada konfigurasi eksternal yang signifikan yang perlu diatur oleh pengguna akhir untuk menjalankan game dasar).*
-*   *(Fitur save/load mungkin akan menggunakan file di lokasi tertentu, akan didokumentasikan di sini jika sudah diimplementasikan).* -->
-
-<!-- Tim: Update bagian ini jika ada penambahan fitur yang memerlukan konfigurasi (misal: path file save, level logging default) -->
+*   **Logback Classic:** Implementasi Logging
+*   **Java Sound API:** Untuk sistem audio game
 
 ---
 
-## 9. Anggota Kelompok
+## 10. Anggota Kelompok
 
 Project ini dikembangkan oleh Kelompok `2` - K4:
 
