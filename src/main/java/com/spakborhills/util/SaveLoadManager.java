@@ -54,7 +54,7 @@ public class SaveLoadManager {
     private static SaveLoadManager instance;
     
     // Private constructor to prevent instantiation from outside
-    private SaveLoadManager() {
+    public SaveLoadManager() {
         // GsonBuilder untuk pretty printing agar file JSON mudah dibaca
         this.gson = new GsonBuilder()
                         .setPrettyPrinting()

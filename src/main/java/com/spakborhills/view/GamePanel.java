@@ -1495,15 +1495,17 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                 farmModel.setCurrentGameState(GameState.PAUSE_MENU);
                 stopGameTimer(); // Pause game timer
                 stopInGameMusicSavingPosition(); // Pause in-game music and save its position
-                // animationTimer.stop(); // Also pause animations
                 currentPauseMenuSelection = 0; // Reset selection
                 repaint();
                 return;
             } else if (farmModel.getCurrentGameState() == GameState.PAUSE_MENU) {
                 farmModel.setCurrentGameState(GameState.IN_GAME);
                 startGameTimer(); // Resume game timer
-                // playInGameMusic(); // Music will be resumed by paintComponent
-                // animationTimer.start(); // Resume animations
+                if (inGameMusicClip != null && !inGameMusicClip.isRunning()) {
+                    inGameMusicClip.setFramePosition((int) inGameMusicPosition);
+                    inGameMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                    inGameMusicClip.start();
+                }
                 repaint();
                 return;
             }
@@ -3863,8 +3865,11 @@ public class GamePanel extends JPanel implements KeyListener { // Implement KeyL
                     case "Resume":
                         farmModel.setCurrentGameState(GameState.IN_GAME);
                         startGameTimer(); // Resume game timer
-                        // playInGameMusic(); // Music will be resumed by paintComponent
-                        // animationTimer.start(); // Resume animations
+                        if (inGameMusicClip != null && !inGameMusicClip.isRunning()) {
+                            inGameMusicClip.setFramePosition((int) inGameMusicPosition);
+                            inGameMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                            inGameMusicClip.start();
+                        }
                         break;
                     case "Save Game":
                         if (gameController != null) {
