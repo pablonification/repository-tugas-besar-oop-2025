@@ -1,35 +1,3 @@
-/*
- *   class Farm {
-    - name: String
-    - player: Player
-    - farmMap: FarmMap
-    - worldMap: WorldMap ' Added reference to world map areas
-    - store: Store ' Added reference to store
-    - npcs: List<NPC> ' List of all NPCs
-    - recipes: List<Recipe> ' List of all Recipes
-    - gameTime: GameTime
-    - shippingBin: ShippingBin
-    - statistics: EndGameStatistics ' Changed from StatisticsTracker
-    - priceList: PriceList ' Added PriceList
-    + getName(): String
-    + getPlayer(): Player
-    + getFarmMap(): FarmMap
-    + getWorldMap(): WorldMap
-    + getStore(): Store
-    + getNpcs(): List<NPC>
-    + findNPC(name: String): Optional<NPC>
-    + getRecipes(): List<Recipe>
-    + findRecipe(name: String): Recipe
-    + getCurrentTime(): GameTime
-    + getShippingBin(): ShippingBin
-    + getStatistics(): EndGameStatistics
-    + getPriceList(): PriceList
-    + nextDay(): void ' Central logic for day change
-    + checkEndConditions(): boolean
-    + getMapArea(type: LocationType): MapArea ' Get specific map based on type
-  }
- */
-
 package com.spakborhills.model;
 
 import java.util.List;
@@ -46,7 +14,6 @@ import com.spakborhills.model.NPC.NPC;
 import com.spakborhills.model.Map.FarmMap;
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.WorldMap;
-// import com.spakborhills.model.Store;
 import com.spakborhills.model.Util.GameTime;
 import com.spakborhills.model.Util.PriceList;
 import com.spakborhills.model.Util.Recipe;
@@ -95,8 +62,8 @@ public class Farm {
       this.farmMap = farmMap;
       this.worldMap = worldMap;
       this.store = store;
-      this.npcs = List.copyOf(npcs); // immutable
-      this.recipes = List.copyOf(recipes); // immutable
+      this.npcs = List.copyOf(npcs); 
+      this.recipes = List.copyOf(recipes); 
       this.gameTime = gameTime;
       this.shippingBin = shippingBin;
       this.statistics = statistics;
@@ -233,7 +200,7 @@ public class Farm {
       if (shippingBin != null && statistics != null && priceList != null && gameTime != null && player != null) {
           income = shippingBin.processSales(this.statistics, this.priceList, this.gameTime.getCurrentDay(), this.gameTime.getCurrentSeason());
       player.addGold(income);
-      shippingBin.clearBin(); // Reset ShippingBin untuk hari berikutnya
+      shippingBin.clearBin(); 
       } else {
           System.err.println("Farm.nextDay: Salah satu komponen (shippingBin, statistics, priceList, gameTime, player) adalah null. Penjualan dilewati.");
       }
@@ -245,11 +212,11 @@ public class Farm {
       System.out.println("Hari ke-" + gameTime.getCurrentDay() + ", Musim " + gameTime.getCurrentSeason() + ", Cuaca: " + gameTime.getCurrentWeather());
       } else {
           System.err.println("Farm.nextDay: gameTime is null. Tidak bisa melanjutkan hari.");
-          return income; // Kembalikan income sejauh ini jika gameTime null
+          return income; 
       }
 
       // Update pertumbuhan tanaman
-      if(farmMap != null && gameTime != null) { // gameTime check lagi untuk keamanan
+      if(farmMap != null && gameTime != null) {
         farmMap.updateDailyTiles(gameTime.getCurrentWeather(), gameTime.getCurrentSeason());
         System.out.println("Tanaman di kebun berhasil tumbuh...");
       }
@@ -270,7 +237,7 @@ public class Farm {
      * @return int jumlah gold yang didapatkan dari penjualan ShippingBin pada hari berikutnya.
      */
     public int forceSleepAndProcessNextDay() {
-        return nextDay(); // Memproses hari berikutnya dan mengembalikan pendapatan
+        return nextDay(); 
     }
 
 /**
@@ -281,7 +248,6 @@ public class Farm {
       // Milestone 1: Gold >=17209g
       boolean goldMet = player.getGold() >= 17209;
 
-      // Milestone 2: Player sudah menikah (punya partner berstatus SPOUSE)
       boolean marriedMet = player.getPartner() != null && player.getPartner().getRelationshipStatus() == RelationshipStatus.SPOUSE;
 
       if(goldMet) {

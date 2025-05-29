@@ -1,21 +1,7 @@
-/*
- *     - rarity: FishRarity
-    - requiredSeason: Season
-    - startTime: int ' Hour 0-23
-    - endTime: int ' Hour 0-23
-    - requiredWeather: Weather
-    - requiredLocation: LocationType 
-    - {static} final int BASE_ENERGY_RESTORE = 1
-    + calculateSellPrice(prices: PriceList): int 
-    + getEnergyRestore(): int
-    + use(player: Player, target: Object): boolean
-    + getRarity(): FishRarity
-    + canBeCaught(season: Season, time: GameTime, weather: Weather, location: LocationType): boolean
- */
 package com.spakborhills.model.Item;
 
 import java.util.List;
-import java.util.Set; // Using Set for locations might be slightly better semantically
+import java.util.Set;
 import java.util.ArrayList;
 
 import com.spakborhills.model.Enum.ItemCategory;
@@ -26,18 +12,7 @@ import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Player;
 import com.spakborhills.model.Util.GameTime;
 
-
-// Assuming these enums and classes exist in the correct packages
-// import com.spakborhills.model.Item;
-// import com.spakborhills.model.ItemCategory;
-// import com.spakborhills.model.Player;
-// import com.spakborhills.model.Season;
-// import com.spakborhills.model.Weather;
-// import com.spakborhills.model.LocationType;
-// import com.spakborhills.model.GameTime; // Needed for canBeCaught
-
 public class Fish extends Item implements EdibleItem {
-
     // Helper class untuk menangani kasus waktu disjoin
     public static class TimeRange {
         public final int startHour;
@@ -68,9 +43,9 @@ public class Fish extends Item implements EdibleItem {
     private static final int BASE_ENERGY_RESTORE = 1;
 
     private final FishRarity rarity;
-    private final Set<Season> requiredSeasons; // (e.g., {SPRING, SUMMER}
+    private final Set<Season> requiredSeasons; 
     private final List<TimeRange> catchableTimeRanges;
-    private final Set<Weather> requiredWeather; // (e.g., {RAINY, SUNNY})
+    private final Set<Weather> requiredWeather; 
     private final Set<LocationType> requiredLocations; 
     
     /**
@@ -135,7 +110,6 @@ public class Fish extends Item implements EdibleItem {
         // eat fish
         player.changeEnergy(getEnergyRestore());
         System.out.println("Kamu memakan " + getName() + " dan mendapatkan sedikit energi.");
-        // Controller should remove 1 fish from inventory after this returns true
         return true;
     }
 
@@ -156,7 +130,7 @@ public class Fish extends Item implements EdibleItem {
             duration += range.getDurationHours();
         }
 
-        if (duration <= 0) duration = 1; // untuk menghindari pembagian dengan 0
+        if (duration <= 0) duration = 1;
 
         double cMultiplier = rarity.getPriceMultiplier();
 
@@ -190,7 +164,7 @@ public class Fish extends Item implements EdibleItem {
         }
 
         // Check time
-        int currentHour = currentTime.getHour(); // GameTime akan punya getHour()
+        int currentHour = currentTime.getHour(); 
         boolean timeMatch = false;
         for (TimeRange range : this.catchableTimeRanges) {
             if (range.contains(currentHour)) {
@@ -202,7 +176,6 @@ public class Fish extends Item implements EdibleItem {
         if (!timeMatch) {
             return false;
         }
-        // Jika semua kondisi terpenuhi, return true
         return true;
     }
 
@@ -228,12 +201,9 @@ public class Fish extends Item implements EdibleItem {
 
     @Override
     public Item cloneItem() {
-        // Create new sets and lists to avoid sharing mutable objects
         Set<Season> clonedSeasons = Set.copyOf(this.requiredSeasons);
         List<TimeRange> clonedTimeRanges = new ArrayList<>(this.catchableTimeRanges.size());
         for (TimeRange range : this.catchableTimeRanges) {
-            // Assuming TimeRange is immutable or we make a deep copy if it's mutable
-            // For now, assuming TimeRange(int, int) constructor is sufficient for a new instance
             clonedTimeRanges.add(new TimeRange(range.startHour, range.endHour)); 
         }
         Set<Weather> clonedWeather = Set.copyOf(this.requiredWeather);
@@ -243,14 +213,3 @@ public class Fish extends Item implements EdibleItem {
     }
 
 }
-
-/*
- * Contoh Instance Halibut
- * List<TimeRange> halibutTimes = Arrays.asList(
-    new TimeRange(6, 11),
-    new TimeRange(19, 2) // Rentang kedua (19:00 - 02:00)
-);
-Fish halibut = new Fish("Halibut", Fish.FishRarity.REGULAR, Set.of(Season.ANY),
-                       halibutTimes, // <-- Berikan list
-                       Set.of(Weather.ANY), Set.of(LocationType.OCEAN));
- */

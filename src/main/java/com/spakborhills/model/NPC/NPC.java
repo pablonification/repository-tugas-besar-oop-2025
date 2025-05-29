@@ -1,24 +1,3 @@
-/*
- *   abstract class NPC {
-    # name: String
-    # heartPoints: int
-    # maxHeartPoints: int
-    # lovedItems: List<String>
-    # likedItems: List<String>
-    # hatedItems: List<String>
-    # relationshipStatus: RelationshipStatus
-    # homeLocation: LocationType ' Changed to LocationType
-    # isBachelor: boolean ' Added from previous good version
-    + getName(): String
-    + getHeartPoints(): int
-    + addHeartPoints(amt: int): void
-    + getRelationshipStatus(): RelationshipStatus
-    + setRelationshipStatus(s: RelationshipStatus): void
-    + checkGiftPreference(item: Item): int
-    + interact(player: Player): void
-  }
- */
-
 package com.spakborhills.model.NPC;
 
 import java.util.List;
@@ -26,7 +5,6 @@ import java.util.ArrayList;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
-// import java.io.File;
 import java.io.IOException;
 
 import com.spakborhills.model.Enum.LocationType;
@@ -51,9 +29,9 @@ public abstract class NPC {
     // Untuk spritesheets
     protected String spritesheetPath;
     protected transient BufferedImage fullSpritesheet;
-    protected String dialoguePortraitPath; // Path to the SPRITESHEET for dialogue portraits
-    protected transient BufferedImage portraitSpritesheetForDialogue; // Loaded image from dialoguePortraitPath
-    protected transient BufferedImage dialoguePortraitImage; // Final cropped portrait for dialogue
+    protected String dialoguePortraitPath;
+    protected transient BufferedImage portraitSpritesheetForDialogue; 
+    protected transient BufferedImage dialoguePortraitImage; 
 
     // Dimensi dan koordinat untuk frame sprite default di peta
     public int defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight;
@@ -64,15 +42,15 @@ public abstract class NPC {
     protected boolean isMoving;
     protected int animationFrame;
     protected int animationCounter;
-    protected static final int ANIMATION_SPEED = 3; // Sama dengan Player
-    protected static final int WALKING_FRAMES = 4; // Jumlah frame animasi berjalan per arah
+    protected static final int ANIMATION_SPEED = 3; 
+    protected static final int WALKING_FRAMES = 4; 
 
 
-    // Layout spritesheet NPC (sesuaikan dengan spritesheet NPC Anda)
-    protected int spriteSheetRowDown = 0;    // Baris untuk menghadap bawah
-    protected int spriteSheetRowUp = 2;      // Baris untuk menghadap atas  
-    protected int spriteSheetRowLeft = 3;    // Baris untuk menghadap kiri
-    protected int spriteSheetRowRight = 1;   // Baris untuk menghadap kanan
+    // Layout spritesheet NPC 
+    protected int spriteSheetRowDown = 0;   
+    protected int spriteSheetRowUp = 2;       
+    protected int spriteSheetRowLeft = 3;   
+    protected int spriteSheetRowRight = 1;  
 
 
     protected NPC(String name, LocationType homeLocation, boolean isBachelor, String spritesheetPath,
@@ -82,7 +60,7 @@ public abstract class NPC {
         this.homeLocation = homeLocation;
         this.isBachelor = isBachelor;
         this.spritesheetPath = spritesheetPath;
-        this.dialoguePortraitPath = dialoguePortraitPath; // Initialize new field
+        this.dialoguePortraitPath = dialoguePortraitPath; 
 
         this.heartPoints = 0;
         this.relationshipStatus = RelationshipStatus.SINGLE;
@@ -106,13 +84,13 @@ public abstract class NPC {
         this.portraitHeight = portraitHeight;
 
         // Inisialisasi animasi
-        this.currentDirection = Direction.SOUTH; // Arah hadap awal
+        this.currentDirection = Direction.SOUTH; 
         this.isMoving = false;
-        this.animationFrame = 0; // Frame diam
+        this.animationFrame = 0; 
         this.animationCounter = 0;
 
         loadSpritesheet();
-        loadDialoguePortrait(); // Call method to load the dialogue portrait
+        loadDialoguePortrait(); 
     }
 
 
@@ -135,29 +113,23 @@ public abstract class NPC {
     private void loadDialoguePortrait() {
         try {
             if (this.dialoguePortraitPath != null && !this.dialoguePortraitPath.isEmpty()) {
-                // Load the specific spritesheet meant for dialogue portraits
                 this.portraitSpritesheetForDialogue = ImageIO.read(getClass().getResourceAsStream(this.dialoguePortraitPath));
 
                 if (this.portraitSpritesheetForDialogue != null) {
-                    // Now, crop from this dialogue-specific spritesheet
                     try {
                         this.dialoguePortraitImage = this.portraitSpritesheetForDialogue.getSubimage(
-                            this.defaultPortraitX, // e.g., 68 for Abigail
-                            this.defaultPortraitY, // e.g., 135 for Abigail
-                            this.portraitWidth,    // e.g., 53 for Abigail (this is the CROP width)
-                            this.portraitHeight    // e.g., 57 for Abigail (this is the CROP height)
+                            this.defaultPortraitX, 
+                            this.defaultPortraitY, 
+                            this.portraitWidth,     
+                            this.portraitHeight     
                         );
-                        // The dialoguePortraitImage is now the correctly cropped image.
-                        // The NPC's this.portraitWidth and this.portraitHeight fields (e.g., 53, 57)
-                        // correctly define the dimensions of this cropped image.
-                        // GamePanel will use these dimensions (53x57) for drawing.
                     } catch (Exception e) {
                         System.err.println("Gagal memotong potret dialog dari spritesheet potret khusus untuk NPC: " + this.name +
                                            " (Path: " + this.dialoguePortraitPath + 
                                            ", X:" + this.defaultPortraitX + ", Y:" + this.defaultPortraitY +
                                            ", W:" + this.portraitWidth + ", H:" + this.portraitHeight +
                                            "): " + e.getMessage());
-                        this.dialoguePortraitImage = null; // Fallback to null if cropping fails
+                        this.dialoguePortraitImage = null;
                     }
                 } else {
                     System.err.println("Gagal memuat spritesheet potret dialog khusus (dari dialoguePortraitPath): " + this.name + " dari path: " + this.dialoguePortraitPath);
@@ -166,8 +138,6 @@ public abstract class NPC {
             } else {
                 System.err.println("Tidak ada dialoguePortraitPath yang disediakan untuk NPC: " + this.name + ". Potret dialog akan null.");
                 this.dialoguePortraitImage = null;
-                // If you wanted the old behavior of trying to crop from the main character animation sheet as a last resort:
-                // fallbackToSpritesheetPortrait(); // <<< This is likely not desired anymore.
             }
         } catch (IOException e) {
             System.err.println("Error I/O saat memuat spritesheet potret dialog (dari dialoguePortraitPath) untuk NPC " + this.name + " (" + this.dialoguePortraitPath + "): " + e.getMessage());
@@ -180,30 +150,6 @@ public abstract class NPC {
             this.dialoguePortraitImage = null;
         }
     }
-
-    // private void fallbackToSpritesheetPortrait() { 
-    //     // This method is now potentially confusing or deprecated if dialoguePortraitPath is the primary source for portrait sheets.
-    //     // It attempts to crop from this.fullSpritesheet (character animation sheet)
-    //     // using coordinates that are likely intended for a different portrait-specific spritesheet.
-    //     System.err.println("PERINGATAN: fallbackToSpritesheetPortrait() dipanggil untuk NPC " + this.name + 
-    //                        ". Ini mencoba memotong potret dari spritesheet animasi karakter utama (" + this.spritesheetPath +
-    //                        ") menggunakan koordinat X:" + this.defaultPortraitX + ", Y:" + this.defaultPortraitY +
-    //                        ", W:" + this.portraitWidth + ", H:" + this.portraitHeight + ". Hasilnya mungkin salah.");
-    //     if (this.fullSpritesheet == null) {
-    //         loadSpritesheet(); // Ensure main character animation spritesheet is loaded
-    //     }
-    //     if (this.fullSpritesheet != null) {
-    //         try {
-    //             this.dialoguePortraitImage = this.fullSpritesheet.getSubimage(defaultPortraitX, defaultPortraitY, portraitWidth, portraitHeight);
-    //         } catch (Exception e) {
-    //             System.err.println("Gagal memotong fallback potret dialog dari spritesheet animasi karakter untuk NPC: " + this.name + ": " + e.getMessage());
-    //             this.dialoguePortraitImage = null; 
-    //         }
-    //     } else {
-    //         System.err.println("Fallback potret dialog (dari spritesheet animasi karakter) gagal total untuk NPC: " + this.name + " karena spritesheet utama ("+ this.spritesheetPath +") juga null.");
-    //         this.dialoguePortraitImage = null; 
-    //     }
-    // }
 
     // Mendapatkan frame sprite default untuk di peta
     public Image getCurrentSpriteFrame() {
@@ -243,19 +189,19 @@ public abstract class NPC {
                 case 0: // Kaki Kiri
                     spriteSheetColPixelX = 1 * spriteWidth;
                     break;
-                case 1: // Diam (posisi tengah)
+                case 1: // Diam
                     spriteSheetColPixelX = 0 * spriteWidth;
                     break;
                 case 2: // Kaki Kanan
                     spriteSheetColPixelX = 3 * spriteWidth;
                     break;
-                case 3: // Diam lagi (kembali ke tengah)
+                case 3: // Diam lagi
                 default: 
                     spriteSheetColPixelX = 0 * spriteWidth;
                     break;
             }
         } else {
-            // NPC diam, gunakan frame idle (kolom 0)
+            // NPC diam, gunakan frame idle 
             spriteSheetColPixelX = 0 * spriteWidth;
         }
         
@@ -268,7 +214,6 @@ public abstract class NPC {
                                ", Xpx: " + spriteSheetColPixelX + ", Ypx: " + spriteSheetRowPixelY +
                                ", W: " + spriteWidth + ", H: " + spriteHeight +
                                ", Sheet: " + fullSpritesheet.getWidth() + "x" + fullSpritesheet.getHeight());
-            // Fallback ke frame default lama jika ada error
             return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
         }
 
@@ -277,24 +222,20 @@ public abstract class NPC {
         } catch (Exception e) {
             System.err.println("NPC " + name + ": Exception saat getSubimage: " + e.getMessage());
             e.printStackTrace();
-            // Fallback ke frame default lama jika ada exception
             return this.fullSpritesheet.getSubimage(defaultSpriteX, defaultSpriteY, spriteWidth, spriteHeight);
         }
     }
 
     // Method untuk update animasi NPC
     public void updateAnimation() {
-        // Force NPC to stay idle
         animationFrame = 0; 
         animationCounter = 0; 
-        isMoving = false; // Ensure isMoving is also false
+        isMoving = false;
     }
 
     // Getter dan Setter untuk animasi
     public void setMoving(boolean moving) {
-        // Force NPC to not be in a moving state
         this.isMoving = false;
-        // Reset animation to idle if it wasn't already
         this.animationFrame = 0;
         this.animationCounter = 0;
     }
@@ -304,7 +245,7 @@ public abstract class NPC {
             this.currentDirection = direction;
             this.animationFrame = 0; 
             this.animationCounter = 0;
-        } else if (!isMoving) { // Jika arah sama tapi berhenti bergerak, reset animasi ke idle
+        } else if (!isMoving) { 
             this.animationFrame = 0;
             this.animationCounter = 0;
         }
@@ -316,24 +257,19 @@ public abstract class NPC {
 
     // Untuk testing, NPC tidak bisa bergerak
     public boolean move(Direction direction) {
-        // Prevent NPC from moving
         this.isMoving = false;
         this.animationFrame = 0;
         this.animationCounter = 0;
-        // Optionally, set a default standing direction if needed, e.g.,
-        // this.currentDirection = Direction.SOUTH; 
-        return false; // Indicate movement failed or was prevented
+        return false;
     }
 
     // Mendapatkan potret default untuk dialog
-    public Image getDefaultPortrait() { // This method now becomes the getter for the dedicated dialogue portrait
+    public Image getDefaultPortrait() { 
         if (this.dialoguePortraitImage == null) {
-            // Attempt to load it if it's null (e.g., after deserialization or if initial load failed or was never called)
-            loadDialoguePortrait(); // This will handle loading dedicated or falling back to spritesheet
+            loadDialoguePortrait();
             
             if (this.dialoguePortraitImage == null) {
                 System.err.println("Potret dialog untuk NPC " + name + " adalah null bahkan setelah upaya pemuatan ulang/fallback.");
-                // Optional: return a truly default placeholder image if even fallback fails
                 return null; 
             }
         }

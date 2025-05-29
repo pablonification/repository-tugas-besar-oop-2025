@@ -8,28 +8,27 @@ import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Player;
 
 public class Perry extends NPC {
-    // Path ke spritesheet
     private static final String PERRY_SPRITESHEET_PATH = "/assets/sprites/npc/perry_tile.png";
-    // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
-    // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
-    private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
-    private static final int DEFAULT_SPRITE_Y = 0;     // Koordinat Y frame di spritesheet
-    private static final int SPRITE_WIDTH = 32;        // Lebar satu frame sprite (tile version)
-    private static final int SPRITE_HEIGHT = 32;       // Tinggi satu frame sprite (tile version)
+    
+    // Untuk sprite di peta
+    private static final int DEFAULT_SPRITE_X = 0;     
+    private static final int DEFAULT_SPRITE_Y = 0;     
+    private static final int SPRITE_WIDTH = 32;        
+    private static final int SPRITE_HEIGHT = 32;       
 
-    // Untuk potret di dialog (misal, potret netral pertama)
-    private static final int DEFAULT_PORTRAIT_X = 64; // Koordinat X potret di spritesheet
-    private static final int DEFAULT_PORTRAIT_Y = 0;   // Koordinat Y potret di spritesheet
-    private static final int PORTRAIT_WIDTH = 65;      // Lebar satu potret
-    private static final int PORTRAIT_HEIGHT = 64;     // Tinggi satu potret
-    private static final String PERRY_PORTRAIT_PATH = "/assets/portraits/npc/perry.png"; // Path for dedicated portrait
+    // Untuk potret di dialog 
+    private static final int DEFAULT_PORTRAIT_X = 64; 
+    private static final int DEFAULT_PORTRAIT_Y = 0;   
+    private static final int PORTRAIT_WIDTH = 65;      
+    private static final int PORTRAIT_HEIGHT = 64;     
+    private static final String PERRY_PORTRAIT_PATH = "/assets/portraits/npc/perry.png"; 
 
     public Perry() {
         super("Perry", LocationType.PERRY_HOME, true,
         PERRY_SPRITESHEET_PATH,
         DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
         DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,
-        PERRY_PORTRAIT_PATH); // Pass the new portrait path
+        PERRY_PORTRAIT_PATH);
         this.lovedItems.addAll(Arrays.asList("Cranberry", "Blueberry"));
         this.likedItems.add("Wine");
     }
@@ -62,7 +61,7 @@ public class Perry extends NPC {
         if (item == null || item.getName() == null) {
             return "...Apa ini?";
         }
-        int preference = checkGiftPreference(item); // Perry has custom logic (hates all fish)
+        int preference = checkGiftPreference(item); // Perry has custom logic
         String playerName = (player != null) ? player.getName() : "...";
 
         if (preference == 25) { // Loved
@@ -71,7 +70,7 @@ public class Perry extends NPC {
         if (preference == 20) { // Liked
             return "Oh, " + item.getName() + ". Lumayan. Terima kasih, " + playerName + ".";
         }
-        if (preference == -25) { // Hated (e.g., Fish for Perry)
+        if (preference == -25) { // Hated
             return "Ugh, " + item.getName() + "... Aku tidak suka ini, " + playerName + ". Tolong jauhkan.";
         }
         // Neutral

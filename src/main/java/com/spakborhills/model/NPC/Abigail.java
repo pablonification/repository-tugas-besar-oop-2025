@@ -7,20 +7,19 @@ import com.spakborhills.model.Player;
 import com.spakborhills.model.Item.Item;
 
 public class Abigail extends NPC {
+    // Untuk sprite di peta
     private static final String ABIGAIL_SPRITESHEET_PATH = "/assets/sprites/npc/abigail_tile.png";
-    // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
-    // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
-    private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
-    private static final int DEFAULT_SPRITE_Y = 0;     // Koordinat Y frame di spritesheet
-    private static final int SPRITE_WIDTH = 32;        // Lebar satu frame sprite (tile version)
-    private static final int SPRITE_HEIGHT = 32;       // Tinggi satu frame sprite (tile version)
+    private static final int DEFAULT_SPRITE_X = 0;    
+    private static final int DEFAULT_SPRITE_Y = 0;    
+    private static final int SPRITE_WIDTH = 32;       
+    private static final int SPRITE_HEIGHT = 32;       
 
-    // Untuk potret di dialog (misal, potret netral pertama)
-    private static final int DEFAULT_PORTRAIT_X = 68; // Koordinat X potret di spritesheet
-    private static final int DEFAULT_PORTRAIT_Y = 135;   // Koordinat Y potret di spritesheet
-    private static final int PORTRAIT_WIDTH = 53;      // Lebar satu potret
-    private static final int PORTRAIT_HEIGHT = 57;     // Tinggi satu potret
-    private static final String ABIGAIL_PORTRAIT_PATH = "/assets/portraits/npc/abigail.png"; // Path for dedicated portrait
+    // Untuk potret di dialog
+    private static final int DEFAULT_PORTRAIT_X = 68; 
+    private static final int DEFAULT_PORTRAIT_Y = 135;   
+    private static final int PORTRAIT_WIDTH = 53;     
+    private static final int PORTRAIT_HEIGHT = 57;     
+    private static final String ABIGAIL_PORTRAIT_PATH = "/assets/portraits/npc/abigail.png"; 
     
     public Abigail() {
         super("Abigail",
@@ -29,7 +28,7 @@ public class Abigail extends NPC {
               ABIGAIL_SPRITESHEET_PATH,
               DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
               DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,
-              ABIGAIL_PORTRAIT_PATH); // Pass the new portrait path
+              ABIGAIL_PORTRAIT_PATH);
 
         this.lovedItems.addAll(Arrays.asList("Blueberry", "Melon", "Pumpkin", "Grape", "Cranberry"));
         this.likedItems.addAll(Arrays.asList("Baguette", "Pumpkin Pie", "Wine"));

@@ -1,8 +1,7 @@
 package com.spakborhills.view;
 
-// import com.spakborhills.model.Map.FarmMap; // No longer needed directly
-import com.spakborhills.model.Farm; // Import Farm
-import com.spakborhills.controller.GameController; // Import GameController
+import com.spakborhills.model.Farm; 
+import com.spakborhills.controller.GameController; 
 import com.spakborhills.model.Player;
 import com.spakborhills.model.Map.FarmMap;
 import com.spakborhills.model.Map.WorldMap;
@@ -15,18 +14,17 @@ import com.spakborhills.model.Util.Recipe;
 import com.spakborhills.model.Util.ShippingBin;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Enum.Gender;
-import com.spakborhills.Main; // Required for setup methods
-import com.spakborhills.util.SaveLoadManager; // Import SaveLoadManager
-import com.spakborhills.data.SaveData; // Import SaveData
-import com.spakborhills.model.Object.House; // Corrected import for House
+import com.spakborhills.Main; 
+import com.spakborhills.util.SaveLoadManager; 
+import com.spakborhills.data.SaveData; 
+import com.spakborhills.model.Object.House; 
 
 import javax.swing.*;
-import java.awt.*; // Import full AWT package for GraphicsDevice and GraphicsEnvironment
+import java.awt.*; 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.text.SimpleDateFormat;
-// import javax.swing.border.EmptyBorder;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import java.util.Collections;
@@ -36,9 +34,9 @@ public class GameFrame extends JFrame {
     private MainMenuPanel mainMenuPanel;
     private GamePanel gamePanel;
     private GameController gameController;
-    private Farm farm; // Store the farm instance
+    private Farm farm; 
     private CardLayout cardLayout;
-    private JPanel mainPanelContainer; // Panel to hold mainMenuPanel and gamePanel
+    private JPanel mainPanelContainer; 
 
     private static final String MAIN_MENU_PANEL_KEY = "MainMenu";
     private static final String GAME_PANEL_KEY = "GamePanel";
@@ -55,11 +53,8 @@ public class GameFrame extends JFrame {
         mainMenuPanel = new MainMenuPanel(this);
         mainPanelContainer.add(mainMenuPanel, MAIN_MENU_PANEL_KEY);
 
-        // Initialize GamePanel here with nulls for now, primarily for its music system.
-        // It will be replaced with a fully initialized one when the game starts.
         gamePanel = new GamePanel(null, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
         mainPanelContainer.add(gamePanel, GAME_PANEL_KEY); 
-        // Note: GameController will be set later when it's created.
 
         add(mainPanelContainer);
 
@@ -81,50 +76,37 @@ public class GameFrame extends JFrame {
     }
 
     private void fallbackToWindowedMode() {
-        setUndecorated(false); // Show decorations if not full screen
+        setUndecorated(false); 
         pack();
-        setSize(1280, 720); // Default window size
+        setSize(1280, 720);
         setLocationRelativeTo(null);
         setVisible(true);
     }
 
         // Di dalam GameFrame, sebelum membuat GamePanel
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        // Atau lebih baik, gunakan bounds yang memperhitungkan taskbar:
-        // Rectangle usableScreenBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-        // int screenHeight = usableScreenBounds.height;
-        // int screenWidth = usableScreenBounds.width;
-        int screenHeight = screenSize.height; // Contoh sederhana
+        int screenHeight = screenSize.height;
     
         // Target persentase tinggi layar untuk jendela game
-        double targetHeightRatio = 0.85; // Misal, gunakan 85% tinggi layar
+        double targetHeightRatio = 0.85; 
         int targetWindowHeight = (int) (screenHeight * targetHeightRatio);
     
-        // Nilai referensi dari desain Anda
-        int originalViewportTilesHeight = 10; // VIEWPORT_HEIGHT_IN_TILES
-        double originalInfoPanelHeightToTileRatio = 100.0 / 96.0; // Rasio INFO_PANEL_HEIGHT terhadap TILE_SIZE asli
+        // Nilai referensi dari desain
+        int originalViewportTilesHeight = 10; 
+        double originalInfoPanelHeightToTileRatio = 100.0 / 96.0; 
     
-        // 1. Lakukan kalkulasi awal dan simpan ke variabel sementara
+        // Lakukan kalkulasi awal
         int calculatedTileSize = (int) (targetWindowHeight / (originalViewportTilesHeight + originalInfoPanelHeightToTileRatio));
     
-        // 2. Batasi (clamp) hasil kalkulasi tersebut ke dalam rentang yang diinginkan (misal, 32px hingga 128px)
+        // Batasi (clamp) hasil kalkulasi tersebut ke dalam suatu rentang
         int dynamicTileSize = Math.max(32, Math.min(calculatedTileSize, 128));
     
-        // Sekarang Anda memiliki nilai `dynamicTileSize` yang sudah final dan aman untuk digunakan.
         int dynamicInfoPanelHeight = (int) (originalInfoPanelHeightToTileRatio * dynamicTileSize);
     
-        // Saat membuat GamePanel, teruskan nilai dinamis yang sudah aman ini:
-        // GamePanel gamePanel = new GamePanel(farmModel, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
-    
-        // Saat membuat GamePanel, teruskan nilai dinamis ini:
-        // GamePanel gamePanel = new GamePanel(farmModel, gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
-
     public void showMainMenu() {
         cardLayout.show(mainPanelContainer, MAIN_MENU_PANEL_KEY);
         mainMenuPanel.requestFocusInWindow();
 
-        // If GamePanel exists (e.g., returning to main menu from game),
-        // tell it to play the menu music and stop any in-game music.
         if (gamePanel != null) {
             System.out.println("GameFrame.showMainMenu: Requesting GamePanel to play menu music.");
             gamePanel.playMenuMusic(); 
@@ -150,15 +132,15 @@ public class GameFrame extends JFrame {
                 break;
             case MainMenuPanel.HELP:
                 displayHelp();
-                mainMenuPanel.requestFocusInWindow(); // Return focus
+                mainMenuPanel.requestFocusInWindow(); 
                 break;
             case MainMenuPanel.CREDITS:
                 displayCredits();
-                mainMenuPanel.requestFocusInWindow(); // Return focus
+                mainMenuPanel.requestFocusInWindow(); 
                 break;
             case MainMenuPanel.MANAGE_SAVES:
                 manageSaves();
-                mainMenuPanel.requestFocusInWindow(); // Return focus
+                mainMenuPanel.requestFocusInWindow(); 
                 break;
             case MainMenuPanel.EXIT:
                 System.exit(0);
@@ -179,7 +161,7 @@ public class GameFrame extends JFrame {
             return;
         }
         
-        // Create a JComboBox dropdown with save files
+        // Buat JComboBox dropdown dari save files
         JComboBox<SaveLoadManager.SaveSlot> saveComboBox = new JComboBox<>();
         DefaultComboBoxModel<SaveLoadManager.SaveSlot> comboModel = new DefaultComboBoxModel<>();
         
@@ -208,7 +190,7 @@ public class GameFrame extends JFrame {
             }
         });
         
-        // Create a panel for the dialog
+        // Panel buat dialog
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         panel.add(new JLabel("Select a save file to load:"), BorderLayout.NORTH);
@@ -239,8 +221,6 @@ public class GameFrame extends JFrame {
         SaveData saveData = saveLoadManager.loadGame(selectedSave.getFileName());
 
         if (saveData != null) {
-            // Initialize game components first, similar to new game but without player/farm input
-            // Many of these will be overwritten by save data, but essential structures need to be in place
             Map<String, Item> itemRegistry = Main.setupItemRegistry();
             if (itemRegistry == null || itemRegistry.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Error: Item Registry setup failed! Cannot load game.", "Load Error", JOptionPane.ERROR_MESSAGE);
@@ -248,18 +228,15 @@ public class GameFrame extends JFrame {
                 return;
             }
 
-            FarmMap farmMap = new FarmMap(false); // For loading game, do not initialize default objects
-            GameTime gameTime = new GameTime(); // Will be set by save data
-            ShippingBin shippingBin = new ShippingBin(); // State might be part of Farm or Player
-            Store store = new Store(); // Potentially needs to be part of save if its stock changes
-            WorldMap worldMap = new WorldMap("Spakbor Hills World", store); // Maps are defined, player's current map will be set
-            List<NPC> npcList = Main.setupNPCs(); // NPC states might need loading if they change
+            FarmMap farmMap = new FarmMap(false); 
+            GameTime gameTime = new GameTime(); 
+            ShippingBin shippingBin = new ShippingBin(); 
+            Store store = new Store(); 
+            WorldMap worldMap = new WorldMap("Spakbor Hills World", store);
+            List<NPC> npcList = Main.setupNPCs(); 
             List<Recipe> recipeList = Main.setupRecipes();
             PriceList priceList = Main.setupPriceList();
             
-            // Player needs to be created, then its state will be loaded.
-            // Provide placeholder values, they will be overwritten by applySaveDataToGame.
-            // The spritesheet path and dimensions should ideally be consistent or stored too.
             String playerSpritesheetPath = "/assets/sprites/player/main_char.png"; 
             int playerSpriteWidth = 16;
             int playerSpriteHeight = 32;
@@ -268,18 +245,12 @@ public class GameFrame extends JFrame {
                                        itemRegistry, playerSpritesheetPath, playerSpriteWidth, playerSpriteHeight);
             EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), player);
 
-
-            // Initialize Farm with these components
-            // Create a default House object to pass to the Farm constructor
-            House playerHouse = new House(); // Assuming a default constructor for House
+            House playerHouse = new House(); 
             this.farm = new Farm("Loading Farm...", player, farmMap, worldMap, store, npcList, recipeList, 
                                  gameTime, shippingBin, statistics, priceList, itemRegistry, playerHouse);
             
-            // Apply the loaded save data
-            // The SaveLoadManager needs the Farm instance to access ItemRegistry and other components.
             saveLoadManager.applySaveDataToGame(saveData, this.farm, this.farm.getPlayer(), this.farm.getCurrentTime());
             
-            // Now that farm and player are populated from save data, create GameController
             this.gameController = new GameController(this.farm);
 
             // Setup GamePanel
@@ -295,11 +266,10 @@ public class GameFrame extends JFrame {
             }
 
             if (gamePanel != null) {
-                gamePanel.startGame(); // This sets GameState to IN_GAME and starts timers
+                gamePanel.startGame(); 
             }
             showGamePanel();
             
-            // After successfully loading and applying, ensure the player spawns safely
             if (this.gameController != null && this.farm.getPlayer().getCurrentMap() != null) {
                 this.gameController.ensureSafePlayerSpawn();
             }
@@ -344,14 +314,12 @@ public class GameFrame extends JFrame {
             farmName = playerName + "'s Farm";
         }
         
-        // Get the item registry to populate favorite item options
         Map<String, Item> itemRegistry = Main.setupItemRegistry();
         if (itemRegistry == null || itemRegistry.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Error: Item Registry setup failed! Cannot start game.", "Initialization Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
-        // Create a list of items to choose from as favorite
         List<String> favoriteItemOptions = new ArrayList<>();
         
         favoriteItemOptions.add("Parsnip Seeds");
@@ -432,17 +400,10 @@ public class GameFrame extends JFrame {
         favoriteItemOptions.add("Proposal Ring");
         favoriteItemOptions.add("Koran");
         
-        // Furnitures (Bonus)
-        // favoriteItemOptions.add("Single Bed");
-        // favoriteItemOptions.add("Queen Bed");
-        // favoriteItemOptions.add("King Bed");
-        // favoriteItemOptions.add("Stove");
-        // favoriteItemOptions.add("Television (TV)");
-        
-        // Sort the options alphabetically for easier selection
+        // Sorting
         Collections.sort(favoriteItemOptions);
         
-        // Show dialog to select favorite item
+        // Show dialog
         String favoriteItemName = (String) JOptionPane.showInputDialog(
                 this,
                 "Choose your favorite item:",
@@ -459,28 +420,25 @@ public class GameFrame extends JFrame {
 
         initializeGame(playerName, playerGender, farmName, favoriteItemName);
         if (this.farm != null && this.gameController != null) {
-            // Remove the old "headless" gamePanel if it exists from the container
-            if (this.gamePanel != null) { // gamePanel here is the one from the constructor
-                this.gamePanel.stopMusic(); // Stop music on the old panel
+            if (this.gamePanel != null) { 
+                this.gamePanel.stopMusic(); 
                 mainPanelContainer.remove(this.gamePanel);
             }
-            // Create and add the new GamePanel with proper Farm and GameController
+
             gamePanel = new GamePanel(this.farm, this.gameController, this, dynamicTileSize, dynamicInfoPanelHeight);
             mainPanelContainer.add(gamePanel, GAME_PANEL_KEY);
             
-            if (this.gameController != null) { // gameController should be non-null here
+            if (this.gameController != null) { 
                 this.gameController.setGamePanel(gamePanel);
             }
             
-            // GamePanel is created and its dependencies are set.
-            // Now, tell GamePanel to start the game logic (sets its state to IN_GAME, starts timers etc.)
-            if (gamePanel != null) { // Ensure gamePanel is not null before calling startGame
+            if (gamePanel != null) { 
                 gamePanel.startGame(); 
             }
-            showGamePanel(); // Then, make the GamePanel visible via CardLayout
+            showGamePanel();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to initialize game components.", "Error", JOptionPane.ERROR_MESSAGE);
-            showMainMenu(); // Go back to main menu
+            showMainMenu(); 
         }
     }
 
@@ -492,7 +450,7 @@ public class GameFrame extends JFrame {
             return;
         }
 
-        FarmMap farmMap = new FarmMap(); // For new game, initialize with default objects (true by default)
+        FarmMap farmMap = new FarmMap();
         GameTime gameTime = new GameTime();
         ShippingBin shippingBin = new ShippingBin();
         Store store = new Store();
@@ -508,13 +466,13 @@ public class GameFrame extends JFrame {
         Player newPlayer = new Player(playerName, playerGender, farmName, farmMap, 5, 5,
                                    itemRegistry, playerSpritesheetPath,
                                    playerSpriteWidth, playerSpriteHeight);
-        // Set the player's favorite item
+        
         newPlayer.setFavoriteItemName(favoriteItemName);
         
         EndGameStatistics statistics = new EndGameStatistics(new ArrayList<>(), newPlayer);
 
-        // Create a default House object to pass to the Farm constructor
-        House newPlayerHouse = new House(); // Assuming a default constructor for House
+        
+        House newPlayerHouse = new House(); 
         this.farm = new Farm(
             farmName, newPlayer, farmMap, worldMap, store,
             npcList, recipeList, gameTime, shippingBin, statistics, priceList,
@@ -522,7 +480,7 @@ public class GameFrame extends JFrame {
         );
 
         this.gameController = new GameController(this.farm);
-        // The GamePanel will be created and set to controller in promptForPlayerAndFarmInfoAndStartGame after farm and controller are ready
+        
     }
 
     private void displayHelp() {
@@ -574,10 +532,8 @@ public class GameFrame extends JFrame {
             return;
         }
         
-        // Create a dialog to let the user manage save files
         boolean keepManaging = true;
         while (keepManaging) {
-            // Create a JComboBox dropdown with save files
             JComboBox<SaveLoadManager.SaveSlot> saveComboBox = new JComboBox<>();
             DefaultComboBoxModel<SaveLoadManager.SaveSlot> comboModel = new DefaultComboBoxModel<>();
             
@@ -606,13 +562,11 @@ public class GameFrame extends JFrame {
                 }
             });
             
-            // Create a panel for the dialog
             JPanel panel = new JPanel(new BorderLayout(10, 10));
             panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
             panel.add(new JLabel("Select a save file to manage:"), BorderLayout.NORTH);
             panel.add(saveComboBox, BorderLayout.CENTER);
             
-            // Show the dialog
             int result = JOptionPane.showConfirmDialog(
                 this, 
                 panel, 
@@ -622,13 +576,13 @@ public class GameFrame extends JFrame {
             );
             
             if (result != JOptionPane.OK_OPTION) {
-                // User cancelled or closed dialog
+                // User cancelled atau closed dialog
                 keepManaging = false;
             } else {
                 SaveLoadManager.SaveSlot selectedSave = (SaveLoadManager.SaveSlot) saveComboBox.getSelectedItem();
                 
                 if (selectedSave != null) {
-                    // Only show delete option
+                    // Tampilkan opsi untuk menghapus save
                     String[] options = {"Delete", "Cancel"};
                     int action = JOptionPane.showOptionDialog(
                         this,
@@ -643,7 +597,7 @@ public class GameFrame extends JFrame {
                         JOptionPane.WARNING_MESSAGE,
                         null,
                         options,
-                        options[1] // Default to Cancel
+                        options[1] // Default Cancel
                     );
                     
                     if (action == 0) { // Delete
@@ -663,7 +617,6 @@ public class GameFrame extends JFrame {
                                     "Delete Save",
                                     JOptionPane.INFORMATION_MESSAGE
                                 );
-                                // Refresh the list of saves
                                 saveSlots = saveLoadManager.getSaveSlots();
                                 if (saveSlots.isEmpty()) {
                                     JOptionPane.showMessageDialog(this, "No more save files available.", "Manage Saves", JOptionPane.INFORMATION_MESSAGE);
@@ -678,7 +631,7 @@ public class GameFrame extends JFrame {
                             }
                         }
                     } else {
-                        // Cancel or dialog closed
+                        // Cancel atau dialog closed
                         keepManaging = false;
                     }
                 } else {

@@ -1,12 +1,10 @@
 package com.spakborhills.model;
 
-// import com.spakborhills.model.Enum.LocationType;
 import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
 import com.spakborhills.model.Object.DeployedObject; 
-// import com.spakborhills.model.Player;
 import com.spakborhills.model.Util.PriceList; 
 
 import java.awt.Dimension;
@@ -27,7 +25,7 @@ public class Store implements MapArea{
     private final List<String> itemNamesForSale;
     private final List<Point> entryPoints;
 
-    private static final int STORE_WIDTH = 10; // ini adjust aja nanti
+    private static final int STORE_WIDTH = 10;
     private static final int STORE_HEIGHT = 8;
 
     /**
@@ -43,8 +41,6 @@ public class Store implements MapArea{
                 tiles[y][x] = new Tile(TileType.GRASS);
             }
         }
-        // Tambahkan objek internal seperti konter, rak, dll. jika perlu
-        // placeObject(new CounterObject(), 3, 2);
 
         defineEntryPoints();
         this.itemNamesForSale = new ArrayList<>();
@@ -79,7 +75,7 @@ public class Store implements MapArea{
         itemNamesForSale.add("Parsnip Seeds");
         itemNamesForSale.add("Cauliflower Seeds");
         itemNamesForSale.add("Potato Seeds");
-        itemNamesForSale.add("Wheat Seeds"); // Spring & Fall
+        itemNamesForSale.add("Wheat Seeds"); 
         itemNamesForSale.add("Blueberry Seeds");
         itemNamesForSale.add("Tomato Seeds");
         itemNamesForSale.add("Hot Pepper Seeds");
@@ -98,7 +94,6 @@ public class Store implements MapArea{
         itemNamesForSale.add("Fish Stew");
         itemNamesForSale.add("Fish Sandwich");
         itemNamesForSale.add("Cooked Pig's Head");
-        // Item Food seperti Fugu, Spakbor Salad, The Legends of Spakbor memiliki harga beli '-' (tidak dijual)
 
         // Crops yang bisa dibeli (Spesifikasi Items Halaman 19)
         itemNamesForSale.add("Parsnip");
@@ -136,13 +131,13 @@ public class Store implements MapArea{
         }
         List<Item> availableItems = new ArrayList<>();
         for (String itemName : itemNamesForSale) {
-            Item masterItem = itemRegistry.get(itemName); // Dapatkan template item dari registry
+            Item masterItem = itemRegistry.get(itemName);
             if (masterItem != null) {
                 // Dapatkan harga beli aktual dari PriceList
                 int actualBuyPrice = priceList.getBuyPrice(itemName);
 
                 // Jika item tidak ada di PriceList, anggap tidak dijual
-                if (actualBuyPrice < 0) { // Harga -1 berarti tidak ditemukan di PriceList
+                if (actualBuyPrice < 0) {
                     System.err.println("Peringatan: Harga beli untuk '" + itemName + "' tidak ditemukan di PriceList. Item tidak ditampilkan.");
                     continue;
                 }
@@ -181,7 +176,7 @@ public class Store implements MapArea{
         // 2. Dapatkan harga beli aktual dari PriceList
         int singleActualBuyPrice = priceList.getBuyPrice(itemToBuy.getName());
 
-        if (singleActualBuyPrice < 0) { // Harga -1 berarti tidak ada di PriceList
+        if (singleActualBuyPrice < 0) { 
             System.out.println("Maaf, harga untuk " + itemToBuy.getName() + " tidak tersedia.");
             return false;
         }
@@ -195,20 +190,16 @@ public class Store implements MapArea{
 
         // 3. Cek apakah pemain punya cukup gold
         if (!player.spendGold(totalCost)) {
-            // Pesan "Gold tidak cukup" sudah dari player.spendGold()
             return false;
         }
 
         // 4. Tambahkan item ke inventory pemain
-        // Penting: Ambil item master dari registry untuk ditambahkan,
-        // jangan tambahkan itemToBuy langsung jika itu adalah salinan/objek sementara.
         Item masterItem = itemRegistry.get(itemToBuy.getName());
         if (masterItem != null) {
             player.getInventory().addItem(masterItem, quantity);
             System.out.println("Kamu membeli " + quantity + " " + masterItem.getName() + " seharga " + totalCost + "g.");
             return true;
         } else {
-            // Seharusnya tidak terjadi jika item ada di itemNamesForSale dan getAvailableItemsForDisplay
             System.err.println("Kesalahan internal: Item master '" + itemToBuy.getName() + "' tidak ditemukan di registry saat transaksi.");
             // Kembalikan gold pemain karena transaksi gagal di tahap akhir
             player.addGold(totalCost);
@@ -246,7 +237,6 @@ public class Store implements MapArea{
     public boolean placeObject(DeployedObject obj, int x, int y) {
         if (obj == null) return false;
         if (isAreaAvailableInternal(x, y, obj.getWidth(), obj.getHeight())) {
-            // this.internalObjects.put(new Point(x,y), obj); // Jika pakai map objek internal
             for (int i = 0; i < obj.getHeight(); i++) {
                 for (int j = 0; j < obj.getWidth(); j++) {
                     Tile currentTile = getTile(x + j, y + i);
@@ -255,7 +245,6 @@ public class Store implements MapArea{
                     }
                 }
             }
-            // System.out.println(obj.getName() + " ditempatkan di dalam toko pada (" + x + "," + y + ").");
             return true;
         }
         System.err.println("Tidak bisa menempatkan " + obj.getName() + " di dalam toko: area tidak tersedia.");

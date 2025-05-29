@@ -93,15 +93,11 @@ public class ItemFactory {
      * @return A new Fish item
      */
     public static Fish createFish(String name, int sellPrice, FishRarity rarity, int energyRestore) {
-        // Fish constructor requires more parameters, but this method seems to be using a simpler constructor
-        // Since we don't have a simpler constructor in Fish.java, we need to create minimal valid parameters
         List<Fish.TimeRange> timeRanges = new ArrayList<>();
-        timeRanges.add(new Fish.TimeRange(0, 23)); // All day
-        
+        timeRanges.add(new Fish.TimeRange(0, 23)); 
         Fish fish = new Fish(name, rarity, Set.of(Season.ANY), timeRanges, Set.of(com.spakborhills.model.Enum.Weather.ANY), 
                             Set.of(com.spakborhills.model.Enum.LocationType.OCEAN));
         
-        // The Fish class already has a BASE_ENERGY_RESTORE constant, so we don't need to set it
         return fish;
     }
     
@@ -113,7 +109,7 @@ public class ItemFactory {
      * @return A new Equipment item
      */
     public static Equipment createEquipment(String name, int sellPrice) {
-        return new Equipment(name, name); // Using name as toolType since that's what Equipment constructor requires
+        return new Equipment(name, name); 
     }
     
     /**

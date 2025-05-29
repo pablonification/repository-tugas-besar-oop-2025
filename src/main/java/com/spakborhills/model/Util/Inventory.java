@@ -1,14 +1,3 @@
-/*
- *   class Inventory {
-    - items: Map<Item, Integer>
-    + addItem(item: Item, qty: int): void
-    + removeItem(item: Item, qty: int): boolean
-    + getItemCount(item: Item): int
-    + hasItem(item: Item, qty: int): boolean
-    + getItems(): Map<Item, Integer>
-  }
- */
-
 package com.spakborhills.model.Util;
 
 import java.util.Map;
@@ -46,16 +35,16 @@ public class Inventory {
       if(item == null || quantity <= 0){
         return;
       }
-      long currentQuantity = items.getOrDefault(item, 0); // Get as int, then cast for sum
+      long currentQuantity = items.getOrDefault(item, 0); 
       long newQuantityLong = currentQuantity + quantity;
       
       int finalQuantity;
       if (newQuantityLong > Integer.MAX_VALUE) {
         finalQuantity = Integer.MAX_VALUE;
-      } else if (newQuantityLong < 0 && quantity > 0 && currentQuantity >=0 ) { // Check for overflow to negative specifically
+      } else if (newQuantityLong < 0 && quantity > 0 && currentQuantity >=0 ) { 
         finalQuantity = Integer.MAX_VALUE; 
-      } else if (newQuantityLong < 0) { // If it's still negative (e.g. current was already negative due to bad data, or quantity was huge negative)
-        finalQuantity = 0; // Cap at 0 if it becomes negative by other means (should ideally not happen)
+      } else if (newQuantityLong < 0) { 
+        finalQuantity = 0; 
       }else {
         finalQuantity = (int)newQuantityLong;
       }
@@ -71,7 +60,6 @@ public class Inventory {
      */
     public boolean removeItem(Item item, int quantity){
       if(item == null || quantity <= 0){
-        // throw new IllegalArgumentException("Item atau kuantitas tidak valid");
         return false;
       }
       
@@ -97,7 +85,6 @@ public class Inventory {
      */
     public boolean hasItem(Item item, int quantity){
       if(item == null || quantity <= 0){
-        // throw new IllegalArgumentException("Item atau kuantitas tidak valid");
         return false;
       } 
       return this.items.getOrDefault(item, 0) >= quantity;
@@ -111,7 +98,6 @@ public class Inventory {
      */
     public int getItemCount(Item item){
       if(item == null){
-        // throw new IllegalArgumentException("Item tidak valid");
         return 0;
       }
       return this.items.getOrDefault(item, 0);
@@ -126,7 +112,6 @@ public class Inventory {
      */
     public boolean hasTool(String toolType){
       if(toolType == null){
-        // throw new IllegalArgumentException("Tipe alat tidak valid");
         return false;
       }
       for (Item item : this.items.keySet()){
@@ -149,7 +134,7 @@ public class Inventory {
       return Collections.unmodifiableMap(this.items);
     }
 
-    public void clear() { // Added for loading save data
+    public void clear() { 
         this.items.clear();
     }
 

@@ -1,10 +1,9 @@
 package com.spakborhills.model.Map;
 
 import com.spakborhills.model.Enum.LocationType;
-import com.spakborhills.model.Enum.TileType; // Untuk tile default
-import com.spakborhills.model.Object.DeployedObject; // Jika ada objek di world map
+import com.spakborhills.model.Enum.TileType; 
+import com.spakborhills.model.Object.DeployedObject;
 import com.spakborhills.model.Store; 
-// import com.spakborhills.model.NPC.*; // Import all NPC classes
 
 import java.awt.Dimension;
 import java.awt.Point;
@@ -27,9 +26,9 @@ public class WorldMap implements MapArea {
     private static final int GENERIC_WIDTH = 20; 
     private static final int GENERIC_HEIGHT = 20;
     private final List<Point> entryPoints;
-    private boolean isParentMap = true; // Flag to prevent infinite recursion
-    private static final int NPC_HOME_WIDTH = 10; // Example size for NPC homes
-    private static final int NPC_HOME_HEIGHT = 10; // Example size for NPC homes
+    private boolean isParentMap = true; 
+    private static final int NPC_HOME_WIDTH = 10; 
+    private static final int NPC_HOME_HEIGHT = 10;
 
     /**
      * Konstruktor untuk WorldMap.
@@ -52,7 +51,7 @@ public class WorldMap implements MapArea {
         this.entryPoints = new ArrayList<>();
         this.isParentMap = isParentMap;
 
-        if (isParentMap) { // Only parent WorldMap creates all sub-locations
+        if (isParentMap) {
         if (storeInstance != null) {
             this.subLocations.put(LocationType.STORE, storeInstance);
             }
@@ -66,26 +65,21 @@ public class WorldMap implements MapArea {
             this.subLocations.put(LocationType.PERRY_HOME, createPerryHomeMap());
             this.subLocations.put(LocationType.DASCO_HOME, createDascoHomeMap());
             this.subLocations.put(LocationType.ABIGAIL_HOME, createAbigailHomeMap());
-            // Emily is in the STORE, handled by storeInstance if provided.
+           
         }
-        // Tambahkan MapArea lain jika ada (misal, peta khusus untuk Hutan, Danau)
-        // this.subLocations.put(LocationType.FOREST_RIVER, new ForestRiverMap());
 
         // Inisialisasi genericTiles untuk area yang tidak punya map detail
         this.genericTiles = new Tile[GENERIC_HEIGHT][GENERIC_WIDTH];
         for (int y = 0; y < GENERIC_HEIGHT; y++) {
             for (int x = 0; x < GENERIC_WIDTH; x++) {
-                genericTiles[y][x] = new Tile(TileType.GRASS); // Default to GRASS for world map areas
+                genericTiles[y][x] = new Tile(TileType.GRASS);
             }
         }
-        defineEntryPoints(); // Define default entry points for the generic world map
+        defineEntryPoints(); 
         System.out.println("WorldMap '" + this.name + "' berhasil dibuat dengan entry points.");
     }
 
     private void defineEntryPoints() {
-        // Define some default entry points on the edges of the generic WorldMap grid
-        // These points, when stepped on, would trigger the world map selection dialog.
-        // Example: Mid-points of each edge
         if (GENERIC_WIDTH > 0 && GENERIC_HEIGHT > 0) {
             // Top edge, middle
             addEntryPoint(new Point(GENERIC_WIDTH / 2, 0));
@@ -96,11 +90,10 @@ public class WorldMap implements MapArea {
             // Right edge, middle
             addEntryPoint(new Point(GENERIC_WIDTH - 1, GENERIC_HEIGHT / 2));
         }
-        // Mark these tiles as ENTRY_POINT type
         for (Point p : this.entryPoints) {
             if (isWithinBounds(p.x, p.y)) {
                 Tile tile = getTile(p.x, p.y);
-                if (tile != null) { // Should not be null if within bounds and initialized
+                if (tile != null) { 
                     tile.setType(TileType.ENTRY_POINT);
             }
         }
@@ -108,7 +101,6 @@ public class WorldMap implements MapArea {
     }
 
     private void addEntryPoint(Point point) {
-        // Check for duplicates and ensure it's within bounds (though defineEntryPoints should ensure this)
         if (!this.entryPoints.contains(point) && isWithinBounds(point.x, point.y)) {
             this.entryPoints.add(point);
         }
@@ -116,7 +108,7 @@ public class WorldMap implements MapArea {
 
     @Override
     public List<Point> getEntryPoints() {
-        return new ArrayList<>(this.entryPoints); // Return a copy
+        return new ArrayList<>(this.entryPoints); 
     }
 
     @Override
@@ -231,11 +223,8 @@ public class WorldMap implements MapArea {
             }
         }
         
-        // Tetapkan entry point di sisi untuk kembali ke farm
         forestMap.entryPoints.clear();
-        // Entry point di sisi kiri tengah
         forestMap.addEntryPoint(new Point(0, GENERIC_HEIGHT / 2));
-        // Entry point di sisi kanan tengah
         forestMap.addEntryPoint(new Point(GENERIC_WIDTH - 1, GENERIC_HEIGHT / 2));
 
         for (Point p : forestMap.entryPoints) {
@@ -259,7 +248,6 @@ public class WorldMap implements MapArea {
     private MapArea createMountainLakeMap() {
         WorldMap lakeMap = new WorldMap("Mountain Lake", null, false);
         
-        // Override genericTiles untuk membuat peta dengan danau
         for (int y = 0; y < GENERIC_HEIGHT; y++) {
             for (int x = 0; x < GENERIC_WIDTH; x++) {
                 // Buat danau di tengah peta (bentuk oval)
@@ -297,7 +285,6 @@ public class WorldMap implements MapArea {
     private MapArea createOceanMap() {
         WorldMap oceanMap = new WorldMap("Ocean", null, false);
         
-        // Override genericTiles untuk membuat peta dengan lautan
         for (int y = 0; y < GENERIC_HEIGHT; y++) {
             for (int x = 0; x < GENERIC_WIDTH; x++) {
                 // Buat daerah pantai (5 kotak dari ujung bawah)
@@ -332,41 +319,36 @@ public class WorldMap implements MapArea {
      * @return MapArea yang merepresentasikan Mayor Tadi's Home
      */
     private MapArea createMayorTadiHomeMap() {
-        WorldMap mayorHome = new WorldMap("Mayor Tadi's Home", null, false); // null for store, false for not parent
-        mayorHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.WOOD_FLOOR); // Example: wood floor
-        // Optionally, place Mayor Tadi NPC object here if we decide to handle it now
-        // DeployedObject mayorDesk = new DeployedObject("Mayor's Desk", 2, 1); // Example
-        // mayorHome.placeObject(mayorDesk, 3, 3); // Example
+        WorldMap mayorHome = new WorldMap("Mayor Tadi's Home", null, false);
+        mayorHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.WOOD_FLOOR); 
         System.out.println("Mayor Tadi's Home map created.");
         return mayorHome;
     }
 
     private MapArea createCarolineHomeMap() {
         WorldMap carolineHome = new WorldMap("Caroline's Home", null, false);
-        carolineHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.STONE_FLOOR); // Example
+        carolineHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.STONE_FLOOR);
         System.out.println("Caroline's Home map created.");
         return carolineHome;
     }
 
     private MapArea createPerryHomeMap() {
         WorldMap perryHome = new WorldMap("Perry's Home", null, false);
-        perryHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.CARPET_FLOOR); // Example
+        perryHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.CARPET_FLOOR); 
         System.out.println("Perry's Home map created.");
         return perryHome;
     }
 
     private MapArea createDascoHomeMap() {
-        // Dasco's home might be the Casino itself, or a private residence.
-        // For now, a simple home. Casino could be a more complex DeployedObject or separate MapArea.
         WorldMap dascoHome = new WorldMap("Dasco's Residence", null, false);
-        dascoHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.LUXURY_FLOOR); // Example
+        dascoHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.LUXURY_FLOOR); 
         System.out.println("Dasco's Residence map created.");
         return dascoHome;
     }
 
     private MapArea createAbigailHomeMap() {
         WorldMap abigailHome = new WorldMap("Abigail's Home", null, false);
-        abigailHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.DIRT_FLOOR); // Example, for an explorer
+        abigailHome.overrideTiles(NPC_HOME_WIDTH, NPC_HOME_HEIGHT, TileType.DIRT_FLOOR); 
         System.out.println("Abigail's Home map created.");
         return abigailHome;
     }
@@ -379,36 +361,18 @@ public class WorldMap implements MapArea {
      * @param defaultType The default TileType for this map.
      */
     private void overrideTiles(int width, int height, TileType defaultType) {
-        // Re-initialize genericTiles with new dimensions and default type
-        // Note: This modifies the 'genericTiles' of *this* WorldMap instance (which is a sub-map)
-        // Tile[][] newTiles = new Tile[height][width]; // This would create a local var, not override the member
-        // Instead, we need to ensure the constructor of these sub-WorldMaps uses these dimensions.
-        // For now, WorldMap sub-maps will use GENERIC_WIDTH/HEIGHT.
-        // To make them truly distinct, they'd need their own tile arrays and size properties.
-        // A simpler approach for now: NPC homes are just named areas, still using the WorldMap's generic grid but conceptually separate.
-        // The 'name' field in WorldMap would distinguish them.
-        // A more robust solution would be a dedicated NPCHomeMap class extending AbstractMapArea.
-
-        // Let's assume for now that the "name" of the WorldMap instance is enough to identify it
-        // and its internal `genericTiles` can be styled. The current structure uses a single GENERIC_WIDTH/HEIGHT.
-        // We'll use the default GENERIC_WIDTH/HEIGHT and just change the tile types.
-        for (int y = 0; y < GENERIC_HEIGHT; y++) { // Still using GENERIC_HEIGHT
-            for (int x = 0; x < GENERIC_WIDTH; x++) { // Still using GENERIC_WIDTH
-                if (x < width && y < height) { // Only fill up to the desired NPC_HOME_WIDTH/HEIGHT
+        for (int y = 0; y < GENERIC_HEIGHT; y++) { 
+            for (int x = 0; x < GENERIC_WIDTH; x++) { 
+                if (x < width && y < height) { 
                     this.genericTiles[y][x] = new Tile(defaultType);
                 } else {
-                    // For tiles outside the NPC home's conceptual boundary but within the generic grid,
-                    // make them inaccessible or visually distinct if needed.
-                    // Or, ensure NPC home dimensions match GENERIC_WIDTH/HEIGHT if they are simple areas.
-                    // For now, they will just be a block of 'defaultType' within the generic grid.
-                    this.genericTiles[y][x] = new Tile(TileType.GRASS); // Fallback for area outside the smaller home
+                    this.genericTiles[y][x] = new Tile(TileType.GRASS); 
                 }
             }
         }
-        // Clear and set specific entry points for this home map
         this.entryPoints.clear();
         if (width > 0 && height > 0) {
-            Point entry = new Point(width / 2, height - 1); // Example: bottom-center edge
+            Point entry = new Point(width / 2, height - 1); 
             addEntryPoint(entry);
              if (isWithinBounds(entry.x, entry.y)) {
                 Tile tile = getTile(entry.x, entry.y);
@@ -433,11 +397,7 @@ public class WorldMap implements MapArea {
             if (subArea.getName().equalsIgnoreCase(name)) {
                 return subArea;
             }
-            // Jika subArea juga adalah WorldMap (misalnya, untuk home map)
-            // kita mungkin perlu rekursi, tapi hati-hati dengan kedalaman dan performa.
-            // Untuk sekarang, kita hanya cek level pertama subLocations.
-            // Jika home map adalah WorldMap sendiri, ini akan dicakup oleh cek this.name di atas.
         }
-        return null; // Tidak ditemukan
+        return null; 
     }
 }

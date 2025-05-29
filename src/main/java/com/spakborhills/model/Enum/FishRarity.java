@@ -1,7 +1,7 @@
 package com.spakborhills.model.Enum;
 
 public enum FishRarity {
-    COMMON(10), // ini adalah C
+    COMMON(10),
     REGULAR(5),
     LEGENDARY(25);
 

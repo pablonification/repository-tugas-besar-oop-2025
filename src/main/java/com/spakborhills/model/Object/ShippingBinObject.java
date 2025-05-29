@@ -13,6 +13,4 @@ public class ShippingBinObject extends DeployedObject {
     public ShippingBinObject() {
         super("Shipping Bin", DEFAULT_BIN_WIDTH, DEFAULT_BIN_HEIGHT);
     }
-
-    // ... implement it later
 }

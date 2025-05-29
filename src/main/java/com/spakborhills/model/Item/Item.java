@@ -1,17 +1,3 @@
-/*
- *   abstract class Item {
-    # name: String
-    # category: ItemCategory
-    # buyPrice: int
-    # sellPrice: int
-    + getName(): String
-    + getCategory(): ItemCategory
-    + getBuyPrice(): int
-    + getSellPrice(): int
-    + {abstract} use(player: Player, target: Object): boolean
-  }
- */
-
 package com.spakborhills.model.Item;
 
 import com.spakborhills.model.Enum.ItemCategory;

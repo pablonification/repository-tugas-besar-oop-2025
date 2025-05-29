@@ -11,16 +11,16 @@ import java.util.Random;
 public class GameTime {
 
     public static final int MINUTES_IN_HOUR = 60;
-    public static final int HOURS_IN_DAY = 24; // 0-23
+    public static final int HOURS_IN_DAY = 24; 
     public static final int DAYS_IN_SEASON = 10; 
-    public static final int START_HOUR = 6; // Game dimulai jam 06:00
+    public static final int START_HOUR = 6; 
     public static final int DAY_START_MINUTE = 0;
-    public static final int NIGHT_START_HOUR = 18; // Malam dimulai jam 18:00 (Halaman 33)
-    public static final int PASS_OUT_HOUR = 2; // Jam 02:00 pagi, pemain otomatis tidur (Halaman 26)
+    public static final int NIGHT_START_HOUR = 18; 
+    public static final int PASS_OUT_HOUR = 2; 
 
-    private int minute; // 0-59
-    private int hour;   // 0-23 (06:00 - 05:59 siklusnya)
-    private int dayOfMonth; // Hari dalam musim (1-10)
+    private int minute; 
+    private int hour;   
+    private int dayOfMonth; 
     private Season currentSeason;
     private Weather currentWeather;
     private int currentYear;
@@ -28,7 +28,7 @@ public class GameTime {
 
     private int rainyDaysThisSeason;
     private final Random randomGenerator;
-    private boolean isPaused; // New field for pausing time
+    private boolean isPaused; 
 
     /**
      * Konstruktor untuk GameTime.
@@ -39,12 +39,12 @@ public class GameTime {
         this.hour = START_HOUR;
         this.dayOfMonth = 1;
         this.currentSeason = Season.SPRING;
-        this.currentWeather = Weather.SUNNY; // Cuaca awal default
+        this.currentWeather = Weather.SUNNY; 
         this.currentYear = 1;
-        this.totalDaysPlayed = 1; // Mulai dari hari pertama
+        this.totalDaysPlayed = 1; 
         this.randomGenerator = new Random();
         this.rainyDaysThisSeason = 0;
-        this.isPaused = false; // Initialize to not paused
+        this.isPaused = false; 
         determineInitialWeather();
         System.out.println("GameTime diinisialisasi: Hari " + dayOfMonth + " " + currentSeason +
                            ", " + String.format("%02d:%02d", hour, minute) + ", Cuaca: " + currentWeather);
@@ -58,21 +58,19 @@ public class GameTime {
     public int getTotalDaysPlayed() { return totalDaysPlayed; } 
     public int getCurrentYear() { return currentYear; }
 
-    public void setDayOfMonth(int dayOfMonth) { // Added for loading
-        if (dayOfMonth >= 1 && dayOfMonth <= DAYS_IN_SEASON) { // Basic validation
+    public void setDayOfMonth(int dayOfMonth) { 
+        if (dayOfMonth >= 1 && dayOfMonth <= DAYS_IN_SEASON) { 
             this.dayOfMonth = dayOfMonth;
         }
     }
 
-    public void setYear(int year) { // Added for loading
-        if (year > 0) { // Basic validation
+    public void setYear(int year) { 
+        if (year > 0) { 
             this.currentYear = year;
         }
     }
 
     private void determineInitialWeather(){
-        // Cuaca awal bisa SUNNY, atau langsung terapkan logika acak
-        // Untuk memastikan hari pertama bisa hujan jika beruntung:
         this.currentWeather = determineNextWeather();
         if (this.currentWeather == Weather.RAINY) {
             this.rainyDaysThisSeason++;
@@ -102,7 +100,6 @@ public class GameTime {
      * @return true jika malam hari, false jika tidak.
      */
     public boolean isNightTime() {
-        // Malam adalah dari jam 18:00 hingga 05:59 keesokan harinya
         return hour >= NIGHT_START_HOUR || hour < START_HOUR;
     }
 
@@ -112,7 +109,7 @@ public class GameTime {
      * @return true jika sudah melewati batas waktu tidur.
      */
     public boolean isPastBedtime() {
-        return hour >= PASS_OUT_HOUR && hour < START_HOUR; // Antara jam 2 pagi sampai sebelum jam 6 pagi
+        return hour >= PASS_OUT_HOUR && hour < START_HOUR; 
     }
 
     // Cheats setter
@@ -135,10 +132,7 @@ public class GameTime {
     public void setSeason(Season newSeason) {
         if (newSeason != null && newSeason != Season.ANY) {
             this.currentSeason = newSeason;
-            this.rainyDaysThisSeason = 0; // Reset counter hujan saat musim diubah manual
-            // Pertimbangkan apakah dayOfMonth juga perlu direset ke 1 atau dibiarkan
-            // Untuk cheat, mungkin lebih baik membiarkannya agar tidak terlalu disruptif
-            // atau tambahkan parameter lain jika perlu kontrol lebih.
+            this.rainyDaysThisSeason = 0;
             System.out.println("CHEAT: Musim diubah menjadi: " + this.currentSeason);
         } else {
             System.err.println("CHEAT: Gagal mengubah musim ke nilai yang tidak valid: " + newSeason);
@@ -170,20 +164,17 @@ public class GameTime {
      * @return true jika penambahan menit ini menyebabkan pergantian hari, false jika tidak.
      */
     public void advance(int minutesToAdd) {
-        if (isPaused || minutesToAdd <= 0) return; // Check pause status here
+        if (isPaused || minutesToAdd <= 0) return; 
 
         this.minute += minutesToAdd;
-        // boolean dayChanged = false;
 
         while (this.minute >= MINUTES_IN_HOUR) {
             this.minute -= MINUTES_IN_HOUR;
             this.hour++;
             if (this.hour >= HOURS_IN_DAY) {
-                this.hour = 0; // Kembali ke jam 00:00
+                this.hour = 0; 
             }
         }
-        // System.out.println("Waktu maju ke: " + getTimeString()); // Feedback
-        // return dayChanged;
     }
 
     /**
@@ -223,7 +214,7 @@ public class GameTime {
                     break;
                 case ANY: 
                     System.err.println("ERROR: Musim ANY tidak valid untuk musim aktif.");
-                    this.currentSeason = Season.SPRING; // Fallback
+                    this.currentSeason = Season.SPRING; 
                     break;
             }
             System.out.println("Musim berganti menjadi: " + this.currentSeason);
@@ -241,18 +232,6 @@ public class GameTime {
         System.out.println("Memulai Hari Baru: Tahun " + currentYear + ", Hari " + dayOfMonth + " " + currentSeason +
                            ", " + getTimeString() + ", Cuaca: " + currentWeather +
                            " (Hujan musim ini: " + rainyDaysThisSeason + ")");
-
-        // Tentukan cuaca untuk hari baru (Halaman 33)
-        // "Dalam satu season, Rainy Day minimal terjadi 2 kali."
-        // Logika ini bisa lebih kompleks. Untuk sekarang, acak sederhana.
-        // Jika ingin memastikan minimal 2 hari hujan, perlu state tambahan untuk melacak.
-        // int rainChance = randomGenerator.nextInt(5); // 0-4, jadi 1/5 = 20% kemungkinan hujan
-        // if (rainChance == 0) { // Atau logika lain untuk memastikan minimal 2 hari hujan per musim
-        //     this.currentWeather = Weather.RAINY;
-        // } else {
-        //     this.currentWeather = Weather.SUNNY;
-        // }
-        // System.out.println("Memulai hari baru: Hari " + dayOfMonth + " " + currentSeason + ", " + getTimeString() + ", Cuaca: " + currentWeather);
     }
 
     /**
@@ -261,14 +240,10 @@ public class GameTime {
      * @return Weather untuk hari berikutnya.
      */
     private Weather determineNextWeather() {
-        int daysRemainingInSeason = DAYS_IN_SEASON - this.dayOfMonth + 1; // +1 karena hari ini belum selesai
+        int daysRemainingInSeason = DAYS_IN_SEASON - this.dayOfMonth + 1;
 
-        // Jika sisa hari sedikit dan target hujan belum tercapai, paksa hujan
         if (this.rainyDaysThisSeason < 2) {
             if (daysRemainingInSeason <= (2 - this.rainyDaysThisSeason)) {
-                // Contoh: sisa 1 hari, belum hujan sama sekali (2-0=2), 1 <= 2 -> paksa hujan
-                // Contoh: sisa 1 hari, sudah hujan 1x (2-1=1), 1 <= 1 -> paksa hujan
-                // Contoh: sisa 2 hari, belum hujan sama sekali (2-0=2), 2 <= 2 -> paksa hujan
                 System.out.println("  (Logika Cuaca: Memastikan minimal 2 hari hujan per musim)");
                 return Weather.RAINY;
             }
@@ -276,17 +251,11 @@ public class GameTime {
 
         // Jika tidak ada paksaan, gunakan probabilitas acak
         // Probabilitas hujan bisa disesuaikan, misal 20% (1 dari 5)
-        int rainChanceRoll = randomGenerator.nextInt(5); // Angka 0-4
-        if (rainChanceRoll == 0) { // 20% chance
+        int rainChanceRoll = randomGenerator.nextInt(5); 
+        if (rainChanceRoll == 0) { 
             return Weather.RAINY;
         } else {
             return Weather.SUNNY;
         }
     }
-
-    /**
-     * Memprediksi cuaca untuk hari berikutnya tanpa mengubah state saat ini.
-     * Berguna untuk fitur seperti ramalan cuaca di TV.
-     * @return Weather yang diprediksi untuk besok.
-     */
 }

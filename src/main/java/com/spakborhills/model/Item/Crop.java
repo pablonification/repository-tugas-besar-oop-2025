@@ -48,7 +48,4 @@ public class Crop extends Item implements EdibleItem {
     public Item cloneItem() {
         return new Crop(this.getName(), this.getBuyPrice(), this.getSellPrice());
     }
-
-    // Tidak ada method atau atribut lain yang perlu ditambahkan, sisanya merupakan properti dari Seed
 }
-

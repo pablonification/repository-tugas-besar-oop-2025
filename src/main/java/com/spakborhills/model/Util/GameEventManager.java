@@ -11,11 +11,7 @@ import java.util.Map;
  * and dispatches events to the appropriate listeners.
  */
 public class GameEventManager {
-    
-    // Singleton instance
     private static GameEventManager instance;
-    
-    // Map of event types to lists of listeners
     private Map<GameEventType, List<GameEventListener>> listeners;
     
     /**

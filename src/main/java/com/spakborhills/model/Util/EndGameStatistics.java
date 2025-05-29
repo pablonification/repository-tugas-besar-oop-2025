@@ -1,17 +1,16 @@
-package com.spakborhills.model.Util; // Atau package yang sesuai
+package com.spakborhills.model.Util;
 
 import com.spakborhills.model.Enum.Season;
 import com.spakborhills.model.Enum.RelationshipStatus;
 import com.spakborhills.model.Enum.FishRarity; 
-// import com.spakborhills.model.Farm; 
 import com.spakborhills.model.NPC.NPC; 
 import com.spakborhills.model.Player; 
 
 import java.util.HashMap;
-import java.util.HashSet; // Untuk item pernah dipanen/dimiliki
+import java.util.HashSet; 
 import java.util.List;
 import java.util.Map;
-import java.util.Set; // Untuk item pernah dipanen/dimiliki
+import java.util.Set; 
 import java.util.Collections;
 
 /**
@@ -25,22 +24,18 @@ public class EndGameStatistics {
     private int totalExpenditure;
     private final Map<Season, Integer> seasonalIncome;
     private final Map<Season, Integer> seasonalExpenditure;
-    private final Map<Season, Integer> daysPlayedInSeason; // BARU: Melacak hari per musim
-
+    private final Map<Season, Integer> daysPlayedInSeason;
     private int totalDaysPlayed;
 
     private final Map<String, RelationshipStatus> npcFriendshipStatus;
     private final Map<String, Integer> npcHeartPoints;
     private final Map<String, Integer> chatFrequency;
     private final Map<String, Integer> giftFrequency;
-    private final Map<String, Integer> visitFrequency; // Diaktifkan
-
-    private final Map<String, Integer> cropsHarvestedCount; // Nama Crop -> Jumlah
-    private final Set<String> uniqueCropsHarvested;      // BARU: Nama Crop unik yang pernah dipanen
+    private final Map<String, Integer> visitFrequency; 
+    private final Map<String, Integer> cropsHarvestedCount; 
+    private final Set<String> uniqueCropsHarvested;      
     private final Map<String, Map<FishRarity, Integer>> fishCaught;
-    private final Set<String> uniqueFishCaught;          // BARU: Nama Ikan unik yang pernah ditangkap
-
-    // BARU: Untuk melacak item kunci yang pernah dimiliki/event untuk unlock resep
+    private final Set<String> uniqueFishCaught;          
     private final Set<String> keyEventsOrItemsObtained;
 
     public EndGameStatistics(List<NPC> initialNpcs, Player initialPlayer) {
@@ -48,26 +43,26 @@ public class EndGameStatistics {
         this.totalExpenditure = 0;
         this.seasonalIncome = new HashMap<>();
         this.seasonalExpenditure = new HashMap<>();
-        this.daysPlayedInSeason = new HashMap<>(); // BARU
+        this.daysPlayedInSeason = new HashMap<>(); 
         this.totalDaysPlayed = 0;
 
         this.npcFriendshipStatus = new HashMap<>();
         this.npcHeartPoints = new HashMap<>();
         this.chatFrequency = new HashMap<>();
         this.giftFrequency = new HashMap<>();
-        this.visitFrequency = new HashMap<>(); // Diaktifkan
+        this.visitFrequency = new HashMap<>(); 
 
         this.cropsHarvestedCount = new HashMap<>();
-        this.uniqueCropsHarvested = new HashSet<>(); // BARU
+        this.uniqueCropsHarvested = new HashSet<>(); 
         this.fishCaught = new HashMap<>();
-        this.uniqueFishCaught = new HashSet<>(); // BARU
-        this.keyEventsOrItemsObtained = new HashSet<>(); // BARU
+        this.uniqueFishCaught = new HashSet<>(); 
+        this.keyEventsOrItemsObtained = new HashSet<>(); 
 
         for (Season s : Season.values()) {
             if (s != Season.ANY) {
                 this.seasonalIncome.put(s, 0);
                 this.seasonalExpenditure.put(s, 0);
-                this.daysPlayedInSeason.put(s, 0); // BARU
+                this.daysPlayedInSeason.put(s, 0); 
             }
         }
 
@@ -77,17 +72,12 @@ public class EndGameStatistics {
                 this.npcHeartPoints.put(npc.getName(), npc.getHeartPoints());
                 this.chatFrequency.put(npc.getName(), 0);
                 this.giftFrequency.put(npc.getName(), 0);
-                this.visitFrequency.put(npc.getName(), 0); // Inisialisasi
+                this.visitFrequency.put(npc.getName(), 0);
             }
         }
-        // Pengeluaran awal bisa dicatat jika Player punya metode untuk itu
-        // if (initialPlayer != null && initialPlayer.getInitialExpenditure() > 0) {
-        //     recordExpenditure(initialPlayer.getInitialExpenditure(), Season.SPRING); // Asumsi musim awal
-        // }
     }
 
-    // --- Metode Perekaman Data Inkremental ---
-
+    // Metode Perekaman Data Inkremental 
     public void recordIncome(int amount, Season season) {
         if (amount > 0 && season != null && season != Season.ANY) {
             this.totalIncome += amount;
@@ -134,25 +124,21 @@ public class EndGameStatistics {
     public void recordHarvest(String cropName, int quantity) {
         if (cropName != null && !cropName.isBlank() && quantity > 0) {
             this.cropsHarvestedCount.put(cropName, this.cropsHarvestedCount.getOrDefault(cropName, 0) + quantity);
-            this.uniqueCropsHarvested.add(cropName); // Catat jenis crop unik yang dipanen
-            if (cropName.equalsIgnoreCase("Parsnip")) { // Contoh untuk unlock resep
+            this.uniqueCropsHarvested.add(cropName); 
+            if (cropName.equalsIgnoreCase("Parsnip")) { 
                 this.keyEventsOrItemsObtained.add("HARVEST_PARSNIP");
             }
             if (cropName.equalsIgnoreCase("Hot Pepper")) {
                 this.keyEventsOrItemsObtained.add("OBTAINED_HOT_PEPPER");
             }
-            // Tambahkan event lain jika perlu
         }
     }
 
     public void recordFishCatch(String fishName, FishRarity fishRarity) {
         if (fishName != null && !fishName.isBlank() && fishRarity != null) {
-            // Debug logging to track when this method is called
             System.out.println("DEBUG: Recording fish catch in statistics - " + fishName + " (Rarity: " + fishRarity + ")");
             
-            // IMPORTANT FIX: Ensure direct access and manipulation of the storage maps to avoid any reference issues
-            synchronized (this) { // Add synchronization to prevent any concurrent modification issues
-                // Ensure the fish map exists for this fish type
+            synchronized (this) { 
                 if (!this.fishCaught.containsKey(fishName)) {
                     this.fishCaught.put(fishName, new HashMap<>());
                     System.out.println("DEBUG: Created new entry for fish: " + fishName);
@@ -160,25 +146,21 @@ public class EndGameStatistics {
                 
                 Map<FishRarity, Integer> rarityMap = this.fishCaught.get(fishName);
                 
-                // Update the count for this rarity
                 int currentCount = rarityMap.getOrDefault(fishRarity, 0);
                 int newCount = currentCount + 1;
                 rarityMap.put(fishRarity, newCount);
                 System.out.println("DEBUG: Updated count for " + fishName + " (" + fishRarity + "): " + currentCount + " -> " + newCount);
                 
-                // Add to unique fish caught set (ensure this is actually happening)
                 boolean wasNewFish = !this.uniqueFishCaught.contains(fishName);
                 this.uniqueFishCaught.add(fishName);
                 if (wasNewFish) {
                     System.out.println("DEBUG: Added new unique fish: " + fishName);
                 }
                 
-                // Log the current state for debugging
                 int totalFishCount = getTotalFishCaughtCount();
                 System.out.println("DEBUG: After recording - Total Fish Caught: " + totalFishCount);
                 System.out.println("DEBUG: Unique Fish Types: " + uniqueFishCaught.size() + " - " + String.join(", ", uniqueFishCaught));
                 
-                // Dump the full fish caught map for debugging
                 System.out.println("DEBUG: Full fish caught map:");
                 for (Map.Entry<String, Map<FishRarity, Integer>> entry : fishCaught.entrySet()) {
                     System.out.println("DEBUG:   Fish: " + entry.getKey());
@@ -187,7 +169,6 @@ public class EndGameStatistics {
                     }
                 }
                 
-                // Record special fish events if applicable
                 if (fishName.equalsIgnoreCase("Pufferfish")) {
                     this.keyEventsOrItemsObtained.add("FISH_PUFFERFISH");
                 }
@@ -215,18 +196,18 @@ public class EndGameStatistics {
      */
     public void recordKeyEventOrItem(String eventKey) {
         if (eventKey != null && !eventKey.isBlank()) {
-            this.keyEventsOrItemsObtained.add(eventKey.toUpperCase()); // Simpan dalam uppercase untuk konsistensi
+            this.keyEventsOrItemsObtained.add(eventKey.toUpperCase()); 
             System.out.println("Event/Item Tercatat di Statistik: " + eventKey.toUpperCase());
         }
     }
 
-    // --- Metode untuk Mengecek Kondisi (digunakan oleh Recipe.isUnlocked) ---
+    // Metode untuk Mengecek Kondisi (digunakan oleh Recipe.isUnlocked) 
     public boolean hasAchieved(String eventKey) {
         return this.keyEventsOrItemsObtained.contains(eventKey);
     }
 
     public int getTotalFishCaughtCount() {
-        synchronized (this) { // Add synchronization for consistency
+        synchronized (this) { 
             int total = 0;
             for (Map<FishRarity, Integer> rarityMap : fishCaught.values()) {
                 for (int count : rarityMap.values()) {
@@ -242,7 +223,7 @@ public class EndGameStatistics {
     }
 
 
-    // --- Metode untuk Menghitung Statistik Turunan & Mendapatkan Ringkasan ---
+    // Metode untuk Menghitung Statistik Turunan & Mendapatkan Ringkasan 
     public double getAverageSeasonalIncome(Season season) {
         if (season == null || season == Season.ANY) return 0;
         int income = seasonalIncome.getOrDefault(season, 0);
@@ -295,7 +276,6 @@ public class EndGameStatistics {
               .append("\n");
         }
 
-        // Before generating crop statistics, log the state
         System.out.println("DEBUG: Generating Statistics Summary");
         System.out.println("DEBUG: Crops Harvested Count entries: " + cropsHarvestedCount.size());
         System.out.println("DEBUG: Unique Crops Harvested: " + uniqueCropsHarvested.size());
@@ -306,13 +286,11 @@ public class EndGameStatistics {
             sb.append("  • ").append(entry.getKey()).append(": ").append(entry.getValue()).append(" units\n");
         }
 
-        // Log fish stats before generating that section
         int totalFish = getTotalFishCaughtCount();
         System.out.println("DEBUG: Total Fish Caught Count: " + totalFish);
         System.out.println("DEBUG: Unique Fish Count: " + uniqueFishCaught.size());
         System.out.println("DEBUG: Fish Caught Map entries: " + fishCaught.size());
         
-        // Enhanced Dump fish caught details for debugging
         System.out.println("DEBUG: Detailed fish caught map state before summary generation:");
         for (Map.Entry<String, Map<FishRarity, Integer>> fishEntry : fishCaught.entrySet()) {
             String fishNameForLog = fishEntry.getKey();
@@ -340,8 +318,8 @@ public class EndGameStatistics {
         }
         return sb.toString();
     }
-    // --- Getters untuk Statistik Individual ---
 
+    // Getters untuk Statistik Individual 
     public int getTotalIncome() { return totalIncome; }
     public int getTotalExpenditure() { return totalExpenditure; }
     

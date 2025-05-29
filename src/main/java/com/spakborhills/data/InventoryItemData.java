@@ -7,8 +7,7 @@ public class InventoryItemData implements Serializable {
 
     private String itemId;
     private int quantity;
-    // Tambahkan field lain jika diperlukan, misalnya kondisi item, dll.
-
+   
     public InventoryItemData() {
     }
 

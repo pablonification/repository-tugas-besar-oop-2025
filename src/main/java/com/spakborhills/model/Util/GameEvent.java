@@ -6,19 +6,8 @@ package com.spakborhills.model.Util;
  */
 public class GameEvent {
     
-    /**
-     * The type of event that occurred
-     */
     private GameEventType eventType;
-    
-    /**
-     * Optional data associated with the event
-     */
     private Object data;
-    
-    /**
-     * The source object that generated the event
-     */
     private Object source;
     
     /**

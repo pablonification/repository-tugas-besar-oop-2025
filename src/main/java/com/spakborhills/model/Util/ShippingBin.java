@@ -15,9 +15,7 @@ import java.util.Map;
 public class ShippingBin {
 
     private final Map<Item, Integer> itemsToSell;
-    public static final int MAX_UNIQUE_SLOTS = 16; // hal 23 - Made public
-
-    // private int lastSellDay; // Replaced by hasSoldToday for immediate effect
+    public static final int MAX_UNIQUE_SLOTS = 16; 
     private boolean hasSoldToday;
 
     /**
@@ -27,7 +25,7 @@ public class ShippingBin {
     public ShippingBin() {
         this.itemsToSell = new HashMap<>();
         // this.lastSellDay = 0; 
-        this.hasSoldToday = false; // Initialize to false, can sell on day 1
+        this.hasSoldToday = false; 
     }
 
     /**
@@ -36,7 +34,7 @@ public class ShippingBin {
      *
      * @return true jika pemain bisa menjual hari ini, false jika sudah menjual.
      */
-    public boolean canSellToday() { // currentDay parameter no longer needed here for this logic
+    public boolean canSellToday() {
         return !this.hasSoldToday;
     }
 
@@ -62,17 +60,13 @@ public class ShippingBin {
             return false;
         }
 
-        // Logic for canSellToday should be checked by the caller (Player/Controller) before calling addItem
-        // However, if we want an absolute guarantee here, we could re-check, but it might be redundant.
-        // For now, assume caller checks canSellToday().
-
         if (!itemsToSell.containsKey(item) && itemsToSell.size() >= MAX_UNIQUE_SLOTS) {
             System.out.println("Shipping Bin sudah penuh untuk jenis item baru (maks " + MAX_UNIQUE_SLOTS + " jenis item unik).");
             return false;
         }
 
         itemsToSell.put(item, itemsToSell.getOrDefault(item, 0) + quantity);
-        markSaleOccurredForToday(); // Mark that a sale has happened today
+        markSaleOccurredForToday(); 
         return true;
     }
 
@@ -88,7 +82,7 @@ public class ShippingBin {
      */
     public int processSales(EndGameStatistics statistics, PriceList priceList, int currentDay, Season currentSeason) {
         if (itemsToSell.isEmpty()) {
-            this.hasSoldToday = false; // Reset for next day even if nothing was sold
+            this.hasSoldToday = false; 
             return 0;
         }
 
@@ -96,8 +90,8 @@ public class ShippingBin {
         System.out.println("Memproses penjualan dari Shipping Bin...");
 
         for (Map.Entry<Item, Integer> entry : itemsToSell.entrySet()) {
-            Item currentItem = entry.getKey(); // Renamed to avoid conflict
-            int currentQuantity = entry.getValue(); // Renamed to avoid conflict
+            Item currentItem = entry.getKey(); 
+            int currentQuantity = entry.getValue(); 
             int sellPricePerUnit = priceList.getSellPrice(currentItem); 
 
             if (sellPricePerUnit < 0) { 
@@ -115,9 +109,8 @@ public class ShippingBin {
             statistics.recordIncome(totalIncomeToday, currentSeason); 
         }
 
-        // this.lastSellDay = currentDay; // Not strictly needed if hasSoldToday is primary
-        this.hasSoldToday = false; // Reset for the next day
-        // clearBin(); // Pengosongan bin dilakukan setelah pemanggilan ini di Farm.nextDay()
+        
+        this.hasSoldToday = false;
         return totalIncomeToday;
     }
 

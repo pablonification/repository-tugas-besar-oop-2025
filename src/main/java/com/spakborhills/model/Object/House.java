@@ -35,6 +35,4 @@ public class House extends DeployedObject {
             this.furnitures.clear();
         }
     }
-
-    // .... implement it later
 }

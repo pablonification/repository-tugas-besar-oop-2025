@@ -1,6 +1,5 @@
 package com.spakborhills.model.NPC;
 
-// import java.lang.reflect.Array;
 import java.util.Arrays;
 
 import com.spakborhills.model.Enum.LocationType;
@@ -18,19 +17,19 @@ hatedItems: Seluruh item yang bukan merupakan lovedItems dan likedItems
  */
 public class MayorTadi extends NPC {
     private static final String MAYOR_TADI_SPRITESHEET_PATH = "/assets/sprites/npc/mayor_tadi_tile.png";
-    // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
-    // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
-    private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
-    private static final int DEFAULT_SPRITE_Y = 0;     // Koordinat Y frame di spritesheet
-    private static final int SPRITE_WIDTH = 32;        // Lebar satu frame sprite (tile version)
-    private static final int SPRITE_HEIGHT = 32;       // Tinggi satu frame sprite (tile version)
 
-    // Untuk potret di dialog (misal, potret netral pertama)
-    private static final int DEFAULT_PORTRAIT_X = 64; // Koordinat X potret di spritesheet
-    private static final int DEFAULT_PORTRAIT_Y = 99;   // Koordinat Y potret di spritesheet
-    private static final int PORTRAIT_WIDTH = 64;      // Lebar satu potret
-    private static final int PORTRAIT_HEIGHT = 61;     // Tinggi satu potret
-    private static final String MAYOR_TADI_PORTRAIT_PATH = "/assets/portraits/npc/mayor_tadi.png"; // Path for dedicated portrait
+    // Untuk sprite di peta
+    private static final int DEFAULT_SPRITE_X = 0;     
+    private static final int DEFAULT_SPRITE_Y = 0;     
+    private static final int SPRITE_WIDTH = 32;       
+    private static final int SPRITE_HEIGHT = 32;       
+
+    // Untuk potret di dialog
+    private static final int DEFAULT_PORTRAIT_X = 64; 
+    private static final int DEFAULT_PORTRAIT_Y = 99;   
+    private static final int PORTRAIT_WIDTH = 64;      
+    private static final int PORTRAIT_HEIGHT = 61;     
+    private static final String MAYOR_TADI_PORTRAIT_PATH = "/assets/portraits/npc/mayor_tadi.png"; 
 
     public MayorTadi() {
         super("Mayor Tadi",
@@ -42,14 +41,6 @@ public class MayorTadi extends NPC {
         MAYOR_TADI_PORTRAIT_PATH); // Pass the new portrait path
         this.lovedItems.add("Legend");
         this.likedItems.addAll(Arrays.asList("Angler", "Crimsonfish", "Glacierfish"));
-        // hated items
-        /*
-        // Catatan: Hated items Mayor Tadi adalah "Seluruh item yang bukan merupakan
-        // lovedItems dan likedItems". Ini mungkin tidak diisi secara eksplisit
-        // di list `hatedItems`, tapi logikanya dihandle dalam `checkGiftPreference`
-        // atau di-override jika perlu. Untuk NPC lain, isi list hatedItems di sini.
-        // this.hatedItems.add("Sampah"); // Contoh jika ada item spesifik yg dibenci
-         */
     }
 
     @Override
@@ -66,7 +57,6 @@ public class MayorTadi extends NPC {
 
     @Override
     public String getDialogue(Player player) {
-        // Example dialogue, can be made more complex (e.g., based on heart points, time of day)
         if (player != null) {
             return "Selamat datang di Spakbor Hills, " + player.getName() + "! Ada yang bisa saya bantu hari ini?";
         }

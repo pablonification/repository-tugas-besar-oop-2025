@@ -1,10 +1,3 @@
-/*
- *  class Equipment extends Item {
-    - toolType: String
-    + use(player: Player, target: Object): boolean
-    + getToolType(): String
-  }
- */
 package com.spakborhills.model.Item;
 
 import com.spakborhills.model.Enum.ItemCategory;

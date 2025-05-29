@@ -2,8 +2,7 @@ package com.spakborhills.model;
 
 public class NonPlayableCharacter {
     private String name;
-    // Future attributes: dialogue, schedule, relationship points, gift preferences
-
+    
     public NonPlayableCharacter(String name) {
         if (name == null || name.trim().isEmpty()) {
             this.name = "Mysterious Figure";
@@ -15,8 +14,6 @@ public class NonPlayableCharacter {
     public String getName() {
         return name;
     }
-
-    // Future methods: interact(), receiveGift(), etc.
 
     @Override
     public String toString() {

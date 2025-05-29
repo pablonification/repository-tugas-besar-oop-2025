@@ -29,7 +29,7 @@ public class MainMenuPanel extends JPanel {
     public MainMenuPanel(GameFrame gameFrame) {
         this.gameFrame = gameFrame;
         setFocusable(true);
-        setPreferredSize(new Dimension(800, 600)); // Default size, will be adapted by GameFrame
+        setPreferredSize(new Dimension(800, 600)); // Default size
 
         try {
             InputStream bgStream = getClass().getResourceAsStream("/assets/menu/background.png");
@@ -40,11 +40,10 @@ public class MainMenuPanel extends JPanel {
         } catch (IOException e) {
             System.err.println("Error loading main menu background image: " + e.getMessage());
             e.printStackTrace();
-            backgroundImage = null; // Fallback to no image
+            backgroundImage = null; 
         }
 
         try {
-            // Attempt to load PixelMix font
             InputStream fontStream = getClass().getResourceAsStream("/assets/font/PixelMix.ttf");
             if (fontStream != null) {
                 pixelFont = Font.createFont(Font.TRUETYPE_FONT, fontStream).deriveFont(24f);
@@ -56,8 +55,8 @@ public class MainMenuPanel extends JPanel {
             }
         } catch (FontFormatException | IOException e) {
             System.err.println("Error loading custom font: " + e.getMessage());
-            pixelFont = new Font("Monospaced", Font.PLAIN, 24); // Fallback font
-            titleFont = new Font("Monospaced", Font.BOLD, 72); // Fallback font
+            pixelFont = new Font("Monospaced", Font.PLAIN, 24); 
+            titleFont = new Font("Monospaced", Font.BOLD, 72); 
         }
 
 
@@ -72,7 +71,7 @@ public class MainMenuPanel extends JPanel {
                 } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_E) {
                     handleMenuSelection(selectedOption);
                 } else if (keyCode == KeyEvent.VK_ESCAPE) {
-                    handleMenuSelection(EXIT); // Exit on Escape
+                    handleMenuSelection(EXIT); 
                 }
                 repaint();
             }
@@ -92,15 +91,14 @@ public class MainMenuPanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // Get panel dimensions
+        // Panel dimensions
         int panelWidth = getWidth();
         int panelHeight = getHeight();
 
-        // Draw background image, scaled to fit panel
+        // Draw background image
         if (backgroundImage != null) {
             g2d.drawImage(backgroundImage, 0, 0, panelWidth, panelHeight, null);
         } else {
-            // Fallback background color if image loading failed
             g2d.setColor(Color.BLACK);
             g2d.fillRect(0, 0, panelWidth, panelHeight);
         }
@@ -111,20 +109,21 @@ public class MainMenuPanel extends JPanel {
         String titleText = "Spakbor Hills";
         int titleWidth = titleFm.stringWidth(titleText);
         int titleX = (panelWidth - titleWidth) / 2;
-        int titleY = panelHeight / 4; // Position title higher
+        int titleY = panelHeight / 4;
 
         // Text shadow for title
-        g2d.setColor(new Color(0,0,0,150)); // Shadow color
+        g2d.setColor(new Color(0,0,0,150)); 
         g2d.drawString(titleText, titleX + 5, titleY + 5);
+
         // Actual text for title
-        g2d.setColor(Color.YELLOW); // Brighter color for title
+        g2d.setColor(Color.YELLOW);
         g2d.drawString(titleText, titleX, titleY);
 
 
         // Draw Menu Options
         g2d.setFont(pixelFont);
         FontMetrics optionFm = g2d.getFontMetrics();
-        int optionStartY = titleY + titleFm.getHeight() + 60; // Start options below title
+        int optionStartY = titleY + titleFm.getHeight() + 60; 
 
         for (int i = 0; i < menuOptions.length; i++) {
             String optionText = menuOptions[i];
@@ -136,10 +135,10 @@ public class MainMenuPanel extends JPanel {
             }
             int optionWidth = optionFm.stringWidth(optionText);
             int optionX = (panelWidth - optionWidth) / 2;
-            int optionY = optionStartY + (i * (optionFm.getHeight() + 15)); // Add padding
+            int optionY = optionStartY + (i * (optionFm.getHeight() + 15)); 
 
             // Text shadow for options
-            g2d.setColor(new Color(0,0,0,100)); // Shadow color
+            g2d.setColor(new Color(0,0,0,100)); 
             g2d.drawString(optionText, optionX + 2, optionY + 2);
 
             // Actual text for options

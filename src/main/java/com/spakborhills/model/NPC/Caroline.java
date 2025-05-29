@@ -8,19 +8,19 @@ import com.spakborhills.model.Item.Item;
 
 public class Caroline extends NPC {
     private static final String CAROLINE_SPRITESHEET_PATH = "/assets/sprites/npc/caroline_tile.png";
-    // CONTOH KOORDINAT DAN DIMENSI (HARUS DISESUAIKAN DENGAN SPRITESHEET ANDA!)
-    // Untuk sprite di peta (misal, frame pertama menghadap ke bawah)
-    private static final int DEFAULT_SPRITE_X = 0;     // Koordinat X frame di spritesheet
-    private static final int DEFAULT_SPRITE_Y = 0;     // Koordinat Y frame di spritesheet
-    private static final int SPRITE_WIDTH = 32;        // Lebar satu frame sprite (tile version)
-    private static final int SPRITE_HEIGHT = 32;       // Tinggi satu frame sprite (tile version)
+    
+    // Untuk sprite di peta
+    private static final int DEFAULT_SPRITE_X = 0;    
+    private static final int DEFAULT_SPRITE_Y = 0;    
+    private static final int SPRITE_WIDTH = 32;        
+    private static final int SPRITE_HEIGHT = 32;       
 
-    // Untuk potret di dialog (misal, potret netral pertama)
-    private static final int DEFAULT_PORTRAIT_X = 67; // Koordinat X potret di spritesheet
-    private static final int DEFAULT_PORTRAIT_Y = 97;   // Koordinat Y potret di spritesheet
-    private static final int PORTRAIT_WIDTH = 57;      // Lebar satu potret
-    private static final int PORTRAIT_HEIGHT = 63;     // Tinggi satu potret
-    private static final String CAROLINE_PORTRAIT_PATH = "/assets/portraits/npc/caroline.png"; // Path for dedicated portrait
+    // Untuk potret di dialog 
+    private static final int DEFAULT_PORTRAIT_X = 67; 
+    private static final int DEFAULT_PORTRAIT_Y = 97;   
+    private static final int PORTRAIT_WIDTH = 57;     
+    private static final int PORTRAIT_HEIGHT = 63;     
+    private static final String CAROLINE_PORTRAIT_PATH = "/assets/portraits/npc/caroline.png"; 
 
     public Caroline() {
         super("Caroline",
@@ -29,7 +29,7 @@ public class Caroline extends NPC {
             CAROLINE_SPRITESHEET_PATH,
             DEFAULT_SPRITE_X, DEFAULT_SPRITE_Y, SPRITE_WIDTH, SPRITE_HEIGHT,
             DEFAULT_PORTRAIT_X, DEFAULT_PORTRAIT_Y, PORTRAIT_WIDTH, PORTRAIT_HEIGHT,
-            CAROLINE_PORTRAIT_PATH); // Pass the new portrait path
+            CAROLINE_PORTRAIT_PATH); 
         this.lovedItems.addAll(Arrays.asList("Firewood", "Coal"));
         this.likedItems.addAll(Arrays.asList("Potato", "Wheat"));
         this.hatedItems.add("Hot Pepper");

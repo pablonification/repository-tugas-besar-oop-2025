@@ -46,12 +46,9 @@ public class Furniture extends Item {
     @Override
     public boolean use(Player player, Object target) {
         System.out.println("Using furniture: " + getName());
-        // Actual use logic for furniture would go here (e.g., placing it)
-        // For now, just return true indicating the action was 'handled'
         return true;
     }
 
-    // cloneItem method - @Override removed as it's not in the abstract Item class
     public Item cloneItem() {
         Furniture cloned = new Furniture(this.getName(), this.getDescription(), this.getBuyPrice(), this.getSellPrice(), this.x, this.y);
         return cloned;

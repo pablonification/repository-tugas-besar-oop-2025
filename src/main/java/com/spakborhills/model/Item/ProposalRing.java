@@ -28,12 +28,6 @@ public class ProposalRing extends Item {
             System.out.println("ERROR: Proposal Ring hanya bisa digunakan untuk melamar NPC!");
             return false;
         }
-        // NPC npcTarget = (NPC) target;
-
-        // Delegate the actual proposal logic to the Player class
-        // The Player.propose() method will handle all checks, status updates, and energy costs.
-        // This 'use' method now simply acts as a trigger.
-        // return player.propose(npcTarget, this);
         return true;
     }
 

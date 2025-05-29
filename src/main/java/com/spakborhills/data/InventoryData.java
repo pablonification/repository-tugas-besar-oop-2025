@@ -8,8 +8,6 @@ public class InventoryData implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private List<InventoryItemData> items;
-    // Mungkin ada properti lain seperti ukuran maksimal inventaris jika perlu disimpan
-    // private int maxSize;
 
     public InventoryData() {
         this.items = new ArrayList<>();

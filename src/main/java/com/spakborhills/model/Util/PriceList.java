@@ -17,10 +17,6 @@ public class PriceList {
     public PriceList() {
         this.buyPrices = new HashMap<>();
         this.sellPrices = new HashMap<>();
-        // Panggil initializeDefaultPrices() di sini jika Anda ingin harga default
-        // selalu ada saat PriceList dibuat dan sebelum loadFromFile dipanggil.
-        // Atau, panggil secara manual dari Main.java untuk testing.
-        // initializeDefaultPrices(); // Contoh: aktifkan untuk testing
         System.out.println("PriceList diinisialisasi.");
     }
 
@@ -29,7 +25,7 @@ public class PriceList {
      * Berguna untuk testing awal atau sebagai fallback.
      */
     public void initializeDefaultPrices() {
-        // --- Seeds (Halaman 15) ---
+        // Seeds (Halaman 15)
         // Harga jual seed adalah setengah harga belinya.
         addPrice("Parsnip Seeds", 20, 10);
         addPrice("Cauliflower Seeds", 80, 40);
@@ -43,63 +39,51 @@ public class PriceList {
         addPrice("Pumpkin Seeds", 150, 75);
         addPrice("Grape Seeds", 60, 30);
 
-        // --- Crops (Halaman 19) ---
+        // Crops (Halaman 19)
         // Harga Beli (jika dari store), Harga Jual
         addPrice("Parsnip", 50, 35);
         addPrice("Cauliflower", 200, 150);
-        addPrice("Potato", 0, 80);          // Tidak bisa dibeli (Harga Beli 0)
+        addPrice("Potato", 0, 80);          
         addPrice("Wheat", 50, 30);
         addPrice("Blueberry", 150, 40);
         addPrice("Tomato", 90, 60);
-        addPrice("Hot Pepper", 0, 40);      // Tidak bisa dibeli
-        addPrice("Melon", 0, 250);          // Tidak bisa dibeli
-        addPrice("Cranberry", 0, 25);       // Tidak bisa dibeli
+        addPrice("Hot Pepper", 0, 40);      
+        addPrice("Melon", 0, 250);          
+        addPrice("Cranberry", 0, 25);       
         addPrice("Pumpkin", 300, 250);
         addPrice("Grape", 100, 10);
 
-        // --- Food (Halaman 20) ---
+        // Food (Halaman 20)
         // Nama, Harga Beli, Harga Jual
         addPrice("Fish n' Chips", 150, 135);
         addPrice("Baguette", 100, 80);
         addPrice("Sashimi", 300, 275);
-        addPrice("Fugu", 0, 135);             // Tidak bisa dibeli ('-')
+        addPrice("Fugu", 0, 135);              
         addPrice("Wine", 100, 90);
         addPrice("Pumpkin Pie", 120, 100);
         addPrice("Veggie Soup", 140, 120);
         addPrice("Fish Stew", 280, 260);
-        addPrice("Spakbor Salad", 0, 250);    // Tidak bisa dibeli ('-')
+        addPrice("Spakbor Salad", 0, 250);     
         addPrice("Fish Sandwich", 200, 180);
-        addPrice("The Legends of Spakbor", 0, 2000); // Tidak bisa dibeli ('-')
-        addPrice("Cooked Pig's Head", 1000, 0); // Harga jual 0g
+        addPrice("The Legends of Spakbor", 0, 2000);  
+        addPrice("Cooked Pig's Head", 1000, 0);
 
-        // --- Misc Items (Halaman 20) ---
+        // Misc Items (Halaman 20)
         // Harga jual harus lebih murah dari harga beli. Ditentuin sendiri
         addPrice("Coal", 20, 10);
-        addPrice("Firewood", 15, 5); // Contoh harga
+        addPrice("Firewood", 15, 5); 
         addPrice("Stone", 5, 2);
 
-        // --- Equipment (Halaman 20, 23) ---
+        // Equipment (Halaman 20, 23)
         // tidak dibeli/dijual, harga 0.
         addPrice("Hoe", 0, 0);
         addPrice("Watering Can", 0, 0);
         addPrice("Pickaxe", 0, 0);
         addPrice("Fishing Rod", 0, 0);
 
-        // --- Special Items ---
-        addPrice("Proposal Ring", 0, 0); // Tidak dijual/dibeli secara normal
-        addPrice("Koran Edisi Baru", 0, 0); // Harga beli 0, tidak untuk dijual kembali
-
-        // --- Fish (Halaman 18) ---
-        // Harga jual ikan dihitung dinamis oleh Fish.getSellPrice().
-        // PriceList bisa saja tidak menyimpan harga jual ikan secara eksplisit.
-        // Jika Anda ingin PriceList menjadi SATU-SATUNYA sumber harga jual,
-        // Anda perlu menghitung harga jual setiap ikan dan menambahkannya di sini.
-        // Contoh:
-        // Fish bullhead = new Fish("Bullhead", Fish.FishRarity.COMMON, Set.of(Season.ANY), List.of(new Fish.TimeRange(0,23)), Set.of(Weather.ANY), Set.of(LocationType.MOUNTAIN_LAKE));
-        // addPrice("Bullhead", 0, bullhead.getSellPrice()); // Harga beli 0
-        // Ini akan membuat PriceList bergantung pada pembuatan objek Fish.
-        // Untuk sekarang, kita biarkan harga jual ikan ditangani di luar PriceList jika dinamis.
-        // Jika ada ikan yang BISA DIBELI (tidak ada di spek), tambahkan harga belinya di sini.
+        // Special Items
+        addPrice("Proposal Ring", 0, 0); 
+        addPrice("Koran Edisi Baru", 0, 0); 
 
         System.out.println("Harga default telah dimuat ke PriceList untuk " + (buyPrices.size() + sellPrices.size()) / 2 + " item unik (kurang lebih).");
     }
@@ -115,17 +99,17 @@ public class PriceList {
         if (buyPrice >= 0) {
             this.buyPrices.put(lowerItemName, buyPrice);
         } else {
-            // System.out.println("Info: Harga beli untuk '" + itemName + "' tidak valid (<0), tidak ditambahkan.");
+            
         }
         if (sellPrice >= 0) {
             this.sellPrices.put(lowerItemName, sellPrice);
         } else {
-            // System.out.println("Info: Harga jual untuk '" + itemName + "' tidak valid (<0), tidak ditambahkan.");
+            
         }
     }
 
     public int getBuyPrice(String itemName) {
-        if (itemName == null || itemName.isBlank()) return -1; // Indikasi tidak valid/tidak ditemukan
+        if (itemName == null || itemName.isBlank()) return -1; 
         return this.buyPrices.getOrDefault(itemName.toLowerCase(), -1);
     }
 
@@ -142,11 +126,9 @@ public class PriceList {
     public int getSellPrice(Item item) {
         if (item == null) return -1;
 
-        // OPSI: Jika ingin harga jual ikan selalu dari objek Fish itu sendiri
         if (item instanceof Fish) {
-             return ((Fish) item).getSellPrice(); // Panggil metode di Fish
+             return ((Fish) item).getSellPrice(); 
         }
-        // Jika tidak, atau jika harga ikan juga disimpan di PriceList, ambil dari map
         return getSellPrice(item.getName());
     }
 
@@ -155,11 +137,10 @@ public class PriceList {
         this.sellPrices.clear();
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
-            // Anda mungkin punya header, jika ya: br.readLine();
             while ((line = br.readLine()) != null) {
                 if (line.isBlank() || line.startsWith("#")) continue;
 
-                String[] values = line.split(","); // Asumsi pemisah koma
+                String[] values = line.split(","); 
                 if (values.length == 3) {
                     try {
                         String itemName = values[0].trim();

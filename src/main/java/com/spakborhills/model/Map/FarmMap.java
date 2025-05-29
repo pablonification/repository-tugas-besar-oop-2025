@@ -4,9 +4,9 @@ import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Enum.Season; 
 import com.spakborhills.model.Object.DeployedObject;
-import com.spakborhills.model.Object.House; // Contoh DeployedObject
-import com.spakborhills.model.Object.Pond;   // Contoh DeployedObject
-import com.spakborhills.model.Object.ShippingBinObject; // Contoh DeployedObject
+import com.spakborhills.model.Object.House; 
+import com.spakborhills.model.Object.Pond;   
+import com.spakborhills.model.Object.ShippingBinObject; 
 
 import java.awt.Point;
 import java.awt.Dimension;
@@ -27,15 +27,15 @@ public class FarmMap implements MapArea{
     private final String name = "Farm";
     private final Tile[][] tiles;
     private final Map<Point, DeployedObject> deployedObjectsMap;
-    private final java.util.List<Point> entryPoints; // Daftar EntryPoint
-    private int playerSpawnX; // Added for default spawn X
-    private int playerSpawnY; // Added for default spawn Y
+    private final java.util.List<Point> entryPoints; 
+    private int playerSpawnX; 
+    private int playerSpawnY; 
 
     /**
      * Default constructor for new games, initializes with default objects and entry points.
      */
     public FarmMap() {
-        this(true); // Initialize with defaults
+        this(true); 
     }
 
     /**
@@ -52,17 +52,14 @@ public class FarmMap implements MapArea{
         this.playerSpawnX = DEFAULT_WIDTH / 2; 
         this.playerSpawnY = DEFAULT_HEIGHT / 2;
 
-        // Always initialize all tiles as TILLABLE first
         for (int y = 0; y < DEFAULT_HEIGHT; y++) {
             for (int x = 0; x < DEFAULT_WIDTH; x++) {
                 tiles[y][x] = new Tile(TileType.TILLABLE);
             }
         }
 
-        // Define entry points first - always need to do this
         defineEntryPoints();
-
-        // Only place house, pond, etc when initializing defaults
+        
         if (initializeDefaults) {
             placeInitialDeployedObjects();
         }
@@ -78,8 +75,7 @@ public class FarmMap implements MapArea{
     private void placeInitialDeployedObjects() {
         Random random = new Random();
 
-        // Margin dari tepi peta untuk memastikan ruang yang cukup
-        int edgeMargin = 4;
+        int edgeMargin = 4; // Margin dari tepi peta untuk memastikan ruang yang cukup
         
         // A. Tempatkan House (6x6) secara acak dengan margin yang cukup
         House playerHouse = new House();
@@ -90,15 +86,13 @@ public class FarmMap implements MapArea{
         // Coba sebanyak kali yang diperlukan untuk menempatkan rumah dengan posisi yang baik
         int houseAttempts = 0;
         while (!housePlaced && houseAttempts < 50) {
-            // Tempatkan rumah dengan margin yang cukup dari tepi
             houseX = random.nextInt(DEFAULT_WIDTH - playerHouse.getWidth() - (2 * edgeMargin)) + edgeMargin;
             houseY = random.nextInt(DEFAULT_HEIGHT - playerHouse.getHeight() - (2 * edgeMargin)) + edgeMargin;
             
-            // Pastikan juga tidak terlalu dekat dengan entry point
             boolean tooCloseToEntry = false;
             for (Point entry : entryPoints) {
                 int entryDistance = Math.abs(entry.x - houseX) + Math.abs(entry.y - houseY);
-                if (entryDistance < 5) { // Minimal 5 tile dari entry point
+                if (entryDistance < 5) { 
                     tooCloseToEntry = true;
                     break;
                 }
@@ -108,14 +102,13 @@ public class FarmMap implements MapArea{
                 housePlaced = true;
                 System.out.println("Rumah berhasil ditempatkan di (" + houseX + "," + houseY + ")");
                 // Set player spawn di dekat rumah
-                playerSpawnX = houseX - 1;  // Sedikit di sebelah kiri rumah
-                playerSpawnY = houseY + playerHouse.getHeight(); // Di depan rumah
+                playerSpawnX = houseX - 1; 
+                playerSpawnY = houseY + playerHouse.getHeight();
             }
             houseAttempts++;
         }
         
         if (!housePlaced) {
-            // Fallback jika tidak berhasil setelah banyak percobaan
             System.err.println("PERINGATAN: Tidak bisa menempatkan rumah setelah banyak percobaan. Menggunakan posisi default.");
             houseX = edgeMargin;
             houseY = edgeMargin;
@@ -172,14 +165,13 @@ public class FarmMap implements MapArea{
         // Posisi 4: Pencarian dengan spiral dari rumah untuk menemukan spot yang tersedia
         if (!binPlaced) {
             System.out.println("Mencari lokasi alternatif untuk Shipping Bin...");
-            int maxRadius = 10; // Radius maksimum pencarian dari rumah
+            int maxRadius = 10;
             int houseCenterX = houseX + playerHouse.getWidth() / 2;
             int houseCenterY = houseY + playerHouse.getHeight() / 2;
             
             for (int radius = 2; radius <= maxRadius && !binPlaced; radius++) {
                 for (int offsetY = -radius; offsetY <= radius && !binPlaced; offsetY++) {
                     for (int offsetX = -radius; offsetX <= radius && !binPlaced; offsetX++) {
-                        // Hanya periksa titik-titik di tepi kotak dengan radius tertentu
                         if (Math.abs(offsetX) == radius || Math.abs(offsetY) == radius) {
                             binX = houseCenterX + offsetX - (shippingBin.getWidth() / 2);
                             binY = houseCenterY + offsetY - (shippingBin.getHeight() / 2);
@@ -203,7 +195,6 @@ public class FarmMap implements MapArea{
         
         if (!binPlaced) {
             System.err.println("KRITIS: Tidak bisa menempatkan Shipping Bin di manapun! Coba di lokasi sembarang yang valid.");
-            // Percobaan terakhir di lokasi random yang valid
             int binAttempts = 0;
             while (!binPlaced && binAttempts < 100) {
                 binX = random.nextInt(DEFAULT_WIDTH - shippingBin.getWidth() - (2 * edgeMargin)) + edgeMargin;
@@ -228,11 +219,9 @@ public class FarmMap implements MapArea{
             int pondX = random.nextInt(DEFAULT_WIDTH - farmPond.getWidth() - (2 * edgeMargin)) + edgeMargin;
             int pondY = random.nextInt(DEFAULT_HEIGHT - farmPond.getHeight() - (2 * edgeMargin)) + edgeMargin;
             
-            // Hindari penempatan terlalu dekat dengan rumah dan shipping bin
             int distanceToHouse = Math.abs(pondX - houseX) + Math.abs(pondY - houseY);
             int distanceToBin = Math.abs(pondX - binX) + Math.abs(pondY - binY);
             
-            // Pastikan kolam tidak terlalu dekat dengan objek lain (minimal 3 tile)
             if (distanceToHouse > 3 && distanceToBin > 3 && isAreaAvailable(pondX, pondY, farmPond.getWidth(), farmPond.getHeight())) {
                 placeObject(farmPond, pondX, pondY);
                 System.out.println("Pond berhasil ditempatkan di (" + pondX + "," + pondY + ")");
@@ -243,7 +232,6 @@ public class FarmMap implements MapArea{
         
         if (!pondPlaced) {
             System.err.println("PERINGATAN: Gagal menempatkan Pond setelah " + maxAttempts + " percobaan. Mungkin peta terlalu penuh.");
-            // Coba di lokasi sembarang yang valid tanpa batasan jarak
             attempts = 0;
             while (!pondPlaced && attempts < 50) {
                 int pondX = random.nextInt(DEFAULT_WIDTH - farmPond.getWidth() - 2) + 1;
@@ -265,7 +253,6 @@ public class FarmMap implements MapArea{
      * regardless of initializeDefaults value.
      */
     private void defineEntryPoints() {
-        // Entry Point Utara (tengah atas)
         int northX = DEFAULT_WIDTH / 2;
         int northY = 0;
         if (isWithinBounds(northX, northY)) {
@@ -274,7 +261,6 @@ public class FarmMap implements MapArea{
             System.out.println("Entry Point Utara ditambahkan di (" + northX + "," + northY + ")");
         }
 
-        // Entry Point Timur (tengah kanan)
         int eastX = DEFAULT_WIDTH - 1;
         int eastY = DEFAULT_HEIGHT / 2;
         if (isWithinBounds(eastX, eastY)) {
@@ -283,7 +269,6 @@ public class FarmMap implements MapArea{
             System.out.println("Entry Point Timur ditambahkan di (" + eastX + "," + eastY + ")");
         }
 
-        // Entry Point Selatan (tengah bawah)
         int southX = DEFAULT_WIDTH / 2;
         int southY = DEFAULT_HEIGHT - 1;
         if (isWithinBounds(southX, southY)) {
@@ -292,7 +277,6 @@ public class FarmMap implements MapArea{
             System.out.println("Entry Point Selatan ditambahkan di (" + southX + "," + southY + ")");
         }
 
-        // Entry Point Barat (tengah kiri)
         int westX = 0;
         int westY = DEFAULT_HEIGHT / 2;
         if (isWithinBounds(westX, westY)) {
@@ -325,8 +309,8 @@ public class FarmMap implements MapArea{
     private boolean isAreaAvailable(int startX, int startY, int width, int height) {
         for (int y = startY; y < startY + height; y++) {
             for (int x = startX; x < startX + width; x++) {
-                if (!isWithinBounds(x, y) || isOccupied(x, y) || tiles[y][x].getType() == TileType.ENTRY_POINT) { // Check for ENTRY_POINT
-                    return false; // Area tidak valid, sudah terisi, atau merupakan entry point
+                if (!isWithinBounds(x, y) || isOccupied(x, y) || tiles[y][x].getType() == TileType.ENTRY_POINT) { 
+                    return false; 
                 }
             }
         }
@@ -379,28 +363,22 @@ public class FarmMap implements MapArea{
     @Override
     public boolean isOccupied(int x, int y) {
         if (!isWithinBounds(x, y)) {
-            return true; // Di luar batas dianggap ditempati/tidak bisa diakses
-        }
-        // Cek dulu tipe tile dasarnya, apakah memang tidak bisa dilewati (misal Tembok, Air)
-        Tile currentTile = tiles[y][x];
-        if (currentTile.getType() == TileType.WALL || 
-            currentTile.getType() == TileType.WATER) { // WATER is generally impassable
-            // Tambahkan TileType lain yang tidak bisa dilewati di sini jika ada (misal, MOUNTAIN)
-            return true;
-        }
-
-        // Kemudian cek apakah ada DeployedObject di lokasi tersebut
-        DeployedObject obj = getObjectAt(x, y);
-        if (obj != null) {
-            // Jika objeknya adalah House, maka tile TIDAK dianggap occupied (bisa dilewati)
-            if (obj instanceof House) {
-                return false; 
-            }
-            // Untuk objek lain, anggap tile occupied (tidak bisa dilewati)
             return true; 
         }
         
-        // Jika tidak ada objek dan tipe tile-nya sendiri tidak menghalangi, maka tidak occupied
+        Tile currentTile = tiles[y][x];
+        if (currentTile.getType() == TileType.WALL || 
+            currentTile.getType() == TileType.WATER) {
+            return true;
+        }
+
+        DeployedObject obj = getObjectAt(x, y);
+        if (obj != null) {
+            if (obj instanceof House) {
+                return false; 
+            }
+            return true; 
+        }
         return false;
     }
 
@@ -430,18 +408,11 @@ public class FarmMap implements MapArea{
             for (int j = 0; j < obj.getWidth(); j++) {
                 Tile currentTile = getTile(x + j, y + i);
                 if (currentTile != null) {
-                    // The associateObject method in Tile now handles preserving ENTRY_POINT type.
-                    // It also correctly sets DEPLOYED_OBJECT for non-Pond, non-ENTRY_POINT cases.
                     currentTile.associateObject(obj);
 
-                    // If the object is a Pond, explicitly set the TileType to WATER.
-                    // This overrides the DEPLOYED_OBJECT that might have been set by associateObject
-                    // if the tile wasn't an ENTRY_POINT.
                     if (obj instanceof Pond) {
                         currentTile.setType(TileType.WATER);
                     } 
-                    // No specific handling for House or ShippingBinObject here regarding tile type,
-                    // as associateObject (if not ENTRY_POINT) would have set it to DEPLOYED_OBJECT.
                 }
             }
         }
@@ -487,7 +458,6 @@ public class FarmMap implements MapArea{
         if (objToRemove == null) return false;
 
         Point anchorToRemove = null;
-        // Cari anchor point dari objek yang mau dihapus
         for (Map.Entry<Point, DeployedObject> entry : deployedObjectsMap.entrySet()) {
             if (entry.getValue() == objToRemove) {
                 anchorToRemove = entry.getKey();
@@ -497,12 +467,11 @@ public class FarmMap implements MapArea{
 
         if (anchorToRemove != null) {
             deployedObjectsMap.remove(anchorToRemove);
-            // Reset semua tile yang sebelumnya ditempati objek ini
             for (int i = 0; i < objToRemove.getHeight(); i++) {
                 for (int j = 0; j < objToRemove.getWidth(); j++) {
                     Tile tile = getTile(anchorToRemove.x + j, anchorToRemove.y + i);
                     if (tile != null) {
-                        tile.removeAssociatedObject(); // Tile kembali ke TILLABLE
+                        tile.removeAssociatedObject(); 
                     }
                 }
             }
@@ -518,13 +487,10 @@ public class FarmMap implements MapArea{
     }
 
     public void clearAllDeployedObjects() {
-        // Create a list of objects to remove to avoid ConcurrentModificationException
         java.util.List<DeployedObject> objectsToRemove = new ArrayList<>(deployedObjectsMap.values());
         for (DeployedObject obj : objectsToRemove) {
-            removeObject(obj); // removeObject already handles resetting tiles
+            removeObject(obj); 
         }
-        // Sanity check, though removeObject should handle it.
-        // deployedObjectsMap.clear(); // This would orphan tiles if removeObject wasn't thorough
         System.out.println("All deployed objects cleared from FarmMap.");
     }
 

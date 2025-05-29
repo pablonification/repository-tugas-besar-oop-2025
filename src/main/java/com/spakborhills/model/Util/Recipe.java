@@ -1,8 +1,6 @@
-package com.spakborhills.model.Util; // Atau package yang sesuai
+package com.spakborhills.model.Util; 
 
-// Import yang mungkin diperlukan
-// import com.spakborhills.model.Farm; // Tidak lagi dibutuhkan di isUnlocked jika stats cukup
-import com.spakborhills.model.Player; // Mungkin dibutuhkan untuk cek inventory jika ada kondisi "punya item X saat ini"
+import com.spakborhills.model.Player; 
 
 import java.util.Collections;
 import java.util.Map;
@@ -14,7 +12,7 @@ public class Recipe {
     private final Map<String, Integer> ingredients;
     private final String resultItemName;
     private final String fuelRequired;
-    private final String unlockConditionKey; // Menggunakan kunci yang lebih standar
+    private final String unlockConditionKey; 
 
     /**
      * Konstruktor untuk Recipe.
@@ -35,10 +33,10 @@ public class Recipe {
         this.ingredients = Collections.unmodifiableMap(new HashMap<>(ingredients));
         this.resultItemName = resultItemName;
         this.fuelRequired = (fuelRequired == null || fuelRequired.isBlank()) ? null : fuelRequired;
-        this.unlockConditionKey = unlockConditionKey.toUpperCase(); // Simpan dalam uppercase untuk konsistensi
+        this.unlockConditionKey = unlockConditionKey.toUpperCase(); 
     }
 
-    // --- Getters ---
+    // Getters
     public String getName() { return name; }
     public Map<String, Integer> getIngredients() { return ingredients; }
     public String getResultItemName() { return resultItemName; }
@@ -64,28 +62,21 @@ public class Recipe {
                 return true;
 
             case "BELI_DI_STORE":
-                // Ini perlu mekanisme di mana saat pemain membeli resep dari toko,
-                // sebuah event dicatat di EndGameStatistics.
-                // Misalnya: statistics.recordKeyEventOrItem("BOUGHT_RECIPE_" + this.name.toUpperCase().replace(" ", "_"));
                 return statistics.hasAchieved("BOUGHT_RECIPE_" + this.getName().toUpperCase().replace(" ", "_"));
 
             case "FISH_10": // recipe_3 Sashimi
                 return statistics.getTotalFishCaughtCount() >= 10;
 
             case "PUFFERFISH": // recipe_4 Fugu (Kunci sudah di-uppercase oleh konstruktor)
-                               // Event yang dicatat di statistics tetap "FISH_PUFFERFISH" untuk konsistensi internal statistics
                 return statistics.hasAchieved("FISH_PUFFERFISH");
 
             case "FIRST_HARVEST": // recipe_7 Veggie Soup
                 return statistics.hasHarvestedAnyCrop();
 
             case "OBTAINED_HOT_PEPPER": // recipe_8 Fish Stew
-                // Diasumsikan EndGameStatistics mencatat event "OBTAINED_HOT_PEPPER"
-                // saat pemain memanen atau mendapatkan Hot Pepper.
                 return statistics.hasAchieved("OBTAINED_HOT_PEPPER");
 
             case "FISH_LEGEND": // recipe_11 The Legends of Spakbor
-                // Diasumsikan EndGameStatistics mencatat event "FISH_LEGEND" saat Legend ditangkap.
                 return statistics.hasAchieved("FISH_LEGEND");
 
             default:

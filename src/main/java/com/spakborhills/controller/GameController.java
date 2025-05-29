@@ -1,10 +1,10 @@
 package com.spakborhills.controller;
 
 import java.awt.Point;
-import java.util.ArrayList; // For creating list of items
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.List; // For returning list of items
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
@@ -16,10 +16,7 @@ import com.spakborhills.model.Player;
 import com.spakborhills.model.Store;
 import com.spakborhills.model.Enum.Direction;
 import com.spakborhills.model.Enum.FishRarity;
-// GameTime might be needed if Farm.nextDay() isn't comprehensive enough for all time updates
-// import com.spakborhills.model.GameTime; 
 import com.spakborhills.model.Enum.LocationType;
-// import com.spakborhills.model.Enum.RelationshipStatus;
 import com.spakborhills.model.Enum.Season;
 import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
@@ -29,13 +26,12 @@ import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
 import com.spakborhills.model.NPC.NPC;
 import com.spakborhills.model.Util.*;
-// GamePanel might be needed later for more complex interactions or direct view updates
 import com.spakborhills.view.GamePanel;
-import com.spakborhills.model.Object.House; // Added import
-import com.spakborhills.model.Util.ShippingBin; // Import ShippingBin
-import com.spakborhills.model.Enum.GameState; // Import GameState
-import com.spakborhills.model.Object.DeployedObject; // Added import for DeployedObject
-import com.spakborhills.util.SaveLoadManager; // Import SaveLoadManager
+import com.spakborhills.model.Object.House; 
+import com.spakborhills.model.Util.ShippingBin; 
+import com.spakborhills.model.Enum.GameState; 
+import com.spakborhills.model.Object.DeployedObject; 
+import com.spakborhills.util.SaveLoadManager; 
 
 public class GameController {
 
@@ -44,7 +40,7 @@ public class GameController {
 
     public GameController(Farm farmModel) {
         this.farmModel = farmModel;
-        this.gamePanel = null; // Inisialisasi null, akan di-set nanti
+        this.gamePanel = null;
     }
 
     /**
@@ -74,7 +70,6 @@ public class GameController {
         }
         boolean moved = player.move(direction);
         if (moved) {
-            // Setelah bergerak, cek apakah pemain ada di entry point map saat ini
             if (player.isOnEntryPoint()) {
                 System.out.println("Player is on an entry point of " + player.getCurrentMap().getName() + ". Triggering world map dialog...");
                 if (gamePanel != null) {
@@ -93,11 +88,9 @@ public class GameController {
      */
     public void checkTimeBasedPassOut() {
         if (farmModel == null || farmModel.getPlayer() == null || farmModel.getCurrentTime() == null || gamePanel == null) {
-            // Avoid critical errors if components aren't ready, though this check should ideally only run when in_game
             return; 
         }
 
-        // Only check if in game and not already in a state that prevents pass out (like EOD summary)
         if (farmModel.getCurrentGameState() != GameState.IN_GAME) {
             return;
         }
@@ -106,30 +99,16 @@ public class GameController {
             System.out.println("GameController: Player is past bedtime. Initiating pass out.");
             Player player = farmModel.getPlayer();
             GameTime currentTime = farmModel.getCurrentTime();
-            EndGameStatistics statistics = farmModel.getStatistics(); // Assuming Farm has getStatistics()
-            PriceList priceList = farmModel.getPriceList(); // Assuming Farm has getPriceList()
+            EndGameStatistics statistics = farmModel.getStatistics();
+            PriceList priceList = farmModel.getPriceList();
 
             String eventMessage = "You stayed up too late and passed out!";
             
-            // Process sales before advancing to next day and changing player state
             int income = farmModel.getShippingBin().processSales(statistics, priceList, currentTime.getCurrentDay(), currentTime.getCurrentSeason());
             
-            // Player.passOut() now returns the energy penalty, but we might not need it here directly
-            // if the EndOfDayMessage just needs the event and income.
-            // Farm farm = farmModel; // Pass the farmModel instance itself
-            player.passOut(farmModel); // Pass the farm model instance
-            
-            // farmModel.getCurrentTime().nextDay(); // Player.passOut should handle calling farm.nextDayLogic() or similar
-            // player.passOut() should set location to home and reset energy.
-            // The nextDay logic is now expected to be handled within Farm model when passOut is called on player, 
-            // or GameController's passOut should call farmModel.nextDayLogic() if player.passOut doesn't trigger it.
-            // For now, assume player.passOut handles becoming the new day via farmModel reference.
-            // If not, farmModel.nextDayLogic() or similar should be called here AFTER player.passOut() and BEFORE showEndOfDayMessage.
-            // Let's assume player.passOut(farmModel) correctly triggers the day change logic via the farmModel reference.
+            player.passOut(farmModel); 
 
             if (gamePanel != null) {
-                // generateNewDayInfoString() might need to be called *after* the day has officially ticked over.
-                // If player.passOut(farmModel) ensures the new day's state is set in currentTime, this is fine.
                 gamePanel.showEndOfDayMessage(eventMessage, income, generateNewDayInfoString());
             }
         }
@@ -145,8 +124,7 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        // FarmMap farmMap = farmModel.getFarmMap(); // farmMap variable can be obtained from player.getCurrentMap() if it's FarmMap
-
+        
         if (player == null) {
             System.err.println("GameController: Player is null, cannot till land.");
             return false;
@@ -156,7 +134,7 @@ public class GameController {
             System.out.println("Hoe (Tilling) can only be used on the Farm.");
             return false;
         }
-        FarmMap farmMap = (FarmMap) player.getCurrentMap(); // Now we know it's a FarmMap
+        FarmMap farmMap = (FarmMap) player.getCurrentMap(); 
 
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to till land.");
@@ -171,7 +149,7 @@ public class GameController {
 
         boolean tilled = player.till(targetTile);
         if (tilled) {
-            player.changeEnergy(-5); // Biaya energi untuk mencangkul
+            player.changeEnergy(-5); 
             System.out.println("Tilled land. Energy: " + player.getEnergy());
             checkPassOut(); 
         }
@@ -188,7 +166,6 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        // FarmMap farmMap = farmModel.getFarmMap();
         GameTime gameTime = farmModel.getCurrentTime();
 
         if (player == null || gameTime == null) {
@@ -238,8 +215,7 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        // FarmMap farmMap = farmModel.getFarmMap();
-        GameTime gameTime = farmModel.getCurrentTime(); // Dipertahankan jika Player.water() membutuhkannya di masa depan, atau untuk konsistensi
+        GameTime gameTime = farmModel.getCurrentTime(); 
 
         if (player == null || gameTime == null) {
             System.err.println("GameController: Player, FarmMap, or GameTime is null, cannot water tile.");
@@ -257,10 +233,6 @@ public class GameController {
             return false; 
         }
 
-        // Pemeriksaan kepemilikan Watering Can dan apakah itu item yang dipilih
-        // sekarang ditangani di dalam player.water() melalui player.getSelectedItem()
-        // Jadi, kita tidak perlu cek inventory.hasTool("Watering Can") di sini lagi.
-
         Tile targetTile = farmMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
         if (targetTile == null) {
             System.err.println("GameController: Tile at player position is null for watering.");
@@ -269,12 +241,10 @@ public class GameController {
 
         boolean watered = player.water(targetTile, gameTime.getCurrentWeather());
         if (watered) {
-            player.changeEnergy(-5); // Biaya energi untuk menyiram
+            player.changeEnergy(-5); 
             System.out.println("Watered tile at (" + player.getCurrentTileX() + "," + player.getCurrentTileY() + "). Energy: " + player.getEnergy());
             checkPassOut(); 
         }
-        // Jika tidak berhasil (misal, tile tidak bisa disiram, atau tidak ada watering can dipilih), 
-        // player.water() akan return false dan pesan error akan dicetak dari Player.java
         return watered;
     }
 
@@ -288,9 +258,7 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        // FarmMap farmMap = farmModel.getFarmMap();
-        Map<String, Item> itemRegistry = farmModel.getItemRegistry(); // For Player.harvest()
-
+        Map<String, Item> itemRegistry = farmModel.getItemRegistry();
         if (player == null || itemRegistry == null) {
             System.err.println("GameController: Player or ItemRegistry is null, cannot harvest.");
             return false;
@@ -309,22 +277,15 @@ public class GameController {
 
         Tile targetTile = farmMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
         if (targetTile == null || !targetTile.isHarvestable()) {
-            // System.out.println("GameController: Nothing to harvest at player position or tile is null.");
-            return false; // Nothing to harvest or tile invalid
+            return false; 
         }
 
-        // Player.harvest() should handle: 
-        // 1. Calling targetTile.processHarvest(itemRegistry)
-        // 2. Adding the returned items to its inventory
-        // 3. Deducting energy (e.g., 5 energy per crop)
-        // 4. Returning true/false
-        // Now also needs EndGameStatistics
         boolean harvested = player.harvest(targetTile, itemRegistry, farmModel.getStatistics()); // Pass statistics
 
         if (harvested) {
             System.out.println("Successfully harvested from tile (" + player.getCurrentTileX() + "," + player.getCurrentTileY() + ")");
-            player.changeEnergy(-5); // Jika ada biaya energi untuk panen
-            checkPassOut(); // Check for pass out condition after successful harvesting
+            player.changeEnergy(-5); 
+            checkPassOut(); 
         }
         return harvested;
     }
@@ -339,7 +300,6 @@ public class GameController {
             return false;
         }
         Player player = farmModel.getPlayer();
-        // FarmMap farmMap = farmModel.getFarmMap();
 
         if (player == null) {
             System.err.println("GameController: Player or FarmMap is null, cannot recover land.");
@@ -365,7 +325,7 @@ public class GameController {
 
         boolean recovered = player.recoverLand(targetTile);
         if (recovered) {
-            player.changeEnergy(-5); // Biaya energi untuk memulihkan tanah
+            player.changeEnergy(-5); 
             System.out.println("Recovered land. Energy: " + player.getEnergy());
             checkPassOut();
         }
@@ -400,54 +360,33 @@ public class GameController {
         // atau jika pemain sudah pingsan.
         if (player.getEnergy() <= Player.MIN_ENERGY && (!(selectedItem instanceof EdibleItem) || ((EdibleItem)selectedItem).getEnergyRestore() <=0 ) ) {
             System.out.println("Player is too tired to eat (or item provides no energy).");
-            // Memungkinkan makan item penambah energi bahkan jika sudah pingsan, jika itu satu-satunya cara untuk pulih sedikit.
-            // Namun, jika item tidak menambah energi atau energi negatif, dan sudah pingsan, maka tidak bisa.
             return false;
         }
 
         boolean eaten = player.eat(selectedItem);
 
         if (eaten) {
-            int timeCostEat = 5; // Biaya waktu 5 menit untuk makan
+            int timeCostEat = 5; 
             gameTime.advance(timeCostEat);
             System.out.println("Player finished eating. Time advanced by " + timeCostEat + " minutes. Current time: " + gameTime.getTimeString());
             
             // Setelah makan, selectedItem mungkin menjadi null jika stacknya habis.
             // Perlu di-handle agar selectedItem di Player konsisten.
             if (player.getInventory().getItemCount(selectedItem) == 0) {
-                // Item habis, coba pilih item berikutnya secara otomatis
-                // Ini bisa jadi kompleks, untuk sekarang kita set null saja, 
-                // dan biarkan pemain memilih ulang atau GamePanel menampilkan "None"
                 System.out.println("GameController: Item " + selectedItem.getName() + " habis setelah dimakan.");
-                // player.setSelectedItem(null); // Jangan set di sini, biarkan sistem pemilihan item yang ada bekerja.
-                                            // Pemain akan otomatis memilih item berikutnya jika ada saat inventory di-cycle.
-                                            // Atau, jika ada mekanisme 'auto-select next available item', itu bisa dipanggil di sini.
-                                            // Untuk sekarang, kita asumsikan player.getSelectedItem() akan mengembalikan null jika item terakhir habis
-                                            // dan player.selectNext/Prev akan skip item yang countnya 0.
-                                            // Jika tidak, kita perlu memanggil selectNext/Previous atau semacamnya di sini.
-                                            // Untuk memastikan konsistensi, jika item yang dimakan adalah selectedItem dan habis,
-                                            // kita perlu memastikan selectedItem di Player di-update. Cara terbaik adalah dengan
-                                            // memanggil kembali logika pemilihan item.
-                                            // Namun, karena Player.eat() sendiri tidak mengubah selectedItem, kita hanya perlu memastikan
-                                            // GamePanel akan me-refresh tampilan selectedItem yang mungkin sudah jadi 0 qty.
-                                            // Jika selectedItem adalah objek yang sama, dan Player.getSelectedItem() merujuk ke sana,
-                                            // maka pengecekan player.getInventory().getItemCount(selectedItem) == 0 sudah cukup.
-                                            // Jika Player.eat() secara internal membuat selectedItem jadi null jika habis, maka tidak perlu apa2.
-                                            // Berdasarkan Player.java, dia TIDAK set selectedItem jadi null. Ini adalah tanggung jawab controller atau UI.
-                                            // Untuk sekarang, kita biarkan. Jika ini jadi masalah, kita bisa panggil selectNextItem() jika item habis.
-                 // Perlu dipastikan selectedItem di Player di-refresh. Cara paling aman:
+                
                 if (player.getSelectedItem() != null && player.getInventory().getItemCount(player.getSelectedItem()) == 0) {
                      System.out.println("GameController: Selected item " + player.getSelectedItem().getName() + " habis, mencoba memilih item lain.");
-                     // Coba select next, jika gagal (misal inventory jadi kosong), selected item akan jadi null.
-                     selectNextItem(); // Ini akan memutar dan memilih item valid berikutnya atau null
-                     if (player.getSelectedItem() == null) { // Jika setelah selectNextItem masih null (inventory kosong)
+                     
+                     selectNextItem(); 
+                     if (player.getSelectedItem() == null) { 
                          System.out.println("GameController: Inventory kosong setelah makan, selected item menjadi null.");
                      } else {
                          System.out.println("GameController: Selected item baru setelah makan: " + player.getSelectedItem().getName());
                      }
                 }
             }
-            checkPassOut(); // Cek kondisi pingsan setelah energi berubah dan waktu bertambah
+            checkPassOut(); 
             return true;
         }
         return false;
@@ -471,9 +410,9 @@ public class GameController {
             String newDayInfo = generateNewDayInfoString();
             
             if (gamePanel != null) {
-                gamePanel.stopGameTimer(); // Stop timer before modal dialog
+                gamePanel.stopGameTimer(); 
                 gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
-                gamePanel.startGameTimer(); // Restart timer after modal dialog
+                gamePanel.startGameTimer(); 
             } else {
                 System.out.println(eventMessage + " " + newDayInfo + " Pendapatan: " + incomeFromSales + "G (GamePanel belum siap untuk dialog)");
             }
@@ -495,10 +434,6 @@ public class GameController {
                              currentTime.getCurrentWeather().toString());
     }
 
-    // Placeholder for other game actions that the controller will handle
-    // public void handleTillRequest() { ... }
-    // public void handlePlantRequest(String seedName) { ... }
-
     /**
      * Retrieves a list of items available for purchase from the store.
      * @return A list of Item objects or null if an error occurs.
@@ -507,7 +442,6 @@ public class GameController {
         if (farmModel == null || farmModel.getStore() == null || farmModel.getItemRegistry() == null || farmModel.getPriceList() == null) {
             System.err.println("Error: Model, Toko, ItemRegistry, atau PriceList null di GameController.getStoreItemsForDisplay.");
             if (gamePanel != null) {
-                // gamePanel.displayMessage("Error: Data toko tidak dapat dimuat.");
             }
             return Collections.emptyList();
         }
@@ -540,19 +474,11 @@ public class GameController {
             return "Gagal: Jumlah pembelian harus lebih dari 0.";
         }
 
-        // Check if the item is actually sold by the store
-        // This relies on Store.getAvailableItemsForDisplay filtering correctly
-        // or Store.sellToPlayer having its own internal check.
-        // For a more direct check here, we'd need access to Store's internal list of items for sale.
-        // Let's assume Store.sellToPlayer handles this.
-        // We can check if the item has a valid buy price.
         int buyPrice = priceList.getBuyPrice(itemName);
-        if (buyPrice == -1) { // Assuming -1 means not for sale or price not set
+        if (buyPrice == -1) { 
             return "Gagal: Item '" + itemName + "' tidak dapat dibeli atau tidak dijual.";
         }
         
-        // Check if item is in the list of items the store *claims* to sell (from getAvailableItemsForDisplay)
-        // This is a sanity check. The ultimate truth is if priceList has a buy price.
         boolean foundInStoreDisplayList = false;
         List<Item> displayItems = store.getAvailableItemsForDisplay(itemRegistry, priceList);
         for (Item displayItem : displayItems) {
@@ -562,15 +488,11 @@ public class GameController {
             }
         }
         if (!foundInStoreDisplayList) {
-             // This case implies an inconsistency, or the item is valid but was filtered out for display (e.g. buy price 0 before fix)
-             // but if it has a valid buyPrice > 0 from pricelist, it should be buyable.
-             // If buyPrice is 0, it means it's free.
-             if (buyPrice <= 0 && buyPrice != -1) { // Item is free or has an issue, but exists in priceList
-                 // Allow free items if they appear in price list with 0
-             } else if (buyPrice == -1) { // Definitely not for sale by priceList
+            if (buyPrice <= 0 && buyPrice != -1) {
+                 
+            } else if (buyPrice == -1) { 
                 return "Gagal: Item '" + itemName + "' tidak terdaftar untuk dijual (kode: C01).";
-             }
-             // If it has a positive price but not in display list, it's weird, but let's proceed if pricelist says it's buyable.
+            }
         }
 
 
@@ -579,13 +501,10 @@ public class GameController {
         if (player.getGold() < totalPrice) {
             return "Gagal: Gold tidak cukup. Butuh " + totalPrice + "G, kamu punya " + player.getGold() + "G.";
         }
-
-        // Call the original Store.sellToPlayer method
-        // The existing sellToPlayer in Store.java is: sellToPlayer(Player player, Item item, int quantity, PriceList priceList, Map<String, Item> itemRegistry)
+        
         boolean success = store.sellToPlayer(player, itemToBuy, quantity, priceList, itemRegistry);
 
         if (success) {
-            // Record the expenditure in statistics
             if (farmModel.getStatistics() != null && totalPrice > 0) {
                 farmModel.getStatistics().recordExpenditure(totalPrice, farmModel.getCurrentTime().getCurrentSeason());
                 System.out.println("Recorded expenditure: " + totalPrice + "g for " + quantity + " " + itemToBuy.getName());
@@ -597,9 +516,6 @@ public class GameController {
             String priceString = totalPrice == 0 ? "Gratis" : totalPrice + "G";
             return "Berhasil membeli " + quantity + " " + itemToBuy.getName() + " (" + priceString + ").";
         } else {
-            // Attempt to give a more specific reason if possible, otherwise generic.
-            // This part depends on Store.sellToPlayer's internal logic and if it provides feedback.
-            // For now, a general message.
             return "Gagal membeli item. Mungkin inventory penuh atau item tidak lagi tersedia.";
         }
     }
@@ -634,12 +550,10 @@ public class GameController {
             return false;
         }
 
-        // The Store.sellToPlayer method should handle gold deduction, adding item to inventory, etc.
         boolean success = store.sellToPlayer(player, itemToBuy, quantity, priceList, itemRegistry);
         if (success) {
             System.out.println("Purchased " + quantity + " of " + itemName);
 
-            // Record the expenditure in statistics
             int buyPrice = priceList.getBuyPrice(itemName);
             int totalPrice = buyPrice * quantity;
             if (farmModel.getStatistics() != null && totalPrice > 0) {
@@ -647,24 +561,21 @@ public class GameController {
                 System.out.println("Recorded expenditure: " + totalPrice + "g for " + quantity + " " + itemToBuy.getName());
             }
 
-            // Check if the bought item unlocks a recipe
-            if (itemToBuy instanceof Food) { // Recipes bought from store are Food items
-                // String normalizedItemName = itemName.toUpperCase().replace(" ", "_");
+            
+            if (itemToBuy instanceof Food) { 
                 String eventKey = null;
 
                 if (itemName.equalsIgnoreCase("Fish n' Chips")) {
-                    eventKey = "BOUGHT_RECIPE_FISH_N'_CHIPS"; // Make sure this matches Recipe.isUnlocked
+                    eventKey = "BOUGHT_RECIPE_FISH_N'_CHIPS"; 
                 } else if (itemName.equalsIgnoreCase("Fish Sandwich")) {
-                    eventKey = "BOUGHT_RECIPE_FISH_SANDWICH"; // Make sure this matches Recipe.isUnlocked
+                    eventKey = "BOUGHT_RECIPE_FISH_SANDWICH"; 
                 }
-                // Add other "buy-to-unlock" recipe items here if any
 
                 if (eventKey != null && farmModel.getStatistics() != null) {
                     farmModel.getStatistics().recordKeyEventOrItem(eventKey);
                     System.out.println("Recipe unlock event recorded: " + eventKey);
                 }
             }
-            // No direct energy cost for buying, so no checkPassOut() here unless specified.
             if (gamePanel != null) {
                 gamePanel.updatePlayerInfoPanel();
             }
@@ -704,21 +615,14 @@ public class GameController {
             return false;
         }
 
-        // Validasi canSellToday dari ShippingBin sebelum memanggil Player.sellItemToBin
         if (!shippingBin.canSellToday()) {
             System.out.println("GameController: Cannot sell today, already sold items via Shipping Bin.");
             return false;
         }
 
-        // Panggil metode player yang sudah divalidasi
         boolean sold = player.sellItemToBin(itemToSell, quantity, shippingBin, gameTime.getCurrentDay());
         if (sold) {
             System.out.println("GameController: Request to sell " + quantity + " of " + itemName + " processed.");
-            // Pertimbangkan jika ada efek waktu 15 menit yang perlu di-trigger di sini
-            // gameTime.advance(15); // Jika interaksi dianggap langsung selesai dan memakan waktu
-            // Namun, spesifikasi (No. 20) menyatakan "Menghentikan waktu selama penjualan dan 
-            // menghabiskan waktu 15 menit dalam game setelah selesai Selling."
-            // Ini mungkin lebih cocok ditangani di GamePanel setelah dialog ditutup.
         }
         return sold;
     }
@@ -730,7 +634,7 @@ public class GameController {
      */
     public List<Item> getPlayerInventoryItems() {
         if (farmModel != null && farmModel.getPlayer() != null && farmModel.getPlayer().getInventory() != null) {
-            return new ArrayList<>(farmModel.getPlayer().getInventory().getItems().keySet()); // Returns a list of unique item types
+            return new ArrayList<>(farmModel.getPlayer().getInventory().getItems().keySet()); 
         }
             return new ArrayList<>();
     }
@@ -741,7 +645,7 @@ public class GameController {
     public void selectNextItem() {
         if (farmModel == null || farmModel.getPlayer() == null) return;
         Player player = farmModel.getPlayer();
-        List<Item> allItems = getPlayerInventoryItems(); // Dapat semua item
+        List<Item> allItems = getPlayerInventoryItems();
 
         if (allItems.isEmpty()) {
             player.setSelectedItem(null); 
@@ -771,7 +675,7 @@ public class GameController {
     public void selectPreviousItem() {
         if (farmModel == null || farmModel.getPlayer() == null) return;
         Player player = farmModel.getPlayer();
-        List<Item> allItems = getPlayerInventoryItems(); // Dapat semua item
+        List<Item> allItems = getPlayerInventoryItems(); 
 
         if (allItems.isEmpty()) {
             player.setSelectedItem(null); 
@@ -791,8 +695,8 @@ public class GameController {
         }
         
         int prevIndex;
-        if (currentIndex <= 0) { // Jika tidak ditemukan atau item pertama
-            prevIndex = allItems.size() - 1; // Putar ke item terakhir
+        if (currentIndex <= 0) { 
+            prevIndex = allItems.size() - 1;
         } else {
             prevIndex = currentIndex - 1;
         }
@@ -800,8 +704,6 @@ public class GameController {
         System.out.println("Selected item: " + player.getSelectedItem().getName());
     }
 
-    // Metode getPlayerTools() yang lama bisa dihapus atau diubah jika masih perlu 
-    // khusus untuk Equipment. Untuk sekarang, kita fokus pada item umum.
     /**
      * Mengambil daftar Equipment (alat) yang dimiliki pemain.
      * @return List dari Equipment, atau list kosong jika tidak ada.
@@ -809,9 +711,8 @@ public class GameController {
     public List<Equipment> getPlayerTools() {
         List<Equipment> tools = new ArrayList<>();
         Player player = farmModel.getPlayer();
-        // Ensure player, inventory, and items are not null before proceeding
         if (player == null || player.getInventory() == null || player.getInventory().getItems() == null) {
-            return tools; // Return empty list if any essential part is null
+            return tools; 
         }
         if (player.getInventory() != null && player.getInventory().getItems() != null) {
             for (Item item : player.getInventory().getItems().keySet()) {
@@ -827,17 +728,14 @@ public class GameController {
     private Point findSafeSpawnPoint(MapArea map, int preferredX, int preferredY) {
         if (map == null) {
             System.err.println("findSafeSpawnPoint: Map is null, returning preferred coordinates as fallback (1,1).");
-            return new Point(1, 1); // Fallback to a generally safe coordinate
+            return new Point(1, 1); 
         }
 
-        // Check preferred point first
         Tile preferredTile = map.getTile(preferredX, preferredY);
-        // Use isTileWalkableForSpawn here
         if (preferredTile != null && isTileWalkableForSpawn(preferredTile, map, preferredX, preferredY)) {
             return new Point(preferredX, preferredY);
         }
 
-        // Search adjacent tiles to the preferred point
         int[][] offsets = {
             {0, -1}, {0, 1}, {1, 0}, {-1, 0}, // N, S, E, W
             {1, -1}, {-1, -1}, {1, 1}, {-1, 1}  // NE, NW, SE, SW
@@ -849,7 +747,6 @@ public class GameController {
 
             if (map.isWithinBounds(checkX, checkY)) {
                 Tile adjacentTile = map.getTile(checkX, checkY);
-                // Use isTileWalkableForSpawn here
                 if (adjacentTile != null && isTileWalkableForSpawn(adjacentTile, map, checkX, checkY)) {
                     System.out.println("Safe spawn found at adjacent tile: (" + checkX + ", " + checkY + ") for preferred: (" + preferredX + ", " + preferredY + ") on map " + map.getName());
                     return new Point(checkX, checkY);
@@ -859,13 +756,11 @@ public class GameController {
 
         System.out.println("findSafeSpawnPoint: Preferred ("+preferredX+","+preferredY+") and adjacent tiles unsafe on map " + map.getName() + ". Checking map entry points.");
 
-        // If preferred and adjacent are not safe, iterate through the map's defined entry points
         List<Point> entryPoints = map.getEntryPoints();
         if (entryPoints != null && !entryPoints.isEmpty()) {
             for (Point entry : entryPoints) {
                 if (map.isWithinBounds(entry.x, entry.y)) {
                     Tile entryTile = map.getTile(entry.x, entry.y);
-                    // Use isTileWalkableForSpawn for entry points as well
                     if (entryTile != null && isTileWalkableForSpawn(entryTile, map, entry.x, entry.y)) {
                         System.out.println("Safe spawn found at map entry point: (" + entry.x + ", " + entry.y + ") on map " + map.getName());
                         return entry;
@@ -873,8 +768,6 @@ public class GameController {
                 }
             }
             System.err.println("findSafeSpawnPoint: No walkable entry point found on map " + map.getName() + ". Fallback to first entry point or (1,1).");
-            // If no entry point is walkable, return the first one as a last resort, or a hardcoded safe point.
-            // Before returning the first entry point, check if IT is walkable for spawn, otherwise fallback.
             if (!entryPoints.isEmpty()) {
                 Point firstEntryPoint = entryPoints.get(0);
                 Tile firstEntryTile = map.getTile(firstEntryPoint.x, firstEntryPoint.y);
@@ -885,7 +778,6 @@ public class GameController {
         }
 
         System.err.println("findSafeSpawnPoint: No safe adjacent tile and no suitable entry points defined/walkable for map " + map.getName() + ". Iterating all GRASS tiles as last resort.");
-        // Absolute fallback: Iterate through all tiles and find the first GRASS tile
         if (map.getTiles() != null) {
             Tile[][] allTiles = map.getTiles();
             for (int r = 0; r < allTiles.length; r++) {
@@ -901,49 +793,6 @@ public class GameController {
         System.err.println("ULTIMATE FALLBACK: No safe spawn point found anywhere on map " + map.getName() + ". Returning absolute fallback (1,1).");
         return new Point(1, 1); 
     }
-
-    // Helper method to check if a tile is walkable (general purpose)
-    // private boolean isTileWalkable(Tile tile, MapArea map, int x, int y) {
-    //     if (tile == null) return false;
-    //     TileType type = tile.getType();
-    //     // Walkable types: GRASS, TILLABLE, TILLED, PLANTED, ENTRY_POINT (if base is walkable)
-    //     // Also includes various floor types.
-    //     // Unwalkable: WATER, OBSTACLE, or if there's a DEPLOYED_OBJECT that's not passable
-    //     boolean isBaseTypeWalkable = type == TileType.GRASS || 
-    //                                  type == TileType.TILLABLE || 
-    //                                  type == TileType.TILLED || 
-    //                                  type == TileType.PLANTED || // A planted tile is walkable; harvestability is a state of the plant, not the tile type itself for walkability.
-    //                                  type == TileType.ENTRY_POINT || // Assuming entry points are placed on walkable base
-    //                                  type == TileType.WOOD_FLOOR ||  
-    //                                  type == TileType.STONE_FLOOR ||
-    //                                  type == TileType.CARPET_FLOOR ||
-    //                                  type == TileType.LUXURY_FLOOR ||
-    //                                  type == TileType.DIRT_FLOOR;
-
-    //     if (!isBaseTypeWalkable) return false;
-
-    //     // Check for blocking deployed objects. 
-    //     // The isOccupied check might be slightly different from "isWalkable".
-    //     // For now, assume if getAssociatedObject is not null, it's blocking.
-    //     // A more robust way would be DeployedObject having an isPassable() method.
-    //     if (map.getObjectAt(x,y) != null) { 
-    //         // For example, a small rug (DeployedObject) might be on a WOOD_FLOOR tile and should be passable.
-    //         // A House object would not be.
-    //         // This currently uses a simplified check: if there's an object, it's not walkable.
-    //         // This might conflict with the definition of some maps if entry points are on tiles with non-blocking objects.
-    //         // For now, if the object is the map itself (e.g. a house in an NPC map), allow it.
-    //         DeployedObject obj = map.getObjectAt(x,y);
-    //         if (obj!= null && obj.getName().toLowerCase().contains("house") && map.getName().toLowerCase().contains("home")){
-    //              //This is likely an NPC house map, player can spawn inside.
-    //         } else if (obj != null){
-    //             // System.out.println("Tile ("+x+","+y+") on map "+map.getName()+" has object: "+obj.getName()+", considered not walkable for spawn.");
-    //             // return false; 
-    //             // Temporarily allowing spawn on occupied tiles if base type is walkable, to avoid getting stuck
-    //             // This needs better logic based on object passability.
-    //         }
-    //     }
-    //     return true;
-    // }
 
     /**
      * Handles the player's request to visit a new location.
@@ -973,56 +822,42 @@ public class GameController {
             return false;
         }
 
-        int preferredX = 0; // Default preferred X
-        int preferredY = 0; // Default preferred Y
+        int preferredX = 0; 
+        int preferredY = 0; 
 
         List<Point> targetEntryPoints = targetMap.getEntryPoints();
 
         if (destination == LocationType.FARM) {
-            // Returning to Farm: Try to use a logical entry point based on where player might be coming from,
-            // or a default safe spot on the farm map if no specific entry logic is in place.
-            // For now, let's assume the FarmMap has entry points defined for world map access.
-            // We could try to find an entry point on FarmMap that isn't on the edge player is on (if currentMap isn't FarmMap)
-            // or use player's last known position on FarmMap if available and still valid.
-            // Simplest: use the first entry point of the farm map, or a safe default.
             if (targetEntryPoints != null && !targetEntryPoints.isEmpty()) {
                 preferredX = targetEntryPoints.get(0).x;
                 preferredY = targetEntryPoints.get(0).y;
             } else {
-                preferredX = targetMap.getSize().width / 2; // Default to center-ish if no entry points
+                preferredX = targetMap.getSize().width / 2; 
                 preferredY = targetMap.getSize().height / 2;
         }
         } else if (currentMap instanceof FarmMap) {
-            // Exiting FarmMap to another location
             int playerExitX = player.getCurrentTileX();
-            // int playerExitY = player.getCurrentTileY();
             int farmMapWidth = currentMap.getSize().width;
-            // int farmMapHeight = currentMap.getSize().height;
 
-            // Default to a central entry point on the target map
             if (targetEntryPoints != null && !targetEntryPoints.isEmpty()) {
-                // Try to find an entry point on the opposite side of the target map
-                if (playerExitX == 0 && targetMap.getName().equalsIgnoreCase("Forest River")) { // Exited left from Farm, entering Forest River (expects right entry)
+                if (playerExitX == 0 && targetMap.getName().equalsIgnoreCase("Forest River")) { 
                     Point entry = targetEntryPoints.stream().filter(p -> p.x == targetMap.getSize().width -1).findFirst().orElse(targetEntryPoints.get(0));
                     preferredX = entry.x; preferredY = entry.y;
-                } else if (playerExitX >= farmMapWidth - 1  && targetMap.getName().equalsIgnoreCase("Forest River")) { // Exited right from Farm, entering Forest River (expects left entry)
+                } else if (playerExitX >= farmMapWidth - 1  && targetMap.getName().equalsIgnoreCase("Forest River")) { 
                     Point entry = targetEntryPoints.stream().filter(p -> p.x == 0).findFirst().orElse(targetEntryPoints.get(0));
                     preferredX = entry.x; preferredY = entry.y;
-                } else if (targetEntryPoints.size() > 0) { // Default to first entry point if no specific logic matches
+                } else if (targetEntryPoints.size() > 0) { 
                      preferredX = targetEntryPoints.get(0).x;
                      preferredY = targetEntryPoints.get(0).y;
-                } else { // Fallback if target has no entry points
+                } else { 
                     preferredX = targetMap.getSize().width / 2;
                     preferredY = targetMap.getSize().height / 2;
                 }
-            } else { // Fallback if target has no entry points
+            } else { 
                 preferredX = targetMap.getSize().width / 2;
                 preferredY = targetMap.getSize().height / 2;
             }
         } else {
-            // Transitioning between two non-FarmMap world locations, or from a world location to another (not Farm)
-            // This logic might need to be more sophisticated based on world map connections.
-            // For now, use the first entry point of the target map or its center.
             if (targetEntryPoints != null && !targetEntryPoints.isEmpty()) {
                 preferredX = targetEntryPoints.get(0).x;
                 preferredY = targetEntryPoints.get(0).y;
@@ -1032,7 +867,6 @@ public class GameController {
             }
         }
         
-        // Ensure preferred coordinates are within the target map bounds before finding safe spawn
         if (preferredX >= targetMap.getSize().width) preferredX = targetMap.getSize().width - 1;
         if (preferredY >= targetMap.getSize().height) preferredY = targetMap.getSize().height - 1;
         if (preferredX < 0) preferredX = 0;
@@ -1046,16 +880,13 @@ public class GameController {
 
         if (visited) {
             System.out.println("Player visited " + destination + ". New map: " + targetMap.getName());
-            player.changeEnergy(-10); // Cost of visiting
-            gameTime.advance(15);   // Time cost of visiting
-
-            // It's important that farmModel's player reference is the same one whose currentMap has changed.
-            // And GamePanel must be looking at player.getCurrentMap() to see the change.
+            player.changeEnergy(-10); 
+            gameTime.advance(15);  
 
             if (gamePanel != null) {
-                gamePanel.repaint(); // Trigger repaint to show new map
+                gamePanel.repaint(); 
             }
-            checkPassOut(); // Check if player passed out due to energy loss
+            checkPassOut(); 
             return true;
         } else {
             System.err.println("GameController: player.visit() returned false for " + destination);
@@ -1091,25 +922,21 @@ public class GameController {
             return false;
         }
         
-        // Check if player has enough energy
         if (player.getEnergy() <= Player.MIN_ENERGY) {
             System.out.println("Player is too tired to fish.");
             return false;
         }
         
-        // Check if player has fishing rod selected
         Item selectedItem = player.getSelectedItem();
         if (selectedItem == null || !selectedItem.getName().equals("Fishing Rod")) {
             System.out.println("You need to select the Fishing Rod to fish.");
             return false;
         }
         
-        // Get current map and determine fishing location type
         MapArea currentMap = player.getCurrentMap();
         LocationType fishingLocation = null;
         
         if (currentMap instanceof FarmMap) {
-            // On farm map, must be near (not on) pond
             boolean nearPond = isPlayerNearWater(player, (FarmMap)currentMap);
             if (nearPond) {
                 fishingLocation = LocationType.POND;
@@ -1118,7 +945,6 @@ public class GameController {
                 return false;
             }
         } else {
-            // On world map, determine location from current map
             String mapName = currentMap.getName();
             if (mapName.contains("Forest River")) {
                 fishingLocation = LocationType.FOREST_RIVER;
@@ -1131,7 +957,6 @@ public class GameController {
                 return false;
             }
             
-            // Check if player is near water on this map
             Tile playerTile = currentMap.getTile(player.getCurrentTileX(), player.getCurrentTileY());
             if (playerTile == null || !isNearWaterTile(player, currentMap)) {
                 System.out.println("You need to be near water to fish.");
@@ -1139,17 +964,9 @@ public class GameController {
             }
         }
         
-        // At this point, we know:
-        // 1. Player has fishing rod selected
-        // 2. Player has enough energy
-        // 3. Player is near water in a valid fishing location
-        // 4. We have determined the fishing location type
+        player.changeEnergy(-5); 
+        gameTime.advance(15); 
         
-        // Time and energy cost
-        player.changeEnergy(-5); // Energy cost for attempting to fish
-        gameTime.advance(15);    // Time cost for fishing attempt (15 minutes)
-        
-        // Show fishing minigame dialog
         if (gamePanel != null) {
             return startFishingMinigame(fishingLocation);
         } else {
@@ -1166,7 +983,6 @@ public class GameController {
         int playerX = player.getCurrentTileX();
         int playerY = player.getCurrentTileY();
         
-        // Check adjacent tiles (up, down, left, right)
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
         
         for (int[] dir : directions) {
@@ -1191,13 +1007,11 @@ public class GameController {
         int playerX = player.getCurrentTileX();
         int playerY = player.getCurrentTileY();
         
-        // First check if player is directly on water
         Tile playerTile = map.getTile(playerX, playerY);
         if (playerTile != null && playerTile.getType() == TileType.WATER) {
             return true;
         }
         
-        // Then check adjacent tiles
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
         
         for (int[] dir : directions) {
@@ -1220,47 +1034,39 @@ public class GameController {
      * Shows a dialog for player to guess a number, with difficulty based on fish type.
      */
     private boolean startFishingMinigame(LocationType fishingLocation) {
-        // Determine season, time, and weather
         Season currentSeason = farmModel.getCurrentTime().getCurrentSeason();
         Weather currentWeather = farmModel.getCurrentTime().getCurrentWeather();
         int currentHour = farmModel.getCurrentTime().getHour();
         
-        // Use the fishing location, season, time, and weather to determine available fish
         boolean canCatchLegendary = canCatchLegendaryFish(fishingLocation, currentSeason, currentHour, currentWeather);
         boolean canCatchRegular = canCatchRegularFish(fishingLocation, currentSeason, currentHour, currentWeather);
         
-        // Default to common fish if no specific fish can be caught
         String fishType = "Common";
-        int maxGuess = 10;    // Range 1-10
-        int maxAttempts = 10; // 10 attempts
+        int maxGuess = 10;    
+        int maxAttempts = 10; 
         
-        // Determine fish type and difficulty with some randomness
         Random rng = new Random();
-        if (canCatchLegendary && rng.nextDouble() < 0.05) { // 5% chance for legendary if conditions are right
+        if (canCatchLegendary && rng.nextDouble() < 0.05) { 
             fishType = "Legendary";
-            maxGuess = 500;    // Range 1-500
-            maxAttempts = 7;   // Only 7 attempts
-        } else if (canCatchRegular && rng.nextDouble() < 0.3) { // 30% chance for regular if conditions are right
+            maxGuess = 500;    
+            maxAttempts = 7;   
+        } else if (canCatchRegular && rng.nextDouble() < 0.3) { 
             fishType = "Regular";
-            maxGuess = 100;    // Range 1-100
-            maxAttempts = 10;  // 10 attempts
+            maxGuess = 100;    
+            maxAttempts = 10; 
         }
         
-        // Generate random number to guess
-        int targetNumber = rng.nextInt(maxGuess) + 1; // 1 to maxGuess
+        int targetNumber = rng.nextInt(maxGuess) + 1; 
 
-        // SPOILER for Legendary Fish
         if ("Legendary".equals(fishType)) {
             System.out.println("[SPOILER] Legendary Fish attempt at: " + fishingLocation + ". Target Number: " + targetNumber);
         }
         
-        // Show dialog for fishing minigame
         if (gamePanel == null) {
             System.err.println("GameController: gamePanel is null, cannot show fishing dialog.");
             return false;
         }
         
-        // Prepare message
         String fishingMessage = "You're fishing for a " + fishType + " fish!\n" +
                                "Guess the number between 1 and " + maxGuess + ".\n" +
                                "You have " + maxAttempts + " attempts.";
@@ -1273,16 +1079,15 @@ public class GameController {
                 fishingMessage + "\nAttempts left: " + attemptsLeft + "\nEnter your guess (or cancel to stop fishing) (DEBUG, answer):" + targetNumber);
             
             if (guessStr == null) {
-                // User canceled the dialog
+                
                 System.out.println("Fishing canceled.");
-                return true; // Still count as action taken
+                return true; 
             }
             
             try {
                 int guess = Integer.parseInt(guessStr);
                 
                 if (guess == targetNumber) {
-                    // Correct guess - fish caught!
                     caughtFish = true;
                     break;
                 } else if (guess < targetNumber) {
@@ -1299,7 +1104,6 @@ public class GameController {
         
         // Process result
         if (caughtFish) {
-            // Generate a random fish based on the type and add to inventory
             Item itemCaught = generateRandomFish(fishType, fishingLocation, currentSeason, currentWeather);
             if (itemCaught != null && itemCaught instanceof Fish) { // Ensure it's a Fish object
                 Fish fishCaughtObject = (Fish) itemCaught;

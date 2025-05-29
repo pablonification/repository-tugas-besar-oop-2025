@@ -13,6 +13,4 @@ public class Pond extends DeployedObject {
     public Pond() {
         super("Kolam", DEFAULT_POND_WIDTH, DEFAULT_POND_HEIGHT);
     }
-
-    // ... implement it later kalo butuh
 }

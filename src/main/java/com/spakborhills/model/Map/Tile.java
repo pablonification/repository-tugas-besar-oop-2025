@@ -55,44 +55,20 @@ public class Tile {
 
     // Added for SaveLoadManager
     public int getLastWateredDay() {
-        // This needs to be calculated or stored differently if an absolute day is needed.
-        // For now, assuming daysSinceLastWatered can be used or adapted.
-        // If GameTime.getCurrentDay() - daysSinceLastWatered is needed, GameTime instance would be required here.
-        // For simplicity with current structure, just returning daysSinceLastWatered.
-        // A more robust solution would be to store the actual game day it was last watered.
-        // Let's assume for now SaveLoadManager wants the *actual day index* it was last watered.
-        // This requires a change in how Tile stores this. For now, placeholder.
-        // To properly implement, Tile would need a field: private int actualLastWateredDay;
-        // and markAsWatered() would set it. GameTime would be needed in markAsWatered().
-        // For the current structure, we will return daysSinceLastWatered as a proxy.
-        // It will be the responsibility of SaveLoadManager to interpret this if needed, or for Tile to be refactored.
-        // REFECTOR CANDIDATE: Store actualLastWateredDay in Tile.
-        // For now, returning daysSinceLastWatered as per current structure.
         return daysSinceLastWatered; 
     }
 
     public void setLastWateredDay(int day) {
-        // This setter implies 'day' is the actual game day it was last watered.
-        // To make this work with daysSinceLastWatered, we'd need current game day.
-        // If 'day' is actually the intended value for daysSinceLastWatered from save file:
         this.daysSinceLastWatered = day;
-        // If 'day' is the actual game day, and Tile needs to calculate daysSinceLastWatered from it,
-        // then Tile needs access to GameTime.getCurrentDay() upon loading.
-        // For now, directly setting daysSinceLastWatered based on the assumption that the
-        // save file stores this relative counter or an equivalent that is passed as 'day'.
     }
 
     public void clearWatered() {
         this.isWatered = false;
-        // Optionally, if daysSinceLastWatered should indicate it wasn't watered today:
-        // this.daysSinceLastWatered = 1; // Or based on game logic if it implies it missed one day of watering.
-        // For now, just clearing the flag.
-    }
+        }
 
     // Setters
     public void setType(TileType newType){
         this.type = newType;
-        // Jika tipe berubah, reset state lain
         if (newType == TileType.TILLABLE || newType == TileType.TILLED){
             isWatered = false;
             daysSinceLastWatered = 0;
@@ -122,9 +98,9 @@ public class Tile {
                 return false;
             }
             this.plantedSeed = seed;
-            this.growthDays = 0; // Reset growth days on new plant
+            this.growthDays = 0; 
             this.type = TileType.PLANTED;
-            this.isWatered = false; // New plant needs water
+            this.isWatered = false; 
             this.daysSinceLastWatered = 0;
             System.out.println("Berhasil menanam " + seed.getName() + " di Tile (" + this.hashCode() % 1000 + ").");
             return true;
@@ -142,10 +118,6 @@ public class Tile {
         if (seed != null) {
             this.type = TileType.PLANTED;
         }
-        // Removed the automatic setting of tile type to TILLED when seed is null
-        // This now preserves the tile type that was set from the saved data
-        
-        // isWatered and daysSinceLastWatered will be set separately by the loading logic
     }
 
     public boolean canBeWateredInternalCheck(){
@@ -163,7 +135,6 @@ public class Tile {
             int quantity = plantedSeed.getQuantityPerHarvest();
             Item cropBase = itemRegistry.get(cropName);
 
-            // Reset state tile setelah panen
             this.setType(TileType.TILLED);
 
             if (cropBase instanceof Crop){
@@ -189,10 +160,9 @@ public class Tile {
     }
 
     public boolean needsWatering(Weather weather){
-        if (this.isWatered || weather == Weather.RAINY) { // Already watered or raining? No need.
+        if (this.isWatered || weather == Weather.RAINY) {
             return false;
         }
-        // Only planted tiles need watering
         return this.type == TileType.PLANTED;
     }
 
@@ -208,28 +178,22 @@ public class Tile {
      * @param currentSeason Musim saat ini.
      */
     public void updateDaily(Weather weather, Season currentSeason){
-        // Determine if the tile is effectively watered for today's growth calculation.
-        // 'this.isWatered' here reflects if it was manually watered by the player before nextDay() was called.
         boolean effectivelyWateredForGrowth = this.isWatered;
 
-        // Only planted tiles can benefit from rain
         if (weather == Weather.RAINY && this.type == TileType.PLANTED) {
-            effectivelyWateredForGrowth = true; // Rain makes it watered for today's growth regardless of prior manual watering.
+            effectivelyWateredForGrowth = true; 
         }
 
-        // Update pertumbuhan tanaman
         if (this.type == TileType.PLANTED && this.plantedSeed != null) {
-            // Check for season mismatch first
             if (this.plantedSeed.getTargetSeason() != Season.ANY && this.plantedSeed.getTargetSeason() != currentSeason) {
                 System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena perubahan musim.");
-                this.setType(TileType.TILLABLE); // Reset tile
-                this.isWatered = false; // Ensure isWatered is also reset before returning
+                this.setType(TileType.TILLABLE); 
+                this.isWatered = false; 
                 return;
             }
 
-            // Now, apply growth logic based on whether it was effectively watered
             if (effectivelyWateredForGrowth) {
-                if (!isHarvestable()) { // Only increment growthDays if not already harvestable
+                if (!isHarvestable()) { 
                     this.growthDays++;
                     System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") tumbuh: day " + 
                         this.growthDays + "/" + plantedSeed.getDaysToHarvest() + " (watered)");
@@ -237,36 +201,28 @@ public class Tile {
                     System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + 
                         ") sudah siap panen: day " + this.growthDays + "/" + plantedSeed.getDaysToHarvest());
                 }
-                this.daysSinceLastWatered = 0; // Reset counter because it got water
+                this.daysSinceLastWatered = 0; 
             } else {
-                // Was not watered by player before nextDay() AND it did not rain today (implicitly weather == Weather.SUNNY)
                 this.daysSinceLastWatered++;
                 System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") tidak disiram hari ini. DaysSinceLastWatered: " + this.daysSinceLastWatered + ", Cuaca: " + weather);
 
-                // Check for death due to hot weather rule first
                 if (weather == Weather.SUNNY && this.daysSinceLastWatered >= WATERING_INTERVAL_HOT_WEATHER) {
                     System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena tidak disiram selama " + this.daysSinceLastWatered + " hari saat cuaca panas.");
-                    this.setType(TileType.TILLED); // Kembali jadi tanah olahan kering
+                    this.setType(TileType.TILLED);
                     this.isWatered = false; 
                     return; 
                 }
                 
-                // If not dead from hot weather rule, check general death rule
                 if (this.daysSinceLastWatered > MAX_DAYS_WITHOUT_WATER_BEFORE_DEATH) {
                     System.out.println("Tanaman " + plantedSeed.getName() + " di Tile (" + this.hashCode() % 1000 + ") mati karena tidak disiram terlalu lama (" + this.daysSinceLastWatered + " hari).");
-                    this.setType(TileType.TILLED); // Kembali jadi tanah olahan kering
+                    this.setType(TileType.TILLED);
                     this.isWatered = false;
                     return; 
                 }
             }
         } else {
-            // Not a planted tile, or no seed, so reset watering counters.
             this.daysSinceLastWatered = 0;
         }
-
-        // CRUCIAL: Reset the 'isWatered' flag for the *next* day cycle.
-        // This flag indicates if the player manually watered it on *their* turn.
-        // It should be false at the start of the next player's turn, unless they water it again.
         this.isWatered = false;
     }
     
@@ -277,7 +233,6 @@ public class Tile {
      * @return true jika berhasil, false jika gagal.
      */
     public boolean associateObject(DeployedObject obj) {
-        // Check if tile already has an object assigned or if planting exists
         if (this.associatedObject != null) {
             System.err.println("Tile (" + this.hashCode() % 1000 + ") sudah ditempati oleh objek lain.");
             return false;
@@ -288,12 +243,9 @@ public class Tile {
             return false;
         }
 
-        // Associate the object
         this.associatedObject = obj;
         
-        // Don't change tile type if it's an ENTRY_POINT
         if (this.type != TileType.ENTRY_POINT) {
-            // Let FarmMap.placeObject handle specific types like WATER for Ponds
             if (!(obj instanceof com.spakborhills.model.Object.Pond)) {
                 this.setType(TileType.DEPLOYED_OBJECT);
             }
@@ -312,16 +264,15 @@ public class Tile {
             System.out.println("Objek '" + this.associatedObject.getName() + "' dihapus dari Tile (" + this.hashCode() % 1000 + ").");
             this.associatedObject = null;
             
-            // Don't change the type back to TILLABLE if it's an ENTRY_POINT
             if (this.type != TileType.ENTRY_POINT) {
                 this.setType(TileType.TILLABLE);
             }
         }
     }
 
-    public void setGrowthDays(int growthDays) { // Added for loading
-        if (this.plantedSeed != null) { // Only makes sense if there's a seed
-            this.growthDays = Math.max(0, growthDays); // Basic validation
+    public void setGrowthDays(int growthDays) { 
+        if (this.plantedSeed != null) { 
+            this.growthDays = Math.max(0, growthDays); 
         }
     }
 

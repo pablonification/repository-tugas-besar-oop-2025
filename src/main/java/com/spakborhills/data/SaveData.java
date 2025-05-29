@@ -1,65 +1,54 @@
 package com.spakborhills.data;
 
 import java.io.Serializable;
-import java.util.List; // Ditambahkan untuk placedObjects
-import java.util.Map; // Diubah untuk farmTiles agar lebih fleksibel dengan koordinat
+import java.util.List; 
+import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.HashSet;
-// Import kelas-kelas lain yang mungkin dibutuhkan nanti
-// import com.spakborhills.model.Player;
-// import com.spakborhills.model.FarmModel;
-// import com.spakborhills.model.TimeService;
 
-// Added imports for new data structures
 import com.spakborhills.model.Enum.Gender;
 import com.spakborhills.model.Enum.RelationshipStatus;
-// import com.spakborhills.model.NPC.NPC;
 
 public class SaveData implements Serializable {
-    private static final long serialVersionUID = 1L; // Untuk kontrol versi serialisasi
+    private static final long serialVersionUID = 1L; 
 
     // Data Player
-    private String playerName; // New
-    private Gender playerGender; // New
+    private String playerName; 
+    private Gender playerGender; 
     private int playerX;
     private int playerY;
     private String currentMapId;
     private int playerMoney;
     private int playerEnergy;
-    private String playerFarmName; // New
-    private PartnerData playerPartner; // New
-    private InventoryData playerInventory; // Diaktifkan
-    private List<String> unlockedRecipes; // New
-    private String favoriteItemName; // New field for player's favorite item
+    private String playerFarmName; 
+    private PartnerData playerPartner; 
+    private InventoryData playerInventory; 
+    private List<String> unlockedRecipes; 
+    private String favoriteItemName;  
 
     // Data Waktu & Dunia Game
     private int currentDay;
     private int currentHour;
-    private int currentMinute; // New
+    private int currentMinute; 
     private String currentSeason;
     private int currentYear;
-    private String currentWeather; // New
-    // Menggunakan Map untuk farmTiles agar bisa menyimpan berdasarkan koordinat (misal "x,y")
-    // Ini lebih fleksibel daripada array 2D jika ukuran farm bisa berubah atau tidak semua tile perlu disimpan.
-    // Jika farm selalu berukuran tetap dan semua tile disimpan, FarmTileData[][] juga bisa.
-    private Map<String, FarmTileData> farmTiles; // Diaktifkan dan diubah tipe datanya
-    private List<ShippingBinItemData> shippingBinContents; // New
-    // private List<PlacedObjectData> placedObjects; // Masih di-comment, akan dibuat jika diperlukan nanti
+    private String currentWeather;
+
+    private List<ShippingBinItemData> shippingBinContents; 
 
     // Data NPC
-    private Map<String, NpcData> npcDataMap; // New
+    private Map<String, NpcData> npcDataMap; 
 
     // Data Progres & Event
-    private List<String> milestonesAchieved; // New
+    private List<String> milestonesAchieved; 
 
     // Data Statistik
-    private StatisticsData statisticsData; // Add field to store statistics
+    private StatisticsData statisticsData;
 
     // Data Bonus
-    private BonusData bonusData; //New
+    private BonusData bonusData;
 
-    // New field for farm deployed objects
     private List<PlacedObjectData> farmDeployedObjects;
 
     // Konstruktor kosong untuk deserialisasi
@@ -67,7 +56,6 @@ public class SaveData implements Serializable {
     }
 
     // Getter dan Setter untuk semua field
-    // Contoh:
     public String getPlayerName() {
         return playerName;
     }
@@ -354,10 +342,8 @@ public class SaveData implements Serializable {
     public static class BonusData implements Serializable {
         private static final long serialVersionUID = 1L;
         private List<FurnitureData> houseFurniture;
-        // Add other bonus data fields here if needed
 
         public BonusData() {
-            // Default constructor
         }
 
         public List<FurnitureData> getHouseFurniture() {
@@ -409,12 +395,10 @@ public class SaveData implements Serializable {
     // Inner class for Placed Object Data
     public static class PlacedObjectData implements Serializable {
         private static final long serialVersionUID = 1L;
-        private String objectName;      // To identify the object, e.g., "Rumah", "Pond"
-        private String objectClassType; // Full class name, e.g., "com.spakborhills.model.Object.House"
-        private int x;                  // Anchor X coordinate
-        private int y;                  // Anchor Y coordinate
-        // Width and height might not be needed if they are fixed by type or re-queried upon creation
-        // For now, let's assume they can be inferred or are fixed by the class type
+        private String objectName;      
+        private String objectClassType;
+        private int x;                  
+        private int y;                  
 
         public PlacedObjectData(String objectName, String objectClassType, int x, int y) {
             this.objectName = objectName;
@@ -462,22 +446,22 @@ public class SaveData implements Serializable {
         
         private int totalIncome;
         private int totalExpenditure;
-        private Map<String, Integer> seasonalIncome; // Season name -> amount
-        private Map<String, Integer> seasonalExpenditure; // Season name -> amount
-        private Map<String, Integer> daysPlayedInSeason; // Season name -> days count
+        private Map<String, Integer> seasonalIncome; 
+        private Map<String, Integer> seasonalExpenditure; 
+        private Map<String, Integer> daysPlayedInSeason; 
         private int totalDaysPlayed;
         
-        private Map<String, Integer> chatFrequency; // NPC name -> count
-        private Map<String, Integer> giftFrequency; // NPC name -> count
-        private Map<String, Integer> visitFrequency; // NPC name -> count
+        private Map<String, Integer> chatFrequency; 
+        private Map<String, Integer> giftFrequency; 
+        private Map<String, Integer> visitFrequency; 
         
-        private Map<String, Integer> cropsHarvestedCount; // Crop name -> count
-        private Set<String> uniqueCropsHarvested; // Names of crops harvested
+        private Map<String, Integer> cropsHarvestedCount; 
+        private Set<String> uniqueCropsHarvested; 
         
-        private Map<String, Map<String, Integer>> fishCaught; // Fish name -> (Rarity -> count)
-        private Set<String> uniqueFishCaught; // Names of fish caught
+        private Map<String, Map<String, Integer>> fishCaught; 
+        private Set<String> uniqueFishCaught; 
         
-        private Set<String> keyEventsOrItemsObtained; // Event keys/item names
+        private Set<String> keyEventsOrItemsObtained; 
         
         public StatisticsData() {
             this.seasonalIncome = new HashMap<>();

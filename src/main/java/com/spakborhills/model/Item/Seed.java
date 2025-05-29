@@ -1,16 +1,3 @@
-/*
- *   class Seed extends Item {
-    - daysToHarvest: int
-    - targetSeason: Season
-    - cropYieldName: String
-    - quantityPerHarvest: int
-    + use(player: Player, target: Object): boolean
-    + getDaysToHarvest(): int
-    + getTargetSeason(): Season
-    + getCropYieldName(): String
-    + getQuantityPerHarvest(): int
-  }
- */
 package com.spakborhills.model.Item;
 
 import com.spakborhills.model.Enum.ItemCategory;

@@ -1,79 +1,14 @@
-/*
-class Player {
-  ' --- Constants ---
-  + {static} final int MAX_ENERGY = 100
-  + {static} final int MIN_ENERGY = -20
-  + {static} final int LOW_ENERGY_THRESHOLD = 10 ' Added constant
-
-  ' --- Attributes ---
-  - name: String
-  - gender: Gender
-  - energy: int
-  - farmName: String
-  - gold: int
-  - inventory: Inventory
-  - currentMap: MapArea
-  - currentTileX: int
-  - currentTileY: int
-  - partner: NPC
-  - favoriteItemName: String
-
-  ' --- Constructor (Implicit dependency on ItemRegistry not shown in diagram) ---
-  + Player(name: String, gender: Gender, farmName: String, startMap: MapArea, startX: int, startY: int, itemRegistry: ItemRegistry)
-
-  ' --- Getters ---
-  + getName(): String
-  + getGender(): Gender
-  + getEnergy(): int
-  + getGold(): int
-  + getInventory(): Inventory
-  + getCurrentMap(): MapArea
-  + getPosition(): Point ' Returns Point(currentTileX, currentTileY)
-  + getPartner(): NPC
-  + getFavoriteItemName(): String
-
-  ' --- Setters / State Changers ---
-  + changeEnergy(amt: int): void ' Clamps energy, pass-out check delegated
-  + addGold(amt: int): void
-  + spendGold(amt: int): boolean
-  + setPartner(n: NPC): void
-  + setPosition(x: int, y: int): void ' Separate from setCurrentMap
-  + setCurrentMap(m: MapArea): void ' Separate from setPosition
-  + setFavoriteItemName(name: String): void
-
-  ' --- Action Methods (Many delegate complex logic/state changes to Controller) ---
-  + move(dir: Direction): boolean ' Checks bounds & obstacles, updates position
-  + till(targetTile: Tile): boolean ' Checks tool & tile, calls tile.till(). Costs delegated.
-  + recoverLand(targetTile: Tile): boolean ' Checks tool & tile, calls tile.recover(). Costs delegated.
-  + plant(seedToPlant: Seed, targetTile: Tile): boolean ' Calls seed.use(), removes seed if success. Costs delegated.
-  + water(targetTile: Tile): boolean ' Checks tool & tile, calls tile.water(). Costs delegated.
-  + harvest(targetTile: Tile, itemRegistry: ItemRegistry): boolean ' Calls tile.harvest(), adds items to inventory. Costs delegated. ' Changed return, added param
-  + eat(itemToEat: Item): boolean ' Checks instanceof EdibleItem, calls item.use(), removes item if success. Time cost delegated. ' Parameter changed to Item
-  + sleep(energyBeforeSleep: int, usedBonusBed: boolean): void ' Sets energy based on penalty/bonus. Time skip delegated. ' Changed signature & return
-  + cook(recipe: Recipe, fuelItem: Item, itemRegistry: ItemRegistry): boolean ' Checks & consumes ingredients/fuel. Passive time/item addition delegated. ' Added params
-  + fish(fishingLocation: LocationType): void ' Checks tool. RNG & item addition delegated. ' Changed return type
-  + propose(npcTarget: NPC, ring: ProposalRing): boolean ' Calls ring.use(). Core logic (checks, status change, costs) delegated. ' Added param
-  + marry(npcTarget: NPC): boolean ' Checks conditions. Time skip & status change delegated.
-  + watchTV(): Weather ' Placeholder. Costs delegated. Needs bonus impl.
-  + visit(destinationMap: MapArea, entryX: int, entryY: int): boolean ' Updates map & position. Costs delegated. ' Changed params
-  + chat(npcTarget: NPC): boolean ' Calls npc.interact(), adds heart points. Costs delegated.
-  + gift(npcTarget: NPC, itemToGift: Item): boolean ' Checks preference, adds points, removes item. Costs delegated.
-  + sellItemToBin(itemToSell: Item, quantity: int, shippingBin: ShippingBin): boolean ' Adds item to bin, removes from inventory. Time cost delegated. ' Added param
-}
- */
-
- package com.spakborhills.model; // Pastikan sesuai struktur Anda
+package com.spakborhills.model; 
 
 import java.util.List;
 import java.util.Map;
 import java.awt.Point;
 import java.util.ArrayList;
-import java.awt.Image; // Impor Image
-import java.awt.image.BufferedImage; // Impor BufferedImage
-import javax.imageio.ImageIO; // Impor ImageIO
-import java.io.IOException; // Impor IOException
+import java.awt.Image; 
+import java.awt.image.BufferedImage; 
+import javax.imageio.ImageIO; 
+import java.io.IOException; 
 
-// Import kelas/enum lain yang dibutuhkan (Pastikan path benar!)
 import com.spakborhills.model.Enum.Gender;
 import com.spakborhills.model.Enum.Direction;
 import com.spakborhills.model.Enum.LocationType;
@@ -82,27 +17,23 @@ import com.spakborhills.model.Enum.TileType;
 import com.spakborhills.model.Enum.Weather;
 import com.spakborhills.model.Item.Item;
 import com.spakborhills.model.Enum.Season;
-// import com.spakborhills.model.Item.Crop;
 import com.spakborhills.model.Item.EdibleItem;
 import com.spakborhills.model.Item.Seed;
-// import com.spakborhills.model.Item.Equipment; // Pastikan ada
 import com.spakborhills.model.Item.ProposalRing;
 import com.spakborhills.model.Item.Fish;
-import com.spakborhills.model.NPC.NPC; // Pastikan ada
+import com.spakborhills.model.NPC.NPC; 
 import com.spakborhills.model.Map.MapArea;
 import com.spakborhills.model.Map.Tile;
-import com.spakborhills.model.Map.FarmMap; // Impor FarmMap
+import com.spakborhills.model.Map.FarmMap; 
 import com.spakborhills.model.Util.GameTime;
-// import com.spakborhills.model.Util.GameTime; // Anda mungkin perlu ini di Controller
 import com.spakborhills.model.Util.Inventory;
-import com.spakborhills.model.Util.Recipe; // Pastikan ada
-import com.spakborhills.model.Util.ShippingBin; // Pastikan ada
-import com.spakborhills.model.Item.Equipment; // Pastikan import Equipment ada
-import com.spakborhills.model.Util.EndGameStatistics; // Pastikan import EndGameStatistics ada
-
+import com.spakborhills.model.Util.Recipe; 
+import com.spakborhills.model.Util.ShippingBin; 
+import com.spakborhills.model.Item.Equipment; 
+import com.spakborhills.model.Util.EndGameStatistics; 
 
 public class Player {
-    // --- Konstanta ---
+    // Konstanta 
     public static final int MAX_ENERGY = 100;
     public static final int MIN_ENERGY = -20;
     public static final int LOW_ENERGY_THRESHOLD = 10;
@@ -112,7 +43,7 @@ public class Player {
     private static final int CHAT_TIME_ADVANCE_MINUTES = 10;
     private static final int CHAT_HEART_POINTS_GAIN = 10;
 
-    // --- Atribut ---
+    // Atribut 
     private String name;
     private Gender gender;
     private int energy;
@@ -122,39 +53,28 @@ public class Player {
     private MapArea currentMap;
     private int currentTileX;
     private int currentTileY;
-    private NPC partner; // null jika single
+    private NPC partner; 
     private String favoriteItemName;
-    private Item selectedItem; // Ditambahkan
+    private Item selectedItem; 
     private int engagementDay;
-    private List<String> unlockedRecipes; // Added for save/load
+    private List<String> unlockedRecipes; 
 
     // Atribut untuk sprite dan animasi pemain
-    private String spritesheetPathPlayer; // Ganti nama agar tidak konflik dengan field NPC jika ada subclassing
+    private String spritesheetPathPlayer; 
     private transient BufferedImage fullSpritesheetPlayer;
-    public int spriteWidthPlayer, spriteHeightPlayer; // Dimensi asli SATU frame
+    public int spriteWidthPlayer, spriteHeightPlayer;
 
     private Direction currentDirection;
     private boolean isMoving;
     private int animationFrame;
     private int animationCounter;
-    private static final int ANIMATION_SPEED = 10; // Ganti frame setiap X panggilan updateAnimation
-    private static final int WALKING_FRAMES = 4; // Jumlah frame animasi berjalan per arah (misal, kiri-kanan)
+    private static final int ANIMATION_SPEED = 10; 
+    private static final int WALKING_FRAMES = 4;
 
-    // Anda perlu mendefinisikan Y offset di spritesheet untuk setiap arah
-    // Ini SANGAT tergantung layout spritesheet Anda. Anggap saja:
-    // Baris 0: Menghadap Bawah (SOUTH)
-    // Baris 1: Menghadap Atas (NORTH)
-    // Baris 2: Menghadap Kiri (WEST)
-    // Baris 3: Menghadap Kanan (EAST)
-    // Frame 0 = Diam, Frame 1 = Kaki Kiri, Frame 2 = Kaki Kanan (atau sebaliknya)
-    // Jika spritesheet Anda punya lebih banyak frame per animasi (misal 4), sesuaikan WALKING_FRAMES
-    // dan logika di getCurrentSpriteFrame.
-    // Ini adalah contoh, Anda HARUS menyesuaikannya dengan spritesheet Anda.
     private int spriteSheetRowDown = 0;    // Y-offset di spritesheet untuk menghadap bawah (kali spriteHeightPlayer)
     private int spriteSheetRowUp = 2;      // Y-offset di spritesheet untuk menghadap atas
     private int spriteSheetRowLeft = 3;    // Y-offset di spritesheet untuk menghadap kiri
     private int spriteSheetRowRight = 1;   // Y-offset di spritesheet untuk menghadap kanan
-    // Jika setiap baris HANYA berisi frame animasi untuk satu arah, maka Y offsetnya adalah `baris_ke * spriteHeightPlayer`
 
     /**
      * Konstruktor untuk kelas Player.
@@ -170,7 +90,7 @@ public class Player {
      */
     public Player(String name, Gender gender, String farmName, MapArea startMap, int startX, int startY,
                   Map<String, Item> itemRegistry, String spritesheetPath,
-                  int spriteWidth, int spriteHeight) { // Hanya perlu lebar & tinggi satu frame
+                  int spriteWidth, int spriteHeight) {
         this.name = name;
         this.gender = gender;
         this.farmName = farmName;
@@ -187,30 +107,24 @@ public class Player {
 
         // Inisialisasi sprite
         this.spritesheetPathPlayer = spritesheetPath;
-        this.spriteWidthPlayer = spriteWidth;   // Lebar SATU frame
-        this.spriteHeightPlayer = spriteHeight; // Tinggi SATU frame
+        this.spriteWidthPlayer = spriteWidth;   
+        this.spriteHeightPlayer = spriteHeight;
         loadSpritesheet();
 
-        this.currentDirection = Direction.SOUTH; // Arah hadap awal
+        this.currentDirection = Direction.SOUTH; 
         this.isMoving = false;
-        this.animationFrame = 0; // Frame diam
+        this.animationFrame = 0; 
         this.animationCounter = 0;
 
         // Inisialisasi inventory dengan item default (Halaman 23)
         if (itemRegistry != null) {
             Item parsnipSeeds = itemRegistry.get("Parsnip Seeds");
-            // Khusus debug gift aja
-            // Legend fish untuk MayorTadi
-
-
+           
             // Testing Mayor Tadi
             Item legendFish = itemRegistry.get("Legend");
             Item anglerFish = itemRegistry.get("Angler Fish");
             Item crimsonFish = itemRegistry.get("Crimson Fish");
             Item glacierFish = itemRegistry.get("Glacier Fish");
-
-
-
             Item proposalRing = itemRegistry.get("Proposal Ring");
 
             // Caroline
@@ -236,8 +150,7 @@ public class Player {
             if(wine != null) this.inventory.addItem(wine, 10); else System.err.println("PERINGATAN: Wine tidak ditemukan di registry.");
 
             // Dasco
-            // Item theLegendOf = itemRegistry.get("The Legend of the Legend");
-
+            
             Item hoe = itemRegistry.get("Hoe");
             Item wateringCan = itemRegistry.get("Watering Can");
             Item pickaxe = itemRegistry.get("Pickaxe");
@@ -246,53 +159,41 @@ public class Player {
             if (parsnipSeeds != null) this.inventory.addItem(parsnipSeeds, 15); else System.err.println("PERINGATAN: Parsnip Seeds tidak ditemukan di registry.");
             if (hoe != null) {
                 this.inventory.addItem(hoe, 1);
-                if (this.selectedItem == null) { // Set Hoe sebagai default jika belum ada
+                if (this.selectedItem == null) { 
                     this.selectedItem = hoe;
                 }
             } else System.err.println("PERINGATAN: Hoe tidak ditemukan di registry.");
-            // if (coal != null) this.inventory.addItem(coal, 10); else System.err.println("PERINGATAN: Coal tidak ditemukan di registry.");
-            // if (firewood != null) this.inventory.addItem(firewood, 10); else System.err.println("PERINGATAN: Firewood tidak ditemukan di registry.");
             if (legendFish != null) this.inventory.addItem(legendFish, 2); else System.err.println("PERINGATAN: Legend Fish tidak ditemukan di registry.");
             if (anglerFish != null) this.inventory.addItem(anglerFish, 1); else System.err.println("PERINGATAN: Angler Fish tidak ditemukan di registry.");
             if (crimsonFish != null) this.inventory.addItem(crimsonFish, 1); else System.err.println("PERINGATAN: Crimson Fish tidak ditemukan di registry.");
             if (glacierFish != null) this.inventory.addItem(glacierFish, 1); else System.err.println("PERINGATAN: Glacier Fish tidak ditemukan di registry.");
 
             if (proposalRing != null) this.inventory.addItem(proposalRing, 1); else System.err.println("PERINGATAN: Proposal Ring tidak ditemukan di registry.");
-            // if (potato != null) this.inventory.addItem(potato, 10); else System.err.println("PERINGATAN: Potato tidak ditemukan di registry.");
-            // if (stone != null) this.inventory.addItem(stone, 10); else System.err.println("PERINGATAN: Stone tidak ditemukan di registry.");
-            // if (wheat != null) this.inventory.addItem(wheat, 10); else System.err.println("PERINGATAN: Wheat tidak ditemukan di registry.");
             if (wateringCan != null) {
                 this.inventory.addItem(wateringCan, 1);
-                if (this.selectedItem == null || !(this.selectedItem instanceof Equipment && ((Equipment)this.selectedItem).getToolType().equals("WateringCan"))) { // Prioritaskan WateringCan jika ada
-                    // Atau jika selectedItem bukan watering can, ganti dengan watering can
-                    // Jika ingin Hoe jadi default utama, tukar logika ini atau set selectedItem ke hoe setelah semua item ditambah
-                     if (this.selectedItem == null && hoe == null) { // Jika Hoe tidak ada dan selectedItem masih null
+                if (this.selectedItem == null || !(this.selectedItem instanceof Equipment && ((Equipment)this.selectedItem).getToolType().equals("WateringCan"))) {
+                    if (this.selectedItem == null && hoe == null) { 
                         this.selectedItem = wateringCan;
                     } else if (hoe != null && this.selectedItem == hoe) { 
-                        // Jika selectedItem sudah Hoe, biarkan. Jika ingin selalu ganti ke WateringCan jika ada, hapus kondisi ini.
-                        // Untuk sekarang, jika ada Hoe dan Watering Can, Hoe akan jadi selected default.
-                        // Jika ingin WC jadi default, maka set this.selectedItem = wateringCan di sini.
-                        // Saya akan set Hoe sebagai default jika ada, baru WC jika Hoe tidak ada.
-                    } else if (hoe == null) { // Jika Hoe tidak ada, jadikan WC sebagai default
+                        
+                    } else if (hoe == null) { 
                          this.selectedItem = wateringCan;
                     }
                 }
             } else System.err.println("PERINGATAN: Watering Can tidak ditemukan di registry.");
             if (pickaxe != null) {
                 this.inventory.addItem(pickaxe, 1);
-                 if (this.selectedItem == null && hoe == null && wateringCan == null) { // Jika belum ada tool terpilih
+                 if (this.selectedItem == null && hoe == null && wateringCan == null) { 
                     this.selectedItem = pickaxe;
                 }
             } else System.err.println("PERINGATAN: Pickaxe tidak ditemukan di registry.");
             if (fishingRod != null) {
                 this.inventory.addItem(fishingRod, 1);
-                if (this.selectedItem == null && hoe == null && wateringCan == null && pickaxe == null) { // Jika belum ada tool terpilih
+                if (this.selectedItem == null && hoe == null && wateringCan == null && pickaxe == null) { 
                     this.selectedItem = fishingRod;
                 }
             } else System.err.println("PERINGATAN: Fishing Rod tidak ditemukan di registry.");
             
-            // Fallback: jika setelah semua item default dicek dan selectedItem masih null (misal semua item tool gagal di-load)
-            // coba ambil item pertama dari inventory jika ada.
             if (this.selectedItem == null && !this.inventory.getItems().isEmpty()) {
                 for (Item itemInInventory : this.inventory.getItems().keySet()) {
                     if (itemInInventory instanceof Equipment) {
@@ -300,7 +201,6 @@ public class Player {
                         break;
                     }
                 }
-                // Jika masih null, ambil item apapun
                 if (this.selectedItem == null) {
                      this.selectedItem = this.inventory.getItems().keySet().iterator().next();
                 }
@@ -365,14 +265,14 @@ public class Player {
                     spriteSheetColPixelX = 1 * spriteWidthPlayer;
                     break;
                 case 1: // Diam (posisi tengah)
-                    spriteSheetColPixelX = 0 * spriteWidthPlayer; // Gunakan kolom 0 untuk diam
+                    spriteSheetColPixelX = 0 * spriteWidthPlayer; 
                     break;
                 case 2: // Kaki Kanan - INI YANG DIPERBAIKI
-                    spriteSheetColPixelX = 3 * spriteWidthPlayer; // Gunakan kolom 3 untuk kaki kanan
+                    spriteSheetColPixelX = 3 * spriteWidthPlayer; 
                     break;
                 case 3: // Diam lagi (kembali ke tengah)
                 default: 
-                    spriteSheetColPixelX = 0 * spriteWidthPlayer; // Kembali ke diam
+                    spriteSheetColPixelX = 0 * spriteWidthPlayer; 
                     break;
             }
         } else {
@@ -411,11 +311,10 @@ public class Player {
                 if (animationFrame >= WALKING_FRAMES) {
                     animationFrame = 0;
                 }
-                // DEBUG: Lihat perubahan animationFrame
                 System.out.println("Player.updateAnimation: isMoving=true, new animationFrame = " + animationFrame);
             }
         } else {
-            if (animationFrame != 0 || animationCounter != 0) { // Hanya print jika ada perubahan
+            if (animationFrame != 0 || animationCounter != 0) {
                 System.out.println("Player.updateAnimation: isMoving=false, resetting animationFrame to 0");
             }
             animationFrame = 0; 
@@ -423,7 +322,7 @@ public class Player {
         }
     }
 
-    // Getter dan Setter untuk animasi (dipanggil dari GamePanel/GameController)
+    // Getter dan Setter untuk animasi 
     public void setMoving(boolean moving) {
         isMoving = moving;
         if (!moving) { // Jika berhenti bergerak, reset ke frame diam
@@ -431,7 +330,7 @@ public class Player {
             animationCounter = 0;
         }
     }
-    public void setCurrentDirection(Direction direction) { //
+    public void setCurrentDirection(Direction direction) { 
         if (this.currentDirection != direction) {
             this.currentDirection = direction;
             this.animationFrame = 0; 
@@ -448,7 +347,7 @@ public class Player {
         return isMoving;
     }
 
-    // --- Getters ---
+    // Getters
     public String getName() { return name; }
     public Gender getGender() { return gender; }
     public int getEnergy() { return energy; }
@@ -466,7 +365,7 @@ public class Player {
 
     // Added getter and setter for unlockedRecipes
     public List<String> getUnlockedRecipes() {
-        if (this.unlockedRecipes == null) { // Initialize if null to prevent NullPointerExceptions
+        if (this.unlockedRecipes == null) { 
             this.unlockedRecipes = new ArrayList<>();
         }
         return unlockedRecipes;
@@ -476,7 +375,7 @@ public class Player {
         this.unlockedRecipes = unlockedRecipes;
     }
 
-    public void unlockRecipe(String recipeId) { // Helper method to add a recipe
+    public void unlockRecipe(String recipeId) {
         if (this.unlockedRecipes == null) {
             this.unlockedRecipes = new ArrayList<>();
         }
@@ -485,7 +384,7 @@ public class Player {
         }
     }
 
-    // --- Setters ---
+    //  Setters 
     public void setName(String name) {
         this.name = name;
     }
@@ -507,7 +406,7 @@ public class Player {
     }
     public void setEngagementDay(int engagementDay) { this.engagementDay = engagementDay; }
 
-    // --- Pengubah State ---
+    //  Pengubah State 
     public void changeEnergy(int amount) {
         long newEnergy = (long)this.energy + amount; 
         if (newEnergy > MAX_ENERGY) {
@@ -548,11 +447,6 @@ public class Player {
     public void setEnergy(int energy) {
         this.energy = Math.max(MIN_ENERGY, Math.min(MAX_ENERGY, energy));
     }
-
-    // --- Metode Aksi Inti (Implementasi berdasarkan Spesifikasi Hal 25-28) ---
-    // Catatan: Metode ini sering mengembalikan boolean untuk sukses/gagal.
-    // Metode ini mengasumsikan Controller menyediakan objek target yang benar.
-    // Biaya Energi/Waktu diterapkan oleh Controller *setelah* aksi berhasil.
 
     /**
      * Mencoba memindahkan pemain satu petak ke arah yang ditentukan.

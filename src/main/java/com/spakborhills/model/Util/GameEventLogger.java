@@ -16,7 +16,6 @@ public class GameEventLogger implements GameEventListener {
     public GameEventLogger(boolean logToConsole) {
         this.logToConsole = logToConsole;
         
-        // Register for all event types
         GameEventManager eventManager = GameEventManager.getInstance();
         for (GameEventType eventType : GameEventType.values()) {
             eventManager.addEventListener(eventType, this);

@@ -30,7 +30,6 @@ public class Food extends Item implements EdibleItem {
         // makan food
         player.changeEnergy(getEnergyRestore());
         System.out.println("Kamu memakan " + getName() + " dan merasa lebih berenergi!");
-        // Controller harus menghapus 1 food dari inventory setelah ini return true
         return true;
     }
 
