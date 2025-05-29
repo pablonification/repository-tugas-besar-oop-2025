@@ -35,6 +35,7 @@ public class SaveData implements Serializable {
     private int currentYear;
     private String currentWeather;
 
+    private Map<String, FarmTileData> farmTiles;
     private List<ShippingBinItemData> shippingBinContents; 
 
     // Data NPC

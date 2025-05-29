@@ -1102,43 +1102,23 @@ public class GameController {
             }
         }
         
-        // Process result
         if (caughtFish) {
             Item itemCaught = generateRandomFish(fishType, fishingLocation, currentSeason, currentWeather);
-            if (itemCaught != null && itemCaught instanceof Fish) { // Ensure it's a Fish object
+            if (itemCaught != null && itemCaught instanceof Fish) { 
                 Fish fishCaughtObject = (Fish) itemCaught;
                 farmModel.getPlayer().getInventory().addItem(fishCaughtObject, 1);
                 
-                // Record the catch in statistics - ENHANCED VERSION
                 if (farmModel.getStatistics() != null) {
-                    // Explicitly get the statistic object to ensure we're using the same instance
                     EndGameStatistics stats = farmModel.getStatistics();
                     
-                    // Record the catch
                     System.out.println("BEFORE recording fish: " + stats.getTotalFishCaughtCount() + " total fish caught");
                     stats.recordFishCatch(fishCaughtObject.getName(), fishCaughtObject.getRarity());
                     System.out.println("AFTER recording fish: " + stats.getTotalFishCaughtCount() + " total fish caught");
                     
-                    // Force statistics to refresh immediately
                     if (gamePanel != null) {
                         JOptionPane.showMessageDialog(gamePanel, "You caught a " + fishCaughtObject.getName() + "!");
-                        // requestShowStatistics();
-                        refreshStatisticsData();
-                        // Display stats summary after catch
-                        // String fishStats = "Current Fish Stats:\n" + 
-                        //                    "- Total fish caught: " + stats.getTotalFishCaughtCount() + "\n" +
-                        //                    "- Unique fish types: " + stats.getUniqueFishCaught().size();
-                        // requestShowStatistics();
-                        // JOptionPane.showMessageDialog(gamePanel, fishStats, "Fish Statistics Updated", JOptionPane.INFORMATION_MESSAGE);
                         
-                        // Give user option to view full statistics
-                        // int viewStats = JOptionPane.showConfirmDialog(gamePanel, 
-                        //         "Would you like to view your complete statistics?", 
-                        //         "View Statistics", 
-                        //         JOptionPane.YES_NO_OPTION);
-                        // if (viewStats == JOptionPane.YES_OPTION) {
-                        //     requestShowStatistics();
-                        // }
+                        refreshStatisticsData();
                     } else {
                         System.out.println("You caught a " + fishCaughtObject.getName() + "!");
                     }
@@ -1150,17 +1130,15 @@ public class GameController {
             JOptionPane.showMessageDialog(gamePanel, "The fish got away! Better luck next time.");
         }
         
-        // Check for pass out
         checkPassOut();
         
-        return true; // Action was processed
+        return true;
     }
     
     /**
      * Checks if legendary fish can be caught based on location, season, time, and weather.
      */
     private boolean canCatchLegendaryFish(LocationType location, Season season, int hour, Weather weather) {
-        // Implement conditions for legendary fish from specification
         switch (location) {
             case POND:
                 return season == Season.FALL && hour >= 8 && hour <= 20;
@@ -1179,22 +1157,20 @@ public class GameController {
      * Checks if regular fish can be caught based on location, season, time, and weather.
      */
     private boolean canCatchRegularFish(LocationType location, Season season, int hour, Weather weather) {
-        // Iterate through all fish in the registry
         if (farmModel == null || farmModel.getItemRegistry() == null || farmModel.getCurrentTime() == null) {
             return false; 
         }
-        GameTime currentTime = farmModel.getCurrentTime(); // Need full GameTime object
+        GameTime currentTime = farmModel.getCurrentTime();
 
         for (Item item : farmModel.getItemRegistry().values()) {
             if (item instanceof Fish) {
                 Fish fish = (Fish) item;
-                // Check if it's a regular fish and can be caught under current conditions
                 if (fish.getRarity() == FishRarity.REGULAR && fish.canBeCaught(season, currentTime, weather, location)) {
-                    return true; // At least one regular fish can be caught
+                    return true;
                 }
             }
         }
-        return false; // No regular fish can be caught
+        return false;
     }
     
     /**
@@ -1204,9 +1180,8 @@ public class GameController {
         if (farmModel == null || farmModel.getItemRegistry() == null || farmModel.getCurrentTime() == null) {
             return null;
         }
-        GameTime currentTime = farmModel.getCurrentTime(); // For Fish.canBeCaught
+        GameTime currentTime = farmModel.getCurrentTime(); 
 
-        // Get all fish from registry
         Map<String, Item> itemRegistry = farmModel.getItemRegistry();
         List<Fish> catchableFish = new ArrayList<>();
 
@@ -1221,7 +1196,7 @@ public class GameController {
         }
 
         if (catchableFish.isEmpty()) {
-            return null; // No fish can be caught at all under these conditions
+            return null; 
         }
 
         // 2. Filter by the determined fishType (rarity)
@@ -1242,23 +1217,13 @@ public class GameController {
                 }
             }
         }
-
-        // If no fish of the target rarity are available from the catchable set,
-        // try to fall back gracefully or return null.
-        // For now, if specific rarity isn't found, we pick any catchable fish of a different type.
-        // A more sophisticated fallback could be: Legendary -> Regular -> Common.
-        // Or, strict: if Legendary roll but none available, then no fish.
-        // Current: If fishOfTargetRarity is empty, use any catchableFish.
         
         List<Fish> listToPickFrom = fishOfTargetRarity.isEmpty() ? catchableFish : fishOfTargetRarity;
 
         if (listToPickFrom.isEmpty()) {
-             // This case should ideally not be reached if catchableFish was not empty,
-             // unless targetRarity was specified but no fish of that rarity were catchable.
             return null;
         }
-        
-        // Pick a random fish from the final list
+
         Random rng = new Random();
         return listToPickFrom.get(rng.nextInt(listToPickFrom.size()));
     }
@@ -1278,22 +1243,21 @@ public class GameController {
         Player player = farmModel.getPlayer();
         GameTime gameTime = farmModel.getCurrentTime();
         Map<String, Item> itemRegistry = farmModel.getItemRegistry();
-        List<Recipe> availableRecipes = farmModel.getRecipes(); // Asumsi Farm punya getter ini
+        List<Recipe> availableRecipes = farmModel.getRecipes();
 
-        // Pengecekan untuk komponen yang diambil dari farmModel
         if (player == null || gameTime == null || itemRegistry == null) {
             gamePanel.displayMessage("Error internal: Data pemain, waktu, atau item tidak lengkap.");
             System.err.println("GameController.handleCookRequest: Player, GameTime, atau ItemRegistry adalah null.");
             return;
         }
 
-        if (availableRecipes == null) { // Cek spesifik untuk recipes
+        if (availableRecipes == null) { 
             gamePanel.displayMessage("Daftar resep tidak tersedia saat ini.");
             System.err.println("GameController.handleCookRequest: farmModel.getRecipes() mengembalikan null.");
             return;
         }
 
-        // --- KONDISI LOKASI MEMASAK (Spesifikasi hal 29) ---
+        // KONDISI LOKASI MEMASAK (Spesifikasi hal 29)
         // Player must be in the PlayerHouseInterior map OR on FarmMap adjacent to a House object
         boolean canCookLocation = false;
         if (player.getCurrentMap() instanceof FarmMap) {
@@ -1313,10 +1277,9 @@ public class GameController {
             return;
         }
 
-        // --- BAGIAN UI UNTUK MEMILIH RESEP (Contoh dengan JOptionPane) ---
+        // BAGIAN UI UNTUK MEMILIH RESEP (Contoh dengan JOptionPane) 
         List<String> unlockedRecipeNames = new ArrayList<>();
         for (Recipe r : availableRecipes) {
-            // Asumsi EndGameStatistics ada di Farm dan bisa diakses untuk cek unlock
             if (r.isUnlocked(farmModel.getStatistics(), player)) {
                 unlockedRecipeNames.add(r.getName());
             }
@@ -1337,7 +1300,7 @@ public class GameController {
                 unlockedRecipeNames.get(0)
         );
 
-        if (chosenRecipeName == null) return; // User cancel
+        if (chosenRecipeName == null) return; 
 
         Recipe selectedRecipe = null;
         for (Recipe r : availableRecipes) {
@@ -1346,14 +1309,12 @@ public class GameController {
                 break;
             }
         }
-        if (selectedRecipe == null) { // Seharusnya tidak terjadi jika nama dari list
+        if (selectedRecipe == null) { 
             gamePanel.displayMessage("Resep tidak valid.");
             return;
         }
 
-        // --- BAGIAN UI UNTUK MEMILIH BAHAN BAKAR (Contoh dengan JOptionPane) ---
-        // String[] fuelOptions = {"Coal", "Firewood"};
-        // Filter fuel yang dimiliki pemain
+        // BAGIAN UI UNTUK MEMILIH BAHAN BAKAR (Contoh dengan JOptionPane) 
         List<String> availableFuelOptions = new ArrayList<>();
         Item coalItem = itemRegistry.get("Coal");
         Item firewoodItem = itemRegistry.get("Firewood");
@@ -1380,31 +1341,30 @@ public class GameController {
                 availableFuelOptions.get(0)
         );
 
-        if (chosenFuelName == null) return; // User cancel
+        if (chosenFuelName == null) return; 
 
         Item selectedFuelItem = itemRegistry.get(chosenFuelName);
-        if (selectedFuelItem == null) { // Seharusnya tidak terjadi
+        if (selectedFuelItem == null) { 
             gamePanel.displayMessage("Bahan bakar tidak valid.");
             return;
         }
         
-        // --- EFEK INISIASI & MEMANGGIL PLAYER.COOK() ---
-        final int COOK_ENERGY_COST = 10; // Spesifikasi Hal 29
+        // EFEK INISIASI & MEMANGGIL PLAYER.COOK() 
+        final int COOK_ENERGY_COST = 10;
         if (player.getEnergy() < COOK_ENERGY_COST) {
             gamePanel.displayMessage("Energi tidak cukup untuk memulai memasak (butuh " + COOK_ENERGY_COST + ").");
             return;
         }
-        player.changeEnergy(-COOK_ENERGY_COST); // Kurangi energi untuk memulai
+        player.changeEnergy(-COOK_ENERGY_COST); 
 
         String cookResultOutcome = player.cook(selectedRecipe, selectedFuelItem, itemRegistry);
 
-        if (cookResultOutcome != null && itemRegistry.containsKey(cookResultOutcome)) { // Sukses mempersiapkan bahan
+        if (cookResultOutcome != null && itemRegistry.containsKey(cookResultOutcome)) {
             Item foodProduct = itemRegistry.get(cookResultOutcome);
             int servingsMade = 1;
 
             // Logika efisiensi Coal
             if (selectedFuelItem.getName().equals("Coal")) {
-                // Cek apakah pemain punya cukup bahan untuk porsi kedua
                 boolean canMakeSecondServing = true;
                 for (Map.Entry<String, Integer> entry : selectedRecipe.getIngredients().entrySet()) {
                     Item ingredient = itemRegistry.get(entry.getKey());
@@ -1415,7 +1375,6 @@ public class GameController {
                 }
 
                 if (canMakeSecondServing) {
-                    // Kurangi bahan untuk porsi kedua
                     for (Map.Entry<String, Integer> entry : selectedRecipe.getIngredients().entrySet()) {
                         Item ingredient = itemRegistry.get(entry.getKey());
                         player.getInventory().removeItem(ingredient, entry.getValue());
@@ -1432,7 +1391,7 @@ public class GameController {
 
             // Simulasi selesai masak setelah 1 jam
             final int finalServings = servingsMade;
-            // Untuk sekarang, kita simulasikan selesai langsung untuk testing, tapi idealnya pakai TaskManager
+
             for (int i = 0; i < finalServings; i++) {
                  player.getInventory().addItem(foodProduct, 1); // Tambah item sejumlah porsi
             }
@@ -1855,9 +1814,7 @@ public class GameController {
             gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
             gamePanel.startGameTimer(); // Restart timer after modal dialog
         }
-        // No checkPassOut() needed here as sleep PREVENTS pass out by ending the day.
-        // GamePanel updates should be handled by showEndOfDayMessage or by Farm.nextDay() if it triggers repaints.
-    }
+       }
 
     /**
      * Handles the player's request to watch TV to see tomorrow's weather forecast.
@@ -1876,7 +1833,6 @@ public class GameController {
             return;
         }
 
-        // Condition 1: Player must be in their house on the FarmMap
         boolean isInHouse = false;
         if (player.getCurrentMap() instanceof FarmMap) {
             FarmMap farmMap = (FarmMap) player.getCurrentMap();
@@ -1890,22 +1846,19 @@ public class GameController {
             return;
         }
 
-        // Get current day's weather
         Weather currentDayWeather = gameTime.getCurrentWeather();
         String weatherMessage = "Today's weather: " + currentDayWeather.toString();
         gamePanel.displayMessage(weatherMessage);
         System.out.println("TV: " + weatherMessage);
 
-        // Advance game time by 5 minutes for watching TV (Specification for Action #12 is -15 minutes, but notes said 5)
-        // Correcting to -15 minutes from specification.
-        gameTime.advance(15); // Specification: -15 menit dalam game
-        player.changeEnergy(-5); // Specification: -5 energi
+        gameTime.advance(15); 
+        player.changeEnergy(-5); 
 
         if (gamePanel != null) {
-            gamePanel.updatePlayerInfoPanel(); // Update time and energy display
-            gamePanel.updateGameRender(); // Redraw if needed
+            gamePanel.updatePlayerInfoPanel(); 
+            gamePanel.updateGameRender(); 
         }
-        checkPassOut(); // Check if player passes out due to energy loss
+        checkPassOut(); 
     }
 
     /**
@@ -1914,13 +1867,11 @@ public class GameController {
      */
     public void refreshStatisticsData() {
         if (farmModel != null && farmModel.getStatistics() != null) {
-            // Just accessing the statistics data will ensure it's properly loaded for display
-            System.out.println("CALLED_FROM_GAMEPANEL: GameController.refreshStatisticsData() - Refreshing statistics data:"); // MODIFIED LOG
+            System.out.println("CALLED_FROM_GAMEPANEL: GameController.refreshStatisticsData() - Refreshing statistics data:"); 
             System.out.println("- Crops Harvested Count: " + farmModel.getStatistics().getCropsHarvestedCount().size());
             System.out.println("- Unique Fish Caught: " + farmModel.getStatistics().getUniqueFishCaught().size());
             System.out.println("- Total Fish Caught: " + farmModel.getStatistics().getTotalFishCaughtCount());
             
-            // Ensure the view is updated
             if (gamePanel != null) {
                 gamePanel.repaint();
             }
@@ -1934,14 +1885,12 @@ public class GameController {
      */
     public void requestShowStatistics() {
         if (farmModel != null && farmModel.getStatistics() != null) {
-            // Refresh the statistics data first
             refreshStatisticsData();
             
             farmModel.setCurrentGameState(GameState.STATISTICS_VIEW);
-            // GamePanel will handle fetching info and drawing. GamePanel should also stop timer.
             if (gamePanel != null) {
-                gamePanel.stopGameTimer(); // Ensure timer is stopped when stats are shown
-                gamePanel.repaint(); // Trigger repaint for UI
+                gamePanel.stopGameTimer(); 
+                gamePanel.repaint(); 
             }
             System.out.println("GameController: Statistics requested. GameState set to STATISTICS_VIEW.");
         } else {
@@ -1956,8 +1905,7 @@ public class GameController {
     public void requestViewPlayerInfo() {
         if (farmModel != null && farmModel.getPlayer() != null) {
             farmModel.setCurrentGameState(GameState.PLAYER_INFO_VIEW); 
-            // GamePanel will handle fetching info and drawing
-            if (gamePanel != null) gamePanel.repaint(); // Trigger repaint to show UI
+            if (gamePanel != null) gamePanel.repaint(); 
         } else {
             System.err.println("GameController: Cannot view player info - model or player is null.");
             if (gamePanel != null) gamePanel.displayMessage("Error: Player data not available.");
@@ -1973,11 +1921,10 @@ public class GameController {
     public boolean requestSetTime(int hour, int minute) {
         if (farmModel != null && farmModel.getCurrentTime() != null) {
             GameTime gameTime = farmModel.getCurrentTime();
-            // Basic validation, GameTime.setTime will also validate
             if (hour >= 0 && hour < GameTime.HOURS_IN_DAY && minute >= 0 && minute < GameTime.MINUTES_IN_HOUR) {
                 gameTime.setTime(hour, minute);
                 if (gamePanel != null) {
-                    gamePanel.updateGameRender(); // Ensure the display updates immediately
+                    gamePanel.updateGameRender();
                 }
                 return true;
             }
@@ -1985,7 +1932,7 @@ public class GameController {
         return false;
     }
 
-    // --- Shipping Bin UI Interaction --- 
+    // Shipping Bin UI Interaction  
 
     public void requestOpenShippingBin() {
         if (farmModel == null || gamePanel == null || farmModel.getPlayer() == null) {
@@ -2000,7 +1947,6 @@ public class GameController {
         }
 
         if (!shippingBin.canSellToday()) {
-            // This check is also in GamePanel.tryOpenShippingBinDialog, but good to have a safeguard
             gamePanel.shippingBinActionFailed("You have already used the shipping bin today.");
             return;
         }
@@ -2008,7 +1954,6 @@ public class GameController {
         farmModel.getCurrentTime().setPaused(true);
         farmModel.setCurrentGameState(GameState.SHIPPING_BIN);
         gamePanel.openShippingBinUI();
-        // gamePanel.setShippingBinFeedback("Select item, [Enter] for quantity, [Esc] to close.", false);
     }
 
     public void requestAddItemToShippingBin(Item item, int quantity) {
@@ -2047,13 +1992,10 @@ public class GameController {
                 // Success
                 gamePanel.itemAddedToBinSuccessfully(item, quantity);
             } else {
-                // Failed to add to bin (should be rare if pre-checks are done, but good to handle)
-                // Re-add to player inventory as a rollback
                 inventory.addItem(item, quantity);
                 gamePanel.shippingBinActionFailed("Could not add " + item.getName() + " to bin. Bin might be full.");
             }
         } else {
-            // Should not happen if hasItem check passed, but as a fallback
             gamePanel.shippingBinActionFailed("Failed to remove " + item.getName() + " from inventory.");
         }
     }
@@ -2063,11 +2005,8 @@ public class GameController {
             System.err.println("GameController: Critical model/view component missing for closing shipping bin.");
             return;
         }
-        // Finalize sale session logic (e.g. marking bin as used for the day)
-        // is done within ShippingBin.addItem() or when canSellToday() is checked.
-        // ShippingBin.processSales() will handle the money and clearing at day end.
         
-        farmModel.getCurrentTime().advance(15); // Changed from advanceTime(15)
+        farmModel.getCurrentTime().advance(15); 
         farmModel.getCurrentTime().setPaused(false);
         farmModel.setCurrentGameState(GameState.IN_GAME);
         gamePanel.closeShippingBinUI();
@@ -2082,10 +2021,8 @@ public class GameController {
     public void setSelectedItem(Item item) {
         if (farmModel != null && farmModel.getPlayer() != null) {
             farmModel.getPlayer().setSelectedItem(item);
-            // Optionally, update GamePanel if it needs to know about this change immediately
-            // For instance, if the HUD needs to refresh. GamePanel.updatePlayerInfoPanel() or similar.
             if (gamePanel != null) {
-                gamePanel.updatePlayerInfoPanel(); // Or a more general updateGameRender()
+                gamePanel.updatePlayerInfoPanel();
             }
         }
     }
@@ -2103,21 +2040,18 @@ public class GameController {
             System.out.println("Player spawned on an unsafe tile (" + (currentTile != null ? currentTile.getType() : "null tile") +
                                " at " + player.getCurrentTileX() + "," + player.getCurrentTileY() +"). Finding a safe spot...");
             Point safeSpot = findSafeSpawnPoint(currentMap, player.getCurrentTileX(), player.getCurrentTileY());
-            player.setPosition(safeSpot.x, safeSpot.y); // Directly set position
+            player.setPosition(safeSpot.x, safeSpot.y); 
             System.out.println("Player moved to a safe spawn point: (" + safeSpot.x + "," + safeSpot.y + ") on map " + currentMap.getName());
         }
     }
 
-    // Modified isTileWalkable or a new version for spawn logic
     private boolean isTileWalkableForSpawn(Tile tile, MapArea map, int x, int y) {
         if (tile == null) return false;
         TileType type = tile.getType();
-
-        // Define spawnable tile types (base types that are generally safe)
         boolean isSpawnableBaseType = type == TileType.GRASS || 
                                       type == TileType.ENTRY_POINT ||
                                       type == TileType.TILLABLE ||
-                                      type == TileType.TILLED || // Allow spawning on tilled land
+                                      type == TileType.TILLED || 
                                       type == TileType.WOOD_FLOOR ||
                                       type == TileType.STONE_FLOOR ||
                                       type == TileType.CARPET_FLOOR ||
@@ -2125,105 +2059,37 @@ public class GameController {
                                       type == TileType.DIRT_FLOOR;
 
         if (!isSpawnableBaseType) {
-            return false; // Not a fundamentally spawnable type (e.g., WATER, OBSTACLE, WALL)
+            return false; 
         }
 
-        // If the tile type itself is DEPLOYED_OBJECT, it's likely an obstacle for spawning.
-        // This is a simplification. A better approach would be for DeployedObject to have an isObstacle() property.
         if (type == TileType.DEPLOYED_OBJECT) {
-            // Further check: if it's a House object specifically, allow spawning (player might load inside their house).
-            // This requires getting the object and checking its type, which might be complex here
-            // or rely on map.isOccupied() which might have its own specific logic.
-            // For now, a simple rule: if tile *type* is DEPLOYED_OBJECT, treat as non-spawnable to be safe.
-            // This might prevent spawning on a tile that has a passable decorative object.
-            // System.out.println("Tile ("+x+","+y+") on map "+map.getName()+" is DEPLOYED_OBJECT type, considered not walkable for spawn.");
-            // return false; 
-            // Re-evaluation: A tile's type being DEPLOYED_OBJECT means the *tile itself* is primarily representing that object.
-            // Let's rely on the MapArea's own isOccupied check, or if not available, the associatedObject check.
         }
 
-        // Check for explicitly blocking objects via MapArea.isOccupied, which might be more context-aware
-        // Some maps might implement isOccupied to allow walking on certain DEPLOYED_OBJECT tiles (like a rug)
         if (map.isOccupied(x, y)) {
-            // However, map.isOccupied might consider a House as occupied for general pathfinding
-            // but we might want to spawn *inside* a house if the player saved there.
-            // This is tricky. Let's check the object directly if isOccupied is true.
             DeployedObject objectOnTile = map.getObjectAt(x, y);
             if (objectOnTile != null && !(objectOnTile instanceof com.spakborhills.model.Object.House)) {
-                // If it's occupied by something other than a house, it's not spawnable.
-                // System.out.println("Tile ("+x+","+y+") on map "+map.getName()+" isOccupied by " + objectOnTile.getName() + ", not spawnable.");
                 return false;
             }
-            // If it's a House, it's potentially spawnable (e.g. loading inside).
         }
         
-        // If tile type is PLANTED, it's also a valid spawn spot (player can stand on their crops)
         if (type == TileType.PLANTED) {
             return true;
         }
 
-        return isSpawnableBaseType; // If it's a spawnable base type and not explicitly blocked by a non-House object.
+        return isSpawnableBaseType;
     }
     
-    // findSafeSpawnPoint uses isTileWalkableForSpawn, which is now updated.
-    // The general isTileWalkable method below is for pathfinding, not spawning.
-
-    // Helper method to check if a tile is walkable (general purpose pathfinding)
-    // private boolean isTileWalkable(Tile tile, MapArea map, int x, int y) {
-    //     if (tile == null) return false;
-    //     TileType type = tile.getType();
-    //     // Walkable types: GRASS, TILLABLE, TILLED, PLANTED, ENTRY_POINT (if base is walkable)
-    //     // Also includes various floor types.
-    //     // Unwalkable: WATER, OBSTACLE, or if there's a DEPLOYED_OBJECT that's not passable
-    //     boolean isBaseTypeWalkable = type == TileType.GRASS || 
-    //                                  type == TileType.TILLABLE || 
-    //                                  type == TileType.TILLED || 
-    //                                  type == TileType.PLANTED || // A planted tile is walkable; harvestability is a state of the plant, not the tile type itself for walkability.
-    //                                  type == TileType.ENTRY_POINT || // Assuming entry points are placed on walkable base
-    //                                  type == TileType.WOOD_FLOOR ||  
-    //                                  type == TileType.STONE_FLOOR ||
-    //                                  type == TileType.CARPET_FLOOR ||
-    //                                  type == TileType.LUXURY_FLOOR ||
-    //                                  type == TileType.DIRT_FLOOR;
-
-    //     if (!isBaseTypeWalkable) return false;
-
-    //     // Check for blocking deployed objects. 
-    //     // The isOccupied check might be slightly different from "isWalkable".
-    //     // For now, assume if getAssociatedObject is not null, it's blocking.
-    //     // A more robust way would be DeployedObject having an isPassable() method.
-    //     if (map.getObjectAt(x,y) != null) { 
-    //         // For example, a small rug (DeployedObject) might be on a WOOD_FLOOR tile and should be passable.
-    //         // A House object would not be.
-    //         // This currently uses a simplified check: if there's an object, it's not walkable.
-    //         // This might conflict with the definition of some maps if entry points are on tiles with non-blocking objects.
-    //         // For now, if the object is the map itself (e.g. a house in an NPC map), allow it.
-    //         DeployedObject obj = map.getObjectAt(x,y);
-    //         if (obj!= null && obj.getName().toLowerCase().contains("house") && map.getName().toLowerCase().contains("home")){
-    //              //This is likely an NPC house map, player can spawn inside.
-    //         } else if (obj != null){
-    //             // System.out.println("Tile ("+x+","+y+") on map "+map.getName()+" has object: "+obj.getName()+", considered not walkable for spawn.");
-    //             // return false; 
-    //             // Temporarily allowing spawn on occupied tiles if base type is walkable, to avoid getting stuck
-    //             // This needs better logic based on object passability.
-    //         }
-    //     }
-    //     return true;
-    // }
-
     // Method to save the game state
     public void saveGame() {
         if (farmModel == null || farmModel.getPlayer() == null || farmModel.getCurrentTime() == null) {
             System.err.println("GameController: Cannot save game. Essential models are null.");
             if (gamePanel != null) {
-                // Use the public setGeneralGameMessage method
                 gamePanel.setGeneralGameMessage("Error: Could not save game state.", true);
             }
             return;
         }
         SaveLoadManager saveLoadManager = new SaveLoadManager();
         
-        // Generate filename automatically from player and farm name
         String savedFileName = saveLoadManager.saveGame(null, farmModel, farmModel.getPlayer(), farmModel.getCurrentTime());
         
         if (savedFileName != null) {
@@ -2292,9 +2158,7 @@ public class GameController {
             return null;
         }
         
-        // Don't modify the filename at all - pass it directly to saveLoadManager
         SaveLoadManager saveLoadManager = new SaveLoadManager();
         return saveLoadManager.saveGame(existingFileName, farmModel, farmModel.getPlayer(), farmModel.getCurrentTime());
     }
-} // End of GameController class
-
+}
