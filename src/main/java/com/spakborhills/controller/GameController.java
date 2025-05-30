@@ -1584,11 +1584,9 @@ public class GameController {
 
         if (gifted) {
             String reaction = targetNPC.reactToGift(itemToGift, player);
-            // KOREKSI DI SINI: Kirim objek NPC, bukan hanya nama
             gamePanel.showNPCDialogue(targetNPC, reaction);  
             System.out.println("Gift successful. NPC: " + targetNPC.getName() + ", Item: " + itemToGift.getName());
         } else {
-            // Pesan kegagalan gifting biasanya sudah dihandle di dalam player.gift() atau oleh gamePanel
             System.out.println("Gifting failed. See Player.gift() logs for details (e.g., energy, distance, item possession).");
         }
         
@@ -1598,7 +1596,6 @@ public class GameController {
         }
         checkPassOut();
     }
-    // END OF handleGiftRequest METHOD
 
     public void handleProposeRequest() {
         if (farmModel == null || gamePanel == null) {
@@ -1606,9 +1603,9 @@ public class GameController {
             return;
         }
         Player player = farmModel.getPlayer();
-        GameTime gameTime = farmModel.getCurrentTime(); // Ambil GameTime dari farmModel
+        GameTime gameTime = farmModel.getCurrentTime(); 
 
-        if (player == null || gameTime == null) { // Periksa juga gameTime
+        if (player == null || gameTime == null) { 
             System.err.println("GameController.handleProposeRequest: Player or GameTime is null.");
             if (gamePanel != null) gamePanel.displayMessage("Error internal: Cannot attempt proposal.");
             return;
@@ -1630,26 +1627,23 @@ public class GameController {
         if (selectedItem instanceof ProposalRing) {
             ProposalRing ring = (ProposalRing) selectedItem;
             
-            // Panggil Item.use() dulu untuk validasi dasar (misal, memastikan target adalah NPC)
-            if (ring.use(player, targetNPC)) { // Panggil Item.use()
-                // Jika Item.use() mengembalikan true (target valid), baru panggil Player.propose()
+            if (ring.use(player, targetNPC)) { 
                 int currentTotalDays = gameTime.getTotalDaysPlayed();
-                String proposalMessage = player.propose(targetNPC, ring, currentTotalDays); // Panggil Player.propose() dengan semua argumen
+                String proposalMessage = player.propose(targetNPC, ring, currentTotalDays); 
 
                 if (proposalMessage == null) { // Lamaran diterima
-                    player.changeEnergy(-10); // Sesuai spesifikasi: -10 energi jika diterima
-                    gameTime.advance(60);   // Sesuai spesifikasi: -1 jam (60 menit)
+                    player.changeEnergy(-10); 
+                    gameTime.advance(60);   
                     gamePanel.displayMessage(player.getName() + " dan " + targetNPC.getName() + " sekarang bertunangan! Waktu maju 1 jam.");
                     System.out.println("Lamaran diterima! Energi player: " + player.getEnergy());
                 } else { // Lamaran ditolak
-                    player.changeEnergy(-20); // Sesuai spesifikasi: -20 energi jika ditolak
-                    gameTime.advance(60);   // Sesuai spesifikasi: -1 jam (60 menit)
+                    player.changeEnergy(-20);
+                    gameTime.advance(60);   
                     gamePanel.displayMessage(proposalMessage + " Waktu tetap maju 1 jam.");
                     System.out.println("Lamaran gagal!\nPesan: " + proposalMessage + "\nEnergi player: " + player.getEnergy());
                 }
             } else {
-                // Pesan error dari ProposalRing.use() sudah dicetak jika target tidak valid
-                gamePanel.displayMessage("Proposal Ring tidak bisa digunakan pada target ini."); // Opsional
+                gamePanel.displayMessage("Proposal Ring tidak bisa digunakan pada target ini.");
             }
         } else {
             gamePanel.displayMessage("Kamu harus memegang cincin lamaran untuk melamar.");
@@ -1726,13 +1720,10 @@ public class GameController {
             return;
         }
         
-        // Tidak perlu lagi validasi di controller apakah npcInteraksi adalah tunangan,
-        // karena Player.marry() akan menangani semua validasi tersebut dan mengembalikan pesan error jika perlu.
-        
         int currentTotalDays = gameTime.getTotalDaysPlayed();
-        String marryMessage = player.marry(npcInteraksi, currentTotalDays); // Gunakan npcInteraksi sebagai target
+        String marryMessage = player.marry(npcInteraksi, currentTotalDays); 
 
-        if (marryMessage == null) { // Sukses menikah (Player.marry() mengembalikan null jika sukses)
+        if (marryMessage == null) { 
             player.changeEnergy(-MARRY_ENERGY_COST);
 
             int currentHour = gameTime.getHour();
@@ -1759,11 +1750,9 @@ public class GameController {
             gamePanel.displayMessage("Selamat! Kamu dan " + npcInteraksi.getName() + " telah menikah! Waktu sekarang " + gameTime.getTimeString() + ".");
             System.out.println("Pernikahan berhasil! Energi player: " + player.getEnergy() + ", Waktu: " + gameTime.getTimeString());
             
-        } else { 
-            // Ada pesan error dari Player.marry()
+        } else {
             gamePanel.displayMessage(marryMessage);
             System.out.println("Pernikahan gagal/tidak valid. Pesan: " + marryMessage);
-            // Tidak ada perubahan energi atau waktu jika pernikahan gagal di tahap validasi Player.marry()
         }
 
         if (gamePanel != null) {
@@ -1784,7 +1773,6 @@ public class GameController {
             return;
         }
 
-        // Condition: Player must be in their house interior
         if (!(player.getCurrentMap() instanceof FarmMap)) {
             gamePanel.displayMessage("Kamu hanya bisa tidur di dalam rumahmu.");
             return;
@@ -1797,22 +1785,21 @@ public class GameController {
         }
 
         int energyBeforeSleep = player.getEnergy();
-        player.sleep(energyBeforeSleep, false); // false for usedBonusBed for now
+        player.sleep(energyBeforeSleep, false); 
 
-        // forceSleepAndProcessNextDay will advance time, update crops, calculate income, etc.
         int incomeFromSales = farmModel.forceSleepAndProcessNextDay(); 
 
-        String eventMessage = player.getName() + " tidur nyenyak."; // Or a different message if energy was low
-        // Could refine message based on energyBeforeSleep if desired:
+        String eventMessage = player.getName() + " tidur nyenyak."; 
+        
         if (energyBeforeSleep < Player.LOW_ENERGY_THRESHOLD) {
             eventMessage = player.getName() + " tidur dengan energi rendah, tapi berhasil memulihkan diri.";
         }
-        String newDayInfo = generateNewDayInfoString(); // Re-use existing helper
+        String newDayInfo = generateNewDayInfoString(); 
         
-        if (gamePanel != null) { // Added null check for safety, though it should be set
-            gamePanel.stopGameTimer(); // Stop timer before modal dialog
+        if (gamePanel != null) { 
+            gamePanel.stopGameTimer(); 
             gamePanel.showEndOfDayMessage(eventMessage, incomeFromSales, newDayInfo);
-            gamePanel.startGameTimer(); // Restart timer after modal dialog
+            gamePanel.startGameTimer(); 
         }
        }
 
