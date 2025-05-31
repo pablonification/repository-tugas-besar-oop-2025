@@ -12,10 +12,9 @@ Dokumen ini bertujuan untuk digunakan sebagai panduan dalam proses setup, build,
 4.  [Struktur Project](#4-struktur-Project)
 5.  [Build Project](#5-build-Project)
 6.  [Running Project](#6-running-Project)
-7.  [Running Test](#7-running-test)
-8.  [Prinsip & Desain](#8-prinsip--desain)
-9.  [Dependensi Utama](#9-dependensi-utama)
-10. [Anggota Kelompok](#10-anggota-kelompok)
+7.  [Prinsip & Desain](#7-prinsip--desain)
+8.  [Dependensi Utama](#8-dependensi-utama)
+9.  [Anggota Kelompok](#9-anggota-kelompok)
 
 ---
 
@@ -29,7 +28,7 @@ Dokumen ini bertujuan untuk digunakan sebagai panduan dalam proses setup, build,
 
 Pastikan perangkat Anda telah terinstall software berikut:
 
-*   **Java Development Kit (JDK):** Versi `21`.
+*   **Java Development Kit (JDK):** Versi `23`.
 *   **Git:** Untuk version control.
 *   **Gradle:** Build automation tool yang kita gunakan.
     *   *Wrapper* (`gradlew` atau `gradlew.bat`) sudah termasuk dalam repo, sehingga instalasi Gradle manual **tidak diperlukan**. Cukup pastikan JDK terpasang dengan benar.
@@ -57,29 +56,29 @@ Berikut adalah gambaran umum struktur direktori Project:
 .
 ├── .git/               # Direktori internal Git
 ├── .gitignore          # File yang diabaikan Git
-├── build/              # Output build (Gradle) - JANGAN DI-COMMIT
+├── build/              # Output build (Gradle)
 ├── gradle/             # File-file Gradle wrapper
 ├── src/
 │   ├── main/
 │   │   ├── java/       # Kode sumber utama aplikasi
 │   │   │   └── com/
 │   │   │       └── spakborhills/
-│   │   │           ├── Main.java       # Entry point aplikasi
+│   │   │           ├── Main.java       # Entry point games
 │   │   │           ├── model/          # Kelas-kelas entitas (Player, NPC, Item, Farm, Tile, etc.)
-│   │   │           ├── view/           # Kelas-kelas untuk display GUI (GamePanel, GameFrame)
+│   │   │           ├── view/           # Kelas-kelas untuk display GUI (GamePanel, GameFrame, etc.)
 │   │   │           ├── controller/     # Kelas-kelas untuk logika game, flow, & input handling
-│   │   │           └── util/           # Kelas-kelas utility (TimeUtil, Randomizer, etc.)
+│   │   │           └── util/           # Kelas-kelas utility
 │   │   └── resources/  # File resource (assets, musik, gambar)
 │   └── test/
-│       ├── java/       # Kode sumber untuk testing (JUnit)
+│       ├── java/       
 │       │   └── com/
 │       │       └── spakborhills/
-│       │           └── ...             # Test classes mengikuti struktur main
-│       └── resources/  # File resource untuk testing
+│       │           └── ...            
+│       └── resources/ 
 ├── build.gradle        # File konfigurasi build Gradle
 ├── gradlew             # Gradle wrapper script (Linux/macOS)
 ├── gradlew.bat         # Gradle wrapper script (Windows)
-└── README.md           # Dokumentasi ini
+└── README.md           # Dokumentasi Readme.md
 ```
 
 ---
@@ -116,60 +115,42 @@ Perintah `run` akan mengkompilasi kode jika perlu dan menjalankan `Main.java`.
 
 ---
 
-## 7. Running Test
 
-Untuk menjalankan unit test yang telah dibuat menggunakan JUnit:
-
-```bash
-# Untuk Linux/macOS
-./gradlew test
-
-# Untuk Windows
-gradlew.bat test
-```
-
-Laporan hasil test akan digenerate oleh Gradle dan biasanya dapat ditemukan di `build/reports/tests/test/index.html`. Buka file HTML ini di browser untuk melihat detail hasil test.
-
----
-
-## 8. Prinsip & Desain
+## 7. Prinsip & Desain
 
 Kami telah menerapkan praktik rekayasa perangkat lunak yang baik dalam Project ini:
 
-*   **SOLID:** Menerapkan kelima prinsip SOLID untuk menghasilkan kode yang modular, fleksibel, dan mudah dipelihara.
+*   **SOLID:** Menerapkan kelima prinsip SOLID untuk menghasilkan kode yang modular, fleksibel, dan mudah di-_maintain_.
 *   **Design Patterns:** Implementasi Design Pattern yang digunakan:
-    *   `MVC (Model-View-Controller)` - Digunakan untuk memisahkan logika game (Model), tampilan (View), dan kontrol input (Controller)
-    *   `State Pattern` - Digunakan untuk mengelola state game (IN_GAME, PAUSE_MENU, STORE_UI, dll)
-    *   `Observer Pattern` - Digunakan untuk sistem event handling dan notifikasi antar komponen
-    *   `Factory Pattern` - Digunakan untuk pembuatan objek Item dan GameObject
-    *   `Singleton Pattern` - Digunakan untuk manajemen game state dan resources
-    
-*   **Logging:** Menggunakan `SLF4J` sebagai API logging dengan implementasi `Logback` untuk debugging dan pemantauan.
+    *   MVC (Model-View-Controller) - Digunakan untuk memisahkan logika game (Model), _interface_ (View), dan kontrol input (Controller)
+    *   State Pattern - Digunakan untuk mengelola state game (IN_GAME, PAUSE_MENU, STORE_UI, dan lain-lain)
+    *   Observer Pattern - Digunakan untuk sistem event handling dan notifikasi antar komponen (GameEvent)
+    *   Factory Pattern - Digunakan untuk pembuatan objek Item dan GameObject
+    *   Singleton Pattern - Digunakan untuk manajemen fitur Load dan Save
+
 *   **Exception Handling:** Menerapkan exception handling yang tepat untuk menangani kondisi error yang mungkin terjadi.
 *   **Concurrency:** Menerapkan konsep concurrency pada sistem waktu game dan animasi.
 
 ---
 
-## 9. Dependensi Utama
+## 8. Dependensi Utama
 
 Dependensi utama Project ini dikelola oleh Gradle dan didefinisikan dalam file `build.gradle`:
 
-*   **Java Development Kit (JDK):** `24`
-*   **Gradle:** Build Tool (via Wrapper)
-*   **JUnit 5 (Jupiter Engine):** Framework untuk Unit Testing
-*   **SLF4J API:** Abstraksi Logging
+*   **Java Development Kit (JDK):** 23
+*   **Gradle:** Build Tool
 *   **Logback Classic:** Implementasi Logging
 *   **Java Sound API:** Untuk sistem audio game
 
 ---
 
-## 10. Anggota Kelompok
+## 9. Anggota Kelompok
 
-Project ini dikembangkan oleh Kelompok `2` - K4:
+Project ini dikembangkan oleh Kelompok 2 - K4:
 
-*   `A. Nurul Aqeela Amin` - `18223019`
-*   `Arqila Surya Putra` - `18223047`
-*   `Ali Syauqie` - `18223045`
-*   `Daffa Athalla Rajasa` - `18223053`
+*   A. Nurul Aqeela Amin - 18223019
+*   Arqila Surya Putra - 18223047
+*   Daffa Athalla Rajasa - 18223053
+*   _Ali Syauqie - 18223045_
 
 ---
